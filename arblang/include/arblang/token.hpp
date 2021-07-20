@@ -27,7 +27,7 @@ enum class tok {
     arrow,
 
     // ; '
-    semicolon, prime,
+    semicolon, comma, prime,
 
     // { }
     lbrace, rbrace,
@@ -51,12 +51,12 @@ enum class tok {
     min, max,
 
     // unary operators
-    exp, sin, cos, log, abs
+    exp, sin, cos, log, abs,
     exprelr, // equivalent to x/(exp(x)-1) with exprelr(0)=1
 
     // keywoards
     module, parameter, constant,
-    record, function, import
+    record, function, import,
 
     // error
     error

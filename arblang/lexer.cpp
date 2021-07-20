@@ -34,43 +34,43 @@ inline bool is_plusminus(char c) {
 // Lexer
 //*********************
 
-Token Lexer::parse() {
-    Token t;
+token lexer::parse() {
+    token t;
 
     // the while loop strips white space/new lines in front of the next token
     while(1) {
         location_.column = current_-line_+1;
-        t.location = location_;
+        t.loc = location_;
 
         switch(*current_) {
             // end of file
-            case 0      :       // end of string
+            case 0:   // end of string
                 t.spelling = "eof";
                 t.type = tok::eof;
                 return t;
 
-                // white space
-            case ' '    :
-            case '\t'   :
-            case '\v'   :
-            case '\f'   :
+            // white space
+            case ' ' :
+            case '\t':
+            case '\v':
+            case '\f':
                 current_++;
                 continue;   // skip to next character
 
-                // new line
-            case '\n'   :
+            // new line
+            case '\n':
                 current_++;
                 line_ = current_;
                 location_.line++;
                 continue;   // skip to next line
 
-                // new line
-            case '\r'   :
+            // new line
+            case '\r':
                 current_++;
                 if(*current_ != '\n') {
                     error_string_ = pprintf("bad line ending: \\n must follow \\r");
-                    status_ = lexerStatus::error;
-                    t.type = tok::reserved;
+                    status_ = lexer_status::error;
+                    t.type = tok::error;
                     return t;
                 }
                 current_++;
@@ -78,55 +78,25 @@ Token Lexer::parse() {
                 location_.line++;
                 continue;   // skip to next line
 
-                // comment (everything after : or ? on a line is a comment)
-            case ':' :
-            case '?' :
+            // comment (everything after : or ? on a line is a comment)
+            case '#':
                 // strip characters until either end of file or end of line
                 while( !is_eof(*current_) && *current_ != '\n') {
                     ++current_;
                 }
                 continue;
 
-                // number
+            // number
             case '0' ... '9':
             case '.':
                 return number();
 
-                // identifier or keyword
+            // identifier or keyword
             case 'a' ... 'z':
             case 'A' ... 'Z':
             case '_': {
-                // get std::string of the identifier
-                auto id = identifier();
-                if (id == "UNITSON" || id == "UNITSOFF") continue;
-                if (id == "COMMENT") {
-                    while (!is_eof(*current_)) {
-                        while ((*current_ != '\n') && (*current_ != '\r') && !is_alpha(*current_)) {
-                            current_++;
-                        }
-                        if (*current_ == '\n') {
-                            current_++;
-                            line_ = current_;
-                            location_.line++;
-                        }
-                        else if (*current_ == '\r') {
-                            current_++;
-                            if(*current_ != '\n') {
-                                error_string_ = pprintf("bad line ending: \\n must follow \\r");
-                                return t;
-                            }
-                            current_++;
-                            line_ = current_;
-                            location_.line++;
-                        }
-                        else if (identifier() == "ENDCOMMENT") break;
-                    }
-                    continue;
-                }
-                t.spelling = id;
-                t.type = status_ == lexerStatus::error
-                         ? tok::reserved
-                         : get_identifier_type(t.spelling);
+                t.spelling = identifier();
+                t.type = status_ == lexer_status::error? tok::error: identifier_token(t.spelling);
                 return t;
             }
             case '(':
@@ -143,10 +113,6 @@ Token Lexer::parse() {
                 return t;
             case '}':
                 t.type = tok::rbrace;
-                t.spelling += character();
-                return t;
-            case '~':
-                t.type = tok::tilde;
                 t.spelling += character();
                 return t;
             case '=': {
@@ -231,8 +197,8 @@ Token Lexer::parse() {
                 }
                 if (!valid) {
                     error_string_ = pprintf("& must be in pairs");
-                    status_ = lexerStatus::error;
-                    t.type = tok::reserved;
+                    status_ = lexer_status::error;
+                    t.type = tok::error;
                 }
                 return t;
             }
@@ -248,8 +214,8 @@ Token Lexer::parse() {
                 }
                 if (!valid) {
                     error_string_ = pprintf("| must be in pairs");
-                    status_ = lexerStatus::error;
-                    t.type = tok::reserved;
+                    status_ = lexer_status::error;
+                    t.type = tok::error;
                 }
                 return t;
             }
@@ -261,28 +227,31 @@ Token Lexer::parse() {
                 t.type = tok::comma;
                 t.spelling += character();
                 return t;
+            case ';':
+                t.type = tok::semicolon;
+                t.spelling += character();
+                return t;
             default:
                 error_string_ =
                         pprintf( "unexpected character '%' at %",
                                  *current_, location_);
-                status_ = lexerStatus::error;
+                status_ = lexer_status::error;
                 t.spelling += character();
-                t.type = tok::reserved;
+                t.type = tok::error;
                 return t;
         }
     }
-
     // return the token
     return t;
 }
 
-Token Lexer::peek() {
+token lexer::peek() {
     // save the current position
     const char *oldpos  = current_;
     const char *oldlin  = line_;
-    Location    oldloc  = location_;
+    location    oldloc  = location_;
 
-    Token t = parse(); // read the next token
+    token t = parse(); // read the next token
 
     // reset position
     current_  = oldpos;
@@ -292,13 +261,13 @@ Token Lexer::peek() {
     return t;
 }
 
-bool Lexer::search_to_eol(tok const& t) {
+bool lexer::search_to_eol(tok const& t) {
     // save the current position
     const char *oldpos  = current_;
     const char *oldlin  = line_;
-    Location    oldloc  = location_;
+    location    oldloc  = location_;
 
-    Token p = token_;
+    token p = token_;
     bool ret = false;
     while (line_ == oldlin && p.type != tok::eof) {
         if (p.type == t) {
@@ -317,7 +286,7 @@ bool Lexer::search_to_eol(tok const& t) {
 }
 
 // scan floating point number from stream
-Token Lexer::number() {
+token lexer::number() {
     std::string str;
     char c = *current_;
 
@@ -367,18 +336,18 @@ Token Lexer::number() {
     // check that the mantisa is an integer
     if(incorrectly_formed_mantisa) {
         error_string_ = pprintf("the exponent/mantissa must be an integer '%'", yellow(str));
-        status_ = lexerStatus::error;
+        status_ = lexer_status::error;
     }
     // check that there is at most one decimal point
     // i.e. disallow values like 2.2324.323
     if(num_point>1) {
         error_string_ = pprintf("too many .'s when reading the number '%'", yellow(str));
-        status_ = lexerStatus::error;
+        status_ = lexer_status::error;
     }
 
     tok type;
-    if(status_==lexerStatus::error) {
-        type = tok::reserved;
+    if(status_==lexer_status::error) {
+        type = tok::error;
     }
     else if(num_point<1 && !uses_scientific_notation) {
         type = tok::integer;
@@ -387,7 +356,7 @@ Token Lexer::number() {
         type = tok::real;
     }
 
-    return Token(type, str, location_);
+    return token(type, str, location_);
 }
 
 // scan identifier from stream
@@ -395,7 +364,7 @@ Token Lexer::number() {
 //      _1 _a ndfs var9 num_a This_
 //  examples of invalid names:
 //      _ __ 9val 9_
-std::string Lexer::identifier() {
+std::string lexer::identifier() {
     std::string name;
     char c = *current_;
 
@@ -425,53 +394,38 @@ std::string Lexer::identifier() {
 }
 
 // scan a single character from the buffer
-char Lexer::character() {
+char lexer::character() {
     return *current_++;
 }
 
-std::map<tok, int> Lexer::binop_prec_;
+std::unordered_map<tok, int> lexer::binop_prec_ = {
+    {tok::eq,       1},
+    {tok::land,     2},
+    {tok::lor,      3},
+    {tok::equality, 4},
+    {tok::ne,       4},
+    {tok::lt,       5},
+    {tok::lte,      5},
+    {tok::gt,       5},
+    {tok::gte,      5},
+    {tok::plus,     6},
+    {tok::minus,    6},
+    {tok::times,    7},
+    {tok::divide,   7},
+    {tok::pow,      8},
+};
 
-void Lexer::binop_prec_init() {
-    if(binop_prec_.size()>0)
-        return;
-
-    // I have taken the operator precedence from C++
-    // Note that only infix operators require precidence.
-    binop_prec_[tok::eq]       = 1;
-    binop_prec_[tok::land]     = 2;
-    binop_prec_[tok::lor]      = 3;
-    binop_prec_[tok::equality] = 4;
-    binop_prec_[tok::ne]       = 4;
-    binop_prec_[tok::lt]       = 5;
-    binop_prec_[tok::lte]      = 5;
-    binop_prec_[tok::gt]       = 5;
-    binop_prec_[tok::gte]      = 5;
-    binop_prec_[tok::plus]     = 6;
-    binop_prec_[tok::minus]    = 6;
-    binop_prec_[tok::times]    = 7;
-    binop_prec_[tok::divide]   = 7;
-    binop_prec_[tok::pow]      = 8;
-}
-
-int Lexer::binop_precedence(tok tok) {
+int lexer::binop_precedence(tok tok) {
     auto r = binop_prec_.find(tok);
     if(r==binop_prec_.end())
         return -1;
     return r->second;
 }
 
-associativity_kind Lexer::operator_associativity(tok token) {
+associativity_kind lexer::operator_associativity(tok token) {
     if(token==tok::pow) {
         return associativity_kind::right;
     }
     return associativity_kind::left;
-}
-
-// pre  : identifier is a valid identifier ([_a-zA-Z][_a-zA-Z0-9]*)
-// post : if(identifier is a keyword) return tok::<keyword>
-//        else                        return tok::identifier
-tok Lexer::get_identifier_type(std::string const& identifier) {
-    auto pos = keyword_map.find(identifier);
-    return pos==keyword_map.end() ? tok::identifier : pos->second;
 }
 } // namespace al

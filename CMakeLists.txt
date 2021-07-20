@@ -17,4 +17,5 @@ add_library(arblang-public-deps INTERFACE)
 install(TARGETS arblang-public-deps EXPORT arblang-targets)
 
 add_subdirectory(arblang)
+add_subdirectory(examples)
 

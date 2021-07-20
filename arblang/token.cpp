@@ -43,6 +43,7 @@ static std::unordered_map<tok, std::string> token_map = {
         {tok::lor,        "||"},
         {tok::arrow,      "<->"},
         {tok::semicolon,  ";"},
+        {tok::comma,      ","},
         {tok::prime,      "'"},
         {tok::lbrace,     "{"},
         {tok::rbrace,     "}"},
@@ -72,7 +73,7 @@ static std::unordered_map<tok, std::string> token_map = {
 };
 
 bool is_keyword(const token& t) {
-    return std::any_of(keyword_map.begin(), keyword_map.end(), [&](const auto&& el){return el.second == t.type;});
+    return std::any_of(keyword_map.begin(), keyword_map.end(), [&](const auto& el){return el.second == t.type;});
 }
 
 tok identifier_token(const std::string& identifier) {
