@@ -23,6 +23,11 @@ using type_expr = std::variant<
 
 using expr = std::shared_ptr<type_expr>;
 
+template <typename T, typename... Args>
+expr make_type_expr(Args&&... args) {
+    return expr(new T(std::forward<Args>(args)...));
+}
+
 enum class quantity {
     real,
     length,

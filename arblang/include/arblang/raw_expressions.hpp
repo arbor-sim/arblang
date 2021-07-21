@@ -55,42 +55,49 @@ enum class unary_op {
 };
 
 // Identifier name and type expression
-struct identifier_expr {
+struct identifier_expr {  // Is this needed? Can it be used directly and not via a shared pointer and a shared pointer to the variant?
     std::string name;
     type_expr type;
 };
 
 struct module_expr {
+    module_expr() {};
+    module_expr(module_expr&&) = default;
+
     std::string name;
-    std::vector<constant_expr> constants;
-    std::vector<parameter_expr> parameters;
-    std::vector<function_expr> functions;
-    std::vector<record_expr> records;
-    std::vector<import_expr> imports;
+    std::vector<expr> constants;  // expect constant_expr
+    std::vector<expr> parameters; // expect parameter_expr
+    std::vector<expr> functions;  // expect function_expr
+    std::vector<expr> records;    // expect record_expr
+    std::vector<expr> imports;    // expect import_expr
+
+    inline std::string to_string() const {
+        return name;
+    }
 };
 
 // Top level module parameters
 struct parameter_expr {
-    identifier_expr identifier;
+    expr identifier; // expect identifier_expr
     expr value;
 };
 
 // Top level module constants
 struct constant_expr {
-    identifier_expr identifier;
+    expr identifier; // expect identifier_expr
     expr value;
 };
 
 // Top level record definitions
 struct record_expr {
     std::string name;
-    std::vector<identifier_expr> fields;
+    std::vector<expr> fields;  // expect identifier_expr
 };
 
 // Top level function definitions
 struct function_expr {
     std::string name;
-    std::vector<identifier_expr> args;
+    std::vector<expr> args;   // expect identifier_expr
     std::optional<type_expr> ret;
     expr body;
 };
@@ -115,7 +122,7 @@ struct field_expr {
 
 // Let bindings
 struct let_expr {
-    identifier_expr identifier;
+    expr identifier; // expect identifier_expr
     expr value;
     expr body;
 };
@@ -152,6 +159,11 @@ struct binary_expr {
     expr lhs;
     expr rhs;
 };
+
+template <typename T, typename... Args>
+expr make_expr(Args&&... args) {
+    return expr(new raw_expr(T(std::forward<Args>(args)...)));
+}
 
 } // namespace raw_ir
 } // namespace al

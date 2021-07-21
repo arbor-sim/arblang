@@ -1,7 +1,7 @@
 #include <iostream>
 
 #include <arblang/lexer.hpp>
-#include <arblang/raw_expressions.hpp>
+#include <arblang/parser.hpp>
 
 int main() {
     using namespace al;
@@ -81,7 +81,7 @@ int main() {
         "\n"
         "} # end of module definition";
 
-    lexer lex(module.c_str());
+    /*lexer lex(module.c_str());
     while (lex.current().type != tok::eof) {
         auto t = lex.current();
 
@@ -92,6 +92,8 @@ int main() {
         std::cout << t << std::endl;
         lex.next();
     }
-    std::cout << lex.current() << std::endl;
+    std::cout << lex.current() << std::endl;*/
 
+    parser p(module);
+    p.parse();
 }
