@@ -1,6 +1,7 @@
 #include <iostream>
 
 #include <arblang/lexer.hpp>
+#include <arblang/raw_expressions.hpp>
 
 int main() {
     using namespace al;
@@ -26,7 +27,7 @@ int main() {
         "\n"
         "# \"def\" introduces a function definition.\n"
         "\n"
-        "def initial() -> state {\n"
+        "function initial() -> state {\n"
         "    # The name of a record type also acts as its constructor.\n"
         "    # Every record field needs to be set, or else be taken from an existing value, or\n"
         "    # else have a default value given in the record definition.\n"
@@ -36,7 +37,7 @@ int main() {
         "\n"
         "# \"state'\" is a struct that is automatically defined given a struct called \"state\".\n"
         "\n"
-        "def evolution(state s, voltage v) -> state' {\n"
+        "function evolution(state s, voltage v) -> state' {\n"
         "    state' {\n"
         "        # Record field access is by dot.\n"
         "        g' = -s.g / tau;\n"

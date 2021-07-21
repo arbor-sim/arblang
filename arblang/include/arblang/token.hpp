@@ -67,6 +67,7 @@ enum class tok {
     // keywoards
     module, parameter, constant,
     record, function, import,
+    as, ret,
 
     // error
     error
@@ -81,8 +82,6 @@ struct token {
     src_location loc;
     tok type;
     std::string spelling;
-
-//    token& operator=(token& other) = default;
 
     static std::optional<tok> is_keyword(const std::string&);
     friend std::ostream& operator<< (std::ostream&, const token&);
