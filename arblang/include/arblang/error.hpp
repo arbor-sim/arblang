@@ -5,28 +5,28 @@
 #include <stdexcept>
 #include <string>
 
-#include <arblang/location.hpp>
+#include <arblang/token.hpp>
 
 namespace al{
 struct error_entry {
     std::string message;
-    location loc;
+    src_location loc;
 
     error_entry(std::string m): message(std::move(m)) {}
-    error_entry(std::string m, location l): message(std::move(m)), loc(l) {}
+    error_entry(std::string m, src_location l): message(std::move(m)), loc(l) {}
 };
 
 // Wrap error entry in exception.
 class compiler_exception : public std::exception {
 public:
     explicit compiler_exception(error_entry info): error_info_(std::move(info)) {}
-    compiler_exception(std::string m, location location): error_info_({std::move(m), location}) {}
+    compiler_exception(std::string m, src_location location): error_info_({std::move(m), location}) {}
 
     virtual const char* what() const throw() {
         return error_info_.message.c_str();
     }
 
-    location const& loc() const {
+    src_location const& loc() const {
         return error_info_.loc;
     }
 

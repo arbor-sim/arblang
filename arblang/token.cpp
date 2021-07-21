@@ -1,11 +1,16 @@
 #include <algorithm>
-#include <mutex>
+#include <optional>
+#include <ostream>
 #include <unordered_map>
 
 #include <arblang/token.hpp>
 
 namespace al {
-static std::unordered_map<std::string, tok> keyword_map = {
+std::ostream& operator<< (std::ostream& os, src_location const& loc) {
+    return os << "location(line " << loc.line << ", col " << loc.column << ")";
+}
+
+std::unordered_map<std::string, tok> token::keyword_to_token = {
         {"if",          tok::if_stmt},
         {"else",        tok::else_stmt},
         {"min",         tok::min},
@@ -24,7 +29,7 @@ static std::unordered_map<std::string, tok> keyword_map = {
         {"import",      tok::import},
 };
 
-static std::unordered_map<tok, std::string> token_map = {
+std::unordered_map<tok, std::string> token::token_to_string = {
         {tok::eof,        "eof"},
         {tok::eq,         "="},
         {tok::plus,       "+"},
@@ -34,9 +39,9 @@ static std::unordered_map<tok, std::string> token_map = {
         {tok::pow,        "^"},
         {tok::lnot,       "!"},
         {tok::lt,         "<"},
-        {tok::lte,        "<="},
+        {tok::le,        "<="},
         {tok::gt,         ">"},
-        {tok::gte,        ">="},
+        {tok::ge,        ">="},
         {tok::equality,   "=="},
         {tok::ne,         "!="},
         {tok::land,       "&&"},
@@ -44,6 +49,7 @@ static std::unordered_map<tok, std::string> token_map = {
         {tok::arrow,      "<->"},
         {tok::semicolon,  ";"},
         {tok::comma,      ","},
+        {tok::dot,        "."},
         {tok::prime,      "'"},
         {tok::lbrace,     "{"},
         {tok::rbrace,     "}"},
@@ -72,21 +78,14 @@ static std::unordered_map<tok, std::string> token_map = {
         {tok::error,      "error"},
 };
 
-bool is_keyword(const token& t) {
-    return std::any_of(keyword_map.begin(), keyword_map.end(), [&](const auto& el){return el.second == t.type;});
-}
-
-tok identifier_token(const std::string& identifier) {
-    auto pos = keyword_map.find(identifier);
-    return pos==keyword_map.end()? tok::identifier: pos->second;
-}
-
-std::string token_string(tok token) {
-    auto pos = token_map.find(token);
-    return pos==token_map.end()? std::string("<unknown token>"): pos->second;
+std::optional<tok> token::is_keyword(const std::string& identifier) {
+    auto pos = keyword_to_token.find(identifier);
+    return pos!=keyword_to_token.end()? std::optional(pos->second): std::nullopt;
 }
 
 std::ostream& operator<<(std::ostream& os, const token& t) {
-    return os << "token( type (" << token_string(t.type) << "), spelling (" << t.spelling << "), " << t.loc << ")";
+    auto pos = token::token_to_string.find(t.type);
+    auto type_string = pos==token::token_to_string.end()? std::string("<unknown token>"): pos->second;
+    return os << "token( type (" << type_string << "), spelling (" << t.spelling << "), " << t.loc << ")";
 }
 } // namespace al

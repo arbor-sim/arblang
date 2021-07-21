@@ -80,15 +80,17 @@ int main() {
         "\n"
         "} # end of module definition";
 
-    lexer lex(module);
-    while (true) {
-        auto t = lex.parse();
+    lexer lex(module.c_str());
+    while (lex.current().type != tok::eof) {
+        auto t = lex.current();
+
+        // Test for errors
         if (t.type == tok::error) {
-            std::cout << "ERROR: " << lex.error_message() << std::endl;
-            break;
+            std::cout << "ERROR: " << t.spelling << " at " << t.loc << std::endl;
         }
         std::cout << t << std::endl;
-        if (t.type == tok::eof) break;
+        lex.next();
     }
-    return 0;
+    std::cout << lex.current() << std::endl;
+
 }

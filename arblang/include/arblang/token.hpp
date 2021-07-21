@@ -1,12 +1,22 @@
 #pragma once
 
+#include <optional>
 #include <string>
 #include <unordered_map>
 #include <utility>
 
-#include "arblang/location.hpp"
-
 namespace al {
+
+    struct src_location {
+    int line;
+    int column;
+
+    src_location(): src_location(1, 1) {}
+    src_location(int ln, int col): line(ln), column(col) {}
+};
+
+std::ostream& operator<< (std::ostream& os, src_location const& loc);
+
 enum class tok {
     eof, // end of file
 
@@ -17,9 +27,9 @@ enum class tok {
     // comparison
     lnot,    // !   named logical not, to avoid clash with C++ not keyword
     lt,      // <
-    lte,     // <=
+    le,      // <=
     gt,      // >
-    gte,     // >=
+    ge,      // >=
     equality,// ==
     ne,      // !=
 
@@ -27,7 +37,7 @@ enum class tok {
     arrow,
 
     // ; '
-    semicolon, comma, prime,
+    semicolon, comma, dot, prime,
 
     // { }
     lbrace, rbrace,
@@ -68,17 +78,20 @@ struct token {
     //   type = tok::identifier : spelling = "foo_bar" (e.g.)
     //   type = tok::plus       : spelling = "+"       (always)
     //   type = tok::if_else    : spelling = "if"      (always)
-    std::string spelling;
+    src_location loc;
     tok type;
-    location loc;
+    std::string spelling;
 
-    token(tok tok, std::string sp, location loc={0,0}): spelling(std::move(sp)), type(tok), loc(loc) {};
-    token(): type(tok::error), loc({0,0}) {};
+//    token& operator=(token& other) = default;
+
+    static std::optional<tok> is_keyword(const std::string&);
+    friend std::ostream& operator<< (std::ostream&, const token&);
+
+private:
+    static std::unordered_map<std::string, tok> keyword_to_token;
+    static std::unordered_map<tok, std::string> token_to_string;
 };
 
-std::string token_string(tok);
-tok identifier_token(const std::string&);
-bool is_keyword(const token&);
 std::ostream& operator<< (std::ostream&, const token&);
 
 } // namespace al

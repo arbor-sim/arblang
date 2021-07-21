@@ -5,409 +5,364 @@
 
 #include <arblang/lexer.hpp>
 #include <arblang/pprintf.hpp>
+#include <arblang/token.hpp>
 
 namespace al{
 // helpers for identifying character types
-inline bool in_range(char c, char first, char last) {
-    return c>=first && c<=last;
-}
-inline bool is_numeric(char c) {
-    return in_range(c, '0', '9');
-}
-inline bool is_alpha(char c) {
-    return (in_range(c, 'a', 'z') || in_range(c, 'A', 'Z') );
-}
 inline bool is_alphanumeric(char c) {
-    return (is_numeric(c) || is_alpha(c) );
+    return std::isalnum(static_cast<unsigned char>(c));
 }
 inline bool is_eof(char c) {
     return (c==0);
-}
-inline bool is_operator(char c) {
-    return (c=='+' || c=='-' || c=='*' || c=='/' || c=='^' || c=='\'');
 }
 inline bool is_plusminus(char c) {
     return (c=='+' || c=='-');
 }
 
-//*********************
-// Lexer
-//*********************
+class lexer_impl {
+    const char* line_start_;
+    const char* stream_;
+    unsigned line_;
+    token token_;
 
-token lexer::parse() {
-    token t;
+public:
 
-    // the while loop strips white space/new lines in front of the next token
-    while(1) {
-        location_.column = current_-line_+1;
-        t.loc = location_;
-
-        switch(*current_) {
-            // end of file
-            case 0:   // end of string
-                t.spelling = "eof";
-                t.type = tok::eof;
-                return t;
-
-            // white space
-            case ' ' :
-            case '\t':
-            case '\v':
-            case '\f':
-                current_++;
-                continue;   // skip to next character
-
-            // new line
-            case '\n':
-                current_++;
-                line_ = current_;
-                location_.line++;
-                continue;   // skip to next line
-
-            // new line
-            case '\r':
-                current_++;
-                if(*current_ != '\n') {
-                    error_string_ = pprintf("bad line ending: \\n must follow \\r");
-                    status_ = lexer_status::error;
-                    t.type = tok::error;
-                    return t;
-                }
-                current_++;
-                line_ = current_;
-                location_.line++;
-                continue;   // skip to next line
-
-            // comment (everything after : or ? on a line is a comment)
-            case '#':
-                // strip characters until either end of file or end of line
-                while( !is_eof(*current_) && *current_ != '\n') {
-                    ++current_;
-                }
-                continue;
-
-            // number
-            case '0' ... '9':
-            case '.':
-                return number();
-
-            // identifier or keyword
-            case 'a' ... 'z':
-            case 'A' ... 'Z':
-            case '_': {
-                t.spelling = identifier();
-                t.type = status_ == lexer_status::error? tok::error: identifier_token(t.spelling);
-                return t;
-            }
-            case '(':
-                t.type = tok::lparen;
-                t.spelling += character();
-                return t;
-            case ')':
-                t.type = tok::rparen;
-                t.spelling += character();
-                return t;
-            case '{':
-                t.type = tok::lbrace;
-                t.spelling += character();
-                return t;
-            case '}':
-                t.type = tok::rbrace;
-                t.spelling += character();
-                return t;
-            case '=': {
-                t.spelling += character();
-                if(*current_=='=') {
-                    t.spelling += character();
-                    t.type=tok::equality;
-                }
-                else {
-                    t.type = tok::eq;
-                }
-                return t;
-            }
-            case '!': {
-                t.spelling += character();
-                if(*current_=='=') {
-                    t.spelling += character();
-                    t.type=tok::ne;
-                }
-                else {
-                    t.type = tok::lnot;
-                }
-                return t;
-            }
-            case '+':
-                t.type = tok::plus;
-                t.spelling += character();
-                return t;
-            case '-':
-                t.type = tok::minus;
-                t.spelling += character();
-                return t;
-            case '/':
-                t.type = tok::divide;
-                t.spelling += character();
-                return t;
-            case '*':
-                t.type = tok::times;
-                t.spelling += character();
-                return t;
-            case '^':
-                t.type = tok::pow;
-                t.spelling += character();
-                return t;
-                // comparison binary operators
-            case '<': {
-                t.spelling += character();
-                if(*current_=='=') {
-                    t.spelling += character();
-                    t.type = tok::lte;
-                }
-                else if(*current_=='-' && current_[1]=='>') {
-                    t.spelling += character();
-                    t.spelling += character();
-                    t.type = tok::arrow;
-                }
-                else {
-                    t.type = tok::lt;
-                }
-                return t;
-            }
-            case '>': {
-                t.spelling += character();
-                if(*current_=='=') {
-                    t.spelling += character();
-                    t.type = tok::gte;
-                }
-                else {
-                    t.type = tok::gt;
-                }
-                return t;
-            }
-            case '&': {
-                bool valid = false;
-                t.spelling += character();
-                if (*current_ == '&') {
-                    t.spelling += character();
-                    if (*current_ != '&') {
-                        t.type = tok::land;
-                        valid = true;
-                    }
-                }
-                if (!valid) {
-                    error_string_ = pprintf("& must be in pairs");
-                    status_ = lexer_status::error;
-                    t.type = tok::error;
-                }
-                return t;
-            }
-            case '|': {
-                bool valid = false;
-                t.spelling += character();
-                if (*current_ == '|') {
-                    t.spelling += character();
-                    if (*current_ != '|') {
-                        t.type = tok::lor;
-                        valid = true;
-                    }
-                }
-                if (!valid) {
-                    error_string_ = pprintf("| must be in pairs");
-                    status_ = lexer_status::error;
-                    t.type = tok::error;
-                }
-                return t;
-            }
-            case '\'':
-                t.type = tok::prime;
-                t.spelling += character();
-                return t;
-            case ',':
-                t.type = tok::comma;
-                t.spelling += character();
-                return t;
-            case ';':
-                t.type = tok::semicolon;
-                t.spelling += character();
-                return t;
-            default:
-                error_string_ =
-                        pprintf( "unexpected character '%' at %",
-                                 *current_, location_);
-                status_ = lexer_status::error;
-                t.spelling += character();
-                t.type = tok::error;
-                return t;
-        }
-    }
-    // return the token
-    return t;
-}
-
-token lexer::peek() {
-    // save the current position
-    const char *oldpos  = current_;
-    const char *oldlin  = line_;
-    location    oldloc  = location_;
-
-    token t = parse(); // read the next token
-
-    // reset position
-    current_  = oldpos;
-    location_ = oldloc;
-    line_     = oldlin;
-
-    return t;
-}
-
-bool lexer::search_to_eol(tok const& t) {
-    // save the current position
-    const char *oldpos  = current_;
-    const char *oldlin  = line_;
-    location    oldloc  = location_;
-
-    token p = token_;
-    bool ret = false;
-    while (line_ == oldlin && p.type != tok::eof) {
-        if (p.type == t) {
-            ret = true;
-            break;
-        }
-        p = parse();
+    lexer_impl(const char* begin) :
+            line_start_(begin), stream_(begin), line_(0) {
+        // Prime the first token.
+        parse();
     }
 
-    // reset position
-    current_  = oldpos;
-    location_ = oldloc;
-    line_     = oldlin;
+    // Return the current token in the stream.
+    const token& current() {
+        return token_;
+    }
 
-    return ret;
-}
+    const token& next(unsigned n=1) {
+        while (n--) parse();
+        return token_;
+    }
 
-// scan floating point number from stream
-token lexer::number() {
-    std::string str;
-    char c = *current_;
+    token peek(unsigned n) {
+        // Save state.
+        auto ls = line_start_;
+        auto st = stream_;
+        auto l  = line_;
+        auto t  = token_;
 
-    // start counting the number of points in the number
-    auto num_point = (c=='.' ? 1 : 0);
-    auto uses_scientific_notation = 0;
-    bool incorrectly_formed_mantisa = false;
+        // Advance n tokens.
+        next(n);
 
-    str += c;
-    current_++;
-    while(1) {
-        c = *current_;
-        if(is_numeric(c)) {
-            str += c;
-            current_++;
+        // Restore state.
+        std::swap(t, token_);
+        line_ = l;
+        line_start_ = ls;
+        stream_ = st;
+
+        return t;
+    }
+
+private:
+    src_location loc() const {
+        return src_location(line_+1, stream_-line_start_+1);
+    }
+
+    bool empty() const {
+        return *stream_ == '\0';
+    }
+
+    // Consumes characters in the stream until end of stream or a new line.
+    // Assumes that the current location is the `#` that starts the comment.
+    void eat_comment() {
+        while (!empty() && *stream_!='\n') {
+            ++stream_;
         }
-        else if(c=='.') {
-            num_point++;
-            str += c;
-            current_++;
-            if(uses_scientific_notation) {
-                incorrectly_formed_mantisa = true;
-            }
-        }
-        else if(!uses_scientific_notation && (c=='e' || c=='E')) {
-            if(is_numeric(current_[1]) ||
-               (is_plusminus(current_[1]) && is_numeric(current_[2])))
-            {
-                uses_scientific_notation++;
+    }
+
+    // Look ahead n characters in the input stream.
+    // If peek to or past the end of the stream return '\0'.
+    char peek_char(int n) {
+        const char* c = stream_;
+        while (*c && n--) ++c;
+        return *c;
+    }
+
+    char character() {
+        return *stream_++;
+    }
+
+    token number() {
+        using namespace std::string_literals;
+
+        auto start = loc();
+        std::string str;
+        char c = *stream_;
+
+        // Start counting the number of points in the number.
+        auto num_point = (c=='.' ? 1 : 0);
+        auto uses_scientific_notation = 0;
+
+        str += c;
+        ++stream_;
+        while(1) {
+            c = *stream_;
+            if (std::isdigit(c)) {
                 str += c;
-                current_++;
-                // Consume the next char if +/-
-                if (is_plusminus(*current_)) {
-                    str += *current_++;
+                ++stream_;
+            }
+            else if (c=='.') {
+                if (++num_point>1) {
+                    // Can't have more than one '.' in a number
+                    return {start, tok::error, "Unexpected '.'"s};
+                }
+                str += c;
+                ++stream_;
+                if (uses_scientific_notation) {
+                    // Can't have a '.' in the mantissa
+                    return {start, tok::error, "Unexpected '.'"s};
+                }
+            }
+            else if (!uses_scientific_notation && (c=='e' || c=='E')) {
+                if ( std::isdigit(peek_char(1)) ||
+                     (is_plusminus(peek_char(1)) && std::isdigit(peek_char(2))))
+                {
+                    uses_scientific_notation++;
+                    str += c;
+                    stream_++;
+                    // Consume the next char if +/-
+                    if (is_plusminus(*stream_)) {
+                        str += *stream_++;
+                    }
+                }
+                else {
+                    // the 'e' or 'E' is the beginning of a new token
+                    break;
                 }
             }
             else {
-                // the 'e' or 'E' is the beginning of a new token
                 break;
             }
         }
-        else {
-            break;
+
+        const bool is_real = uses_scientific_notation || num_point>0;
+        return {start, (is_real? tok::real: tok::integer), std::move(str)};
+    }
+
+    // scan identifier from stream
+    //  examples of valid names:
+    //      _1 _a ndfs var9 num_a This_
+    //  examples of invalid names:
+    //      _ __ 9val 9_
+    token identifier() {
+        using namespace std::string_literals;
+        auto start = loc();
+        std::string identifier;
+        char c = *stream_;
+
+        // Assert that current position is at the start of an identifier
+        if(!(std::isalpha(c) || c == '_')) {
+            return {start, tok::error, "Internal error: lexer attempting to read identifier when none is available '.'"s};
         }
-    }
 
-    // check that the mantisa is an integer
-    if(incorrectly_formed_mantisa) {
-        error_string_ = pprintf("the exponent/mantissa must be an integer '%'", yellow(str));
-        status_ = lexer_status::error;
-    }
-    // check that there is at most one decimal point
-    // i.e. disallow values like 2.2324.323
-    if(num_point>1) {
-        error_string_ = pprintf("too many .'s when reading the number '%'", yellow(str));
-        status_ = lexer_status::error;
-    }
+        identifier += c;
+        ++stream_;
+        while(1) {
+            c = *stream_;
 
-    tok type;
-    if(status_==lexer_status::error) {
-        type = tok::error;
-    }
-    else if(num_point<1 && !uses_scientific_notation) {
-        type = tok::integer;
-    }
-    else {
-        type = tok::real;
-    }
-
-    return token(type, str, location_);
-}
-
-// scan identifier from stream
-//  examples of valid names:
-//      _1 _a ndfs var9 num_a This_
-//  examples of invalid names:
-//      _ __ 9val 9_
-std::string lexer::identifier() {
-    std::string name;
-    char c = *current_;
-
-    // assert that current position is at the start of a number
-    // note that the first character can't be numeric
-    if( !(is_alpha(c) || c=='_') ) {
-        throw compiler_exception(
-                "Lexer attempting to read number when none is available",
-                location_);
-    }
-
-    name += c;
-    current_++;
-    while(1) {
-        c = *current_;
-
-        if(is_alphanumeric(c) || c=='_') {
-            name += c;
-            current_++;
+            if((std::isalnum(c) || c == '_')) {
+                identifier += c;
+                ++stream_;
+            }
+            else {
+                break;
+            }
         }
-        else {
-            break;
-        }
+
+        return {start, token::is_keyword(identifier).value_or(tok::identifier), std::move(identifier)};
     }
 
-    return name;
-}
+    void parse() {
+        using namespace std::string_literals;
 
-// scan a single character from the buffer
-char lexer::character() {
-    return *current_++;
-}
+        while(!empty()) {
+            switch(*stream_) {
+                // end of file
+                case 0:   // end of string
+                    token_ = {loc(), tok::eof, "eof"};
+                    return ;
 
-std::unordered_map<tok, int> lexer::binop_prec_ = {
+                // white space
+                case ' ' :
+                case '\t':
+                case '\v':
+                case '\f':
+                    ++stream_;
+                    continue;   // skip to next character
+
+                // new line
+                case '\n':
+                    line_++;
+                    ++stream_;
+                    line_start_ = stream_;
+                    continue;   // skip to next line
+
+                // carriage return (windows new line)
+                case '\r':
+                    ++stream_;
+                    if(*stream_ != '\n') {
+                        token_ = {loc(), tok::error, "Expected new line after cariage return (bad line ending)"};
+                        return;
+                    }
+                    continue; // catch the new line on the next pass
+
+                case '#':
+                    eat_comment();
+                    continue;
+                case '(':
+                    token_ = {loc(), tok::lparen, {character()}};
+                    return;
+                case ')':
+                    token_ = {loc(), tok::rparen, {character()}};
+                    return;
+                case '{':
+                    token_ = {loc(), tok::lbrace, {character()}};
+                    return;
+                case '}':
+                    token_ = {loc(), tok::rbrace, {character()}};
+                    return;
+                case '0' ... '9':
+                    token_ = number();
+                    return;
+                case '.':
+                    if (std::isdigit(peek_char(1))) {
+                        token_ = number();
+                    } else {
+                        token_ = {loc(), tok::dot, {character()}};
+                    }
+                    return;
+                // identifier or keyword
+                case 'a' ... 'z':
+                case 'A' ... 'Z':
+                case '_':
+                    token_ = identifier();
+                    return;
+
+                case '=': {
+                    if(peek_char(1)=='=') {
+                        auto c = character();
+                        token_ = {loc(), tok::equality, {c+=character()}};
+                    }
+                    else {
+                        token_ = {loc(), tok::eq, {character()}};
+                    }
+                    return;
+                }
+                case '!': {
+                    if(peek_char(1)=='=') {
+                        auto c = character();
+                        token_ = {loc(), tok::ne, {c+=character()}};
+                    }
+                    else {
+                        token_ = {loc(), tok::lnot, {character()}};
+                    }
+                    return;
+                }
+                case '+':
+                    token_ = {loc(), tok::plus, {character()}};
+                    return;
+                case '-':
+                    token_ = {loc(), tok::minus, {character()}};
+                    return;
+                case '/':
+                    token_ = {loc(), tok::divide, {character()}};
+                    return;
+                case '*':
+                    token_ = {loc(), tok::times, {character()}};
+                    return;
+                case '^':
+                    token_ = {loc(), tok::pow, {character()}};
+                    return;
+                // comparison binary operators and reaction
+                case '<': {
+                    if (peek_char(1)=='-' && peek_char(1)=='>') {
+                        auto c = character();
+                        c+=character();
+                        c+=character();
+                        token_ = {loc(), tok::arrow, {c}};
+                    }
+                    else if (peek_char(1)=='=') {
+                        auto c = character();
+                        c+=character();
+                        token_ = {loc(), tok::le, {c}};
+                    }
+                    else {
+                        token_ = {loc(), tok::lt, {character()}};
+                    }
+                    return;
+                }
+                case '>': {
+                    if (peek_char(1)=='=') {
+                        auto c = character();
+                        token_ = {loc(), tok::ge, {c+=character()}};
+                    }
+                    else {
+                        token_ = {loc(), tok::gt, {character()}};
+                    }
+                    return;
+                }
+                case '&': {
+                    if (peek_char(1)!='&') {
+                        token_ = {loc(), tok::error, "Expected & in a pair."};
+                        return;
+                    }
+                    auto c = character();
+                    token_ = {loc(), tok::land, {c+=character()}};
+                    return;
+                }
+                case '|': {
+                    if (peek_char(1)!='|') {
+                        token_ = {loc(), tok::error, "Expected | in a pair."};
+                        return;
+                    }
+                    auto c = character();
+                    token_ = {loc(), tok::lor, {c+=character()}};
+                    return;
+                }
+                case '\'':
+                    token_ = {loc(), tok::prime, {character()}};
+                    return;
+                case ',':
+                    token_ = {loc(), tok::comma, {character()}};
+                    return;
+                case ';':
+                    token_ = {loc(), tok::semicolon, {character()}};
+                    return;
+                default:
+                    token_ = {loc(), tok::error, std::string("Unexpected character '")+character()+"'"};
+                    return;
+            }
+        }
+        // return the token
+        if (!empty()) {
+            token_ = {loc(), tok::error, "Internal lexer error: expected end of input, please open a bug report"s};
+            return;
+        }
+        token_ = {loc(), tok::eof, "eof"s};
+        return;
+    }
+
+};
+
+/*std::unordered_map<tok, int> lexer::binop_prec_ = {
     {tok::eq,       1},
     {tok::land,     2},
     {tok::lor,      3},
     {tok::equality, 4},
     {tok::ne,       4},
     {tok::lt,       5},
-    {tok::lte,      5},
+    {tok::le,      5},
     {tok::gt,       5},
-    {tok::gte,      5},
+    {tok::ge,      5},
     {tok::plus,     6},
     {tok::minus,    6},
     {tok::times,    7},
@@ -427,5 +382,24 @@ associativity_kind lexer::operator_associativity(tok token) {
         return associativity_kind::right;
     }
     return associativity_kind::left;
+}*/
+
+lexer::lexer(const char* begin):
+        impl_(new lexer_impl(begin))
+{}
+
+const token& lexer::current() {
+    return impl_->current();
 }
+
+const token& lexer::next(unsigned n) {
+    return impl_->next(n);
+}
+
+token lexer::peek(unsigned n) {
+    return impl_->peek(n);
+}
+
+lexer::~lexer() = default;
+
 } // namespace al
