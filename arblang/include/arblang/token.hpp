@@ -67,7 +67,7 @@ enum class tok {
     // keywoards
     module, parameter, constant,
     record, function, import,
-    as, ret,
+    let, as, ret,
 
     // error
     error
@@ -83,10 +83,10 @@ struct token {
     tok type;
     std::string spelling;
 
-    static std::optional<tok> is_keyword(const std::string&);
     friend std::ostream& operator<< (std::ostream&, const token&);
 
 private:
+    static std::optional<tok> is_keyword(const std::string&);
     static std::unordered_map<std::string, tok> keyword_to_token;
     static std::unordered_map<tok, std::string> token_to_string;
 };

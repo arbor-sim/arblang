@@ -28,6 +28,7 @@ std::unordered_map<std::string, tok> token::keyword_to_token = {
         {"function",    tok::function},
         {"import",      tok::import},
         {"as",          tok::function},
+        {"let",         tok::let},
 };
 
 std::unordered_map<tok, std::string> token::token_to_string = {
@@ -77,6 +78,7 @@ std::unordered_map<tok, std::string> token::token_to_string = {
         {tok::function,   "function"},
         {tok::import,     "import"},
         {tok::as,         "as"},
+        {tok::let,        "let"},
         {tok::ret,        "->"},
         {tok::error,      "error"},
 };
