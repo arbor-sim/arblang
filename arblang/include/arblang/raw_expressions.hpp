@@ -1,6 +1,7 @@
 #pragma once
 
 #include <memory>
+#include <optional>
 #include <string>
 #include <vector>
 #include <variant>
@@ -48,7 +49,7 @@ using expr = std::shared_ptr<raw_expr>;
 using type_expr = types::expr;
 
 enum class binary_op {
-    add, aub, mul, div,
+    add, sub, mul, div, pow,
     lt, le, gt, ge, eq, ne,
     land, lor, min, max
 };
@@ -212,8 +213,7 @@ struct unary_expr {
     src_location loc;
 
     unary_expr(unary_expr&&) = default;
-    unary_expr(unary_op op, expr value, const src_location& loc):
-            op(op), value(std::move(value)), loc(loc) {};
+    unary_expr(tok t, expr value, const src_location& loc);
 
     bool is_boolean () const;
     inline std::string to_string() const;
@@ -227,8 +227,7 @@ struct binary_expr {
     src_location loc;
 
     binary_expr(binary_expr&&) = default;
-    binary_expr(binary_op op, expr lhs, expr rhs, const src_location& loc):
-        op(op), lhs(std::move(lhs)), rhs(std::move(rhs)), loc(loc) {};
+    binary_expr(tok t, expr lhs, expr rhs, const src_location& loc);
 
     bool is_boolean () const;
     inline std::string to_string() const;

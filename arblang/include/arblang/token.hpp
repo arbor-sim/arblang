@@ -84,9 +84,12 @@ struct token {
     std::string spelling;
 
     friend std::ostream& operator<< (std::ostream&, const token&);
+    static std::optional<tok> is_keyword(const std::string&);
+    int precedence() const;
+    bool right_associative() const;
 
 private:
-    static std::optional<tok> is_keyword(const std::string&);
+    static std::unordered_map<tok, int> binop_prec;
     static std::unordered_map<std::string, tok> keyword_to_token;
     static std::unordered_map<tok, std::string> token_to_string;
 };

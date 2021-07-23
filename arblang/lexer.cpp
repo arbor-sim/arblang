@@ -348,41 +348,9 @@ private:
             return;
         }
         token_ = {loc(), tok::eof, "eof"s};
-        return;
     }
 
 };
-
-/*std::unordered_map<tok, int> lexer::binop_prec_ = {
-    {tok::eq,       1},
-    {tok::land,     2},
-    {tok::lor,      3},
-    {tok::equality, 4},
-    {tok::ne,       4},
-    {tok::lt,       5},
-    {tok::le,      5},
-    {tok::gt,       5},
-    {tok::ge,      5},
-    {tok::plus,     6},
-    {tok::minus,    6},
-    {tok::times,    7},
-    {tok::divide,   7},
-    {tok::pow,      8},
-};
-
-int lexer::binop_precedence(tok tok) {
-    auto r = binop_prec_.find(tok);
-    if(r==binop_prec_.end())
-        return -1;
-    return r->second;
-}
-
-associativity_kind lexer::operator_associativity(tok token) {
-    if(token==tok::pow) {
-        return associativity_kind::right;
-    }
-    return associativity_kind::left;
-}*/
 
 lexer::lexer(const char* begin):
         impl_(new lexer_impl(begin))

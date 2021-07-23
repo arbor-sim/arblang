@@ -9,16 +9,6 @@
 #include <arblang/token.hpp>
 
 namespace al{
-/*enum class lexer_status {
-    error,  // lexer has encountered a problem
-    happy   // lexer is in a good place
-};
-
-enum class associativity_kind {
-    left,
-    right
-};*/
-
 class lexer_impl;
 class lexer {
 public:

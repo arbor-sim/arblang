@@ -225,7 +225,7 @@ expr parser::parse_conditional() {
     if (t.type != tok::rbrace) {
         throw std::runtime_error("Expected '}' expression, got " + t.spelling);
     }
-    t = next(); // consume '}'
+    next(); // consume '}'
 
     return make_expr<conditional_expr>(std::move(condition), std::move(if_true), std::move(if_false), if_stmt.loc);
 }
@@ -260,94 +260,146 @@ expr parser::parse_int() {
     return make_expr<int_expr>(std::stoll(num.spelling), unit, num.loc);
 }
 
+expr parser::parse_identifier() {
+    auto type = parse_type();
+    if (current().type != tok::identifier) {
+        throw std::runtime_error("Expected identifier, got " + current().spelling);
+    }
+    return make_expr<identifier_expr>(type, current().spelling, current().loc);
+}
+
 expr parser::parse_prefix() {
-    auto parse_unary_paren_expr = [&]() {
-        if (current().type != tok::lparen) {
-            throw std::runtime_error("Expected '(' expression, got " + current().spelling);
-        }
-        next(); // consume '('
-        auto e = parse_expr();
-        if (current().type != tok::rparen) {
-            throw std::runtime_error("Expected ')' expression, got " + current().spelling);
-        }
-        next(); // consume ')'
-        return e;
-    };
-    auto parse_binary_paren_expr = [&]() {
-        if (current().type != tok::lparen) {
-            throw std::runtime_error("Expected '(' expression, got " + current().spelling);
-        }
-        next(); // consume '('
-
-        auto lhs = parse_expr();
-
-        if (current().type != tok::comma) {
-            throw std::runtime_error("Expected ',' expression, got " + current().spelling);
-        }
-        next(); // consume ','
-
-        auto rhs = parse_expr();
-
-        if (current().type != tok::rparen) {
-            throw std::runtime_error("Expected ')' expression, got " + current().spelling);
-        }
-        next(); // consume ')'
-        return std::make_pair(lhs, rhs);
-    };
-
     auto prefix_op = current();
     switch (prefix_op.type) {
         case tok::exp:
-            return make_expr<unary_expr>(unary_op::exp, parse_unary_paren_expr(), prefix_op.loc);
         case tok::exprelr:
-            return make_expr<unary_expr>(unary_op::exprelr, parse_unary_paren_expr(), prefix_op.loc);
         case tok::log:
-            return make_expr<unary_expr>(unary_op::log, parse_unary_paren_expr(), prefix_op.loc);
         case tok::cos:
-            return make_expr<unary_expr>(unary_op::cos, parse_unary_paren_expr(), prefix_op.loc);
         case tok::sin:
-            return make_expr<unary_expr>(unary_op::sin, parse_unary_paren_expr(), prefix_op.loc);
         case tok::abs:
-            return make_expr<unary_expr>(unary_op::abs, parse_unary_paren_expr(), prefix_op.loc);
-        case tok::lnot:
-            return make_expr<unary_expr>(unary_op::lnot, parse_expr(), prefix_op.loc);
+        case tok::lnot: {
+            if (current().type != tok::lparen) {
+                throw std::runtime_error("Expected '(' expression, got " + current().spelling);
+            }
+            next(); // consume '('
+            auto e = parse_expr();
+            if (current().type != tok::rparen) {
+                throw std::runtime_error("Expected ')' expression, got " + current().spelling);
+            }
+            next(); // consume ')'
+            return make_expr<unary_expr>(prefix_op.type, std::move(e), prefix_op.loc);
+        }
         case tok::minus:
-            return make_expr<unary_expr>(unary_op::neg, parse_expr(), prefix_op.loc);
+            return make_expr<unary_expr>(prefix_op.type, parse_expr(), prefix_op.loc);
         case tok::plus:
             return parse_expr();
-        case tok::max: {
-            auto pair = parse_binary_paren_expr();
-            return make_expr<binary_expr>(binary_op::max, std::move(pair.first), std::move(pair.second), prefix_op.loc);
-        }
+        case tok::max:
         case tok::min: {
-            auto pair = parse_binary_paren_expr();
-            return make_expr<binary_expr>(binary_op::min, std::move(pair.first), std::move(pair.second), prefix_op.loc);
+            if (current().type != tok::lparen) {
+                throw std::runtime_error("Expected '(' expression, got " + current().spelling);
+            }
+            next(); // consume '('
+            auto lhs = parse_expr();
+            if (current().type != tok::comma) {
+                throw std::runtime_error("Expected ',' expression, got " + current().spelling);
+            }
+            next(); // consume ','
+            auto rhs = parse_expr();
+            if (current().type != tok::rparen) {
+                throw std::runtime_error("Expected ')' expression, got " + current().spelling);
+            }
+            next(); // consume ')'
+            return make_expr<binary_expr>(prefix_op.type, std::move(lhs), std::move(rhs), prefix_op.loc);
         }
-        default:
-            throw std::runtime_error("expected prefix operator, got " + prefix_op.spelling);
+        default: throw std::runtime_error("expected prefix operator, got " + prefix_op.spelling);
     }
-}
-
-expr parser::parse_infix() {
-
-}
-
-expr parser::parse_identifier() {
-
 }
 
 // This is one of:
 // - call_expr
 // - field_expr
+// - identifier_expr
 // - let_expr
 // - conditional_expr
-// - identifier_expr
 // - float_expr
 // - int_expr
-// - unary_expr
-// - binary_expr
-expr parser::parse_expr() {
+// - prefix_expr
+expr parser::parse_unary() {
+    auto t = current();
+    switch (t.type) {
+        case tok::lparen: {
+            t = next(); // consume '('
+            auto e = parse_expr();
+            if (t.type != tok::rparen) {
+                throw std::runtime_error("Expected ')' expression, got " + t.spelling);
+            }
+            next(); // consume ')'
+            return e;
+        }
+        case tok::identifier:
+            if (peek().type == tok::lparen) {
+                return parse_call();
+            }
+            if (peek().type == tok::dot) {
+                return parse_field();
+            }
+            return parse_identifier();
+        case tok::let:
+            return parse_let();
+        case tok::if_stmt:
+            return parse_conditional();
+        case tok::real:
+            return parse_float();
+        case tok::integer:
+            return parse_int();
+        default:
+            return parse_prefix();
+    }
+}
 
+// Handles infix operations
+expr parser::parse_binary(expr&& lhs, const token& lop) {
+    auto lop_prec = lop.precedence();
+    auto rhs = parse_expr(lop_prec);
+    if (!rhs) return nullptr;
+
+    auto rop = current();
+    auto rop_prec = rop.precedence();
+
+    if (rop_prec > lop_prec) {
+        throw std::runtime_error("parse_binop() : encountered operator of higher precedence");
+    }
+    if (rop_prec < lop_prec) {
+        return make_expr<binary_expr>(lop.type, std::move(lhs), std::move(rhs), lop.loc);
+    }
+    next(); // consume rop
+    if (rop.right_associative()) {
+        rhs = parse_binary(std::move(rhs), rop);
+        return make_expr<binary_expr>(lop.type, std::move(lhs), std::move(rhs), lop.loc);
+    }
+    else {
+        lhs = make_expr<binary_expr>(lop.type, std::move(lhs), std::move(rhs), lop.loc);
+        return parse_binary(std::move(lhs), rop);
+    }
+}
+
+// Handles full nested expressions
+expr parser::parse_expr(int prec) {
+    auto lhs = parse_unary();
+
+    // Combine all sub-expressions with precedence greater than prec.
+    for (;;) {
+        auto op = current();
+        auto op_prec = op.precedence();
+
+        // Note: all tokens that are not infix binary operators have a precedence of -1,
+        // so expressions like function calls will short circuit this loop here.
+        if (op_prec <= prec) return lhs;
+
+        next(); // consume the infix binary operator
+
+        lhs = parse_binary(std::move(lhs), op);
+    }
 }
 
 type_expr parser::parse_type() {}

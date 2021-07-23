@@ -83,6 +83,32 @@ std::unordered_map<tok, std::string> token::token_to_string = {
         {tok::error,      "error"},
 };
 
+static std::unordered_map<tok, int> binop_prec = {
+    {tok::eq,       1},
+    {tok::land,     2},
+    {tok::lor,      3},
+    {tok::equality, 4},
+    {tok::ne,       4},
+    {tok::lt,       5},
+    {tok::le,      5},
+    {tok::gt,       5},
+    {tok::ge,      5},
+    {tok::plus,     6},
+    {tok::minus,    6},
+    {tok::times,    7},
+    {tok::divide,   7},
+    {tok::pow,      8},
+};
+
+int token::precedence() const {
+    if(!binop_prec.count(type)) return -1;
+    return binop_prec.find(type)->second;
+}
+
+bool token::right_associative() const {
+    return type==tok::pow;
+}
+
 std::optional<tok> token::is_keyword(const std::string& identifier) {
     auto pos = keyword_to_token.find(identifier);
     return pos!=keyword_to_token.end()? std::optional(pos->second): std::nullopt;

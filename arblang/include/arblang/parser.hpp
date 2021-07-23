@@ -34,9 +34,10 @@ private:
     expr parse_float();
     expr parse_int();
     expr parse_prefix();
-    expr parse_infix();
 
-    expr parse_expr();
+    expr parse_unary();
+    expr parse_binary(expr&&, const token&);
+    expr parse_expr(int prec=0);
 
     type_expr parse_type();
 

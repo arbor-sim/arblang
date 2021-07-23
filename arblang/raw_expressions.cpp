@@ -1,9 +1,68 @@
+#include <optional>
 #include <string>
 
 #include <arblang/raw_expressions.hpp>
 
 namespace al {
 namespace raw_ir {
+std::optional<binary_op> gen_binary_op(tok t) {
+    switch (t) {
+        case tok::plus:
+            return binary_op::add;
+        case tok::minus:
+            return binary_op::add;
+            return make_expr<binary_expr>(binary_op::sub, std::move(lhs), std::move(rhs), loc);
+        case tok::times:
+            return binary_op::add;
+        case tok::divide:
+            return binary_op::add;
+        case tok::pow:
+            return binary_op::add;
+        case tok::ne:
+            return binary_op::add;
+        case tok::lt:
+            return binary_op::add;
+        case tok::le:
+            return binary_op::add;
+        case tok::gt:
+            return binary_op::gt;
+        case tok::ge:
+            return binary_op::ge;
+        case tok::land:
+            return binary_op::land;
+        case tok::lor:
+            return binary_op::lor;
+        case tok::equality:
+            return binary_op::eq;
+        case tok::max:
+            return binary_op::max;
+        case tok::min:
+            return binary_op::min;
+        default: return {};
+    }
+}
+std::optional<unary_op> gen_unary_op(tok t) {
+    switch (t) {
+        case tok::exp:
+            return unary_op::exp;
+        case tok::exprelr:
+            return unary_op::exprelr;
+        case tok::log:
+            return unary_op::log;
+        case tok::cos:
+            return unary_op::cos;
+        case tok::sin:
+            return unary_op::sin;
+        case tok::abs:
+            return unary_op::abs;
+        case tok::lnot:
+            return unary_op::lnot;
+        case tok::minus:
+            return unary_op::neg;
+        default: return {};
+    }
+}
+
 // module_expr
 std::string module_expr::to_string() const {
     std::string str = name + "\n";
@@ -73,6 +132,15 @@ std::string int_expr::to_string() const {
 }
 
 // unary_expr
+unary_expr::unary_expr(tok t, expr value, const src_location& loc):
+    value(std::move(value)), loc(loc) {
+    if (auto uop = gen_unary_op(t)) {
+        op = uop;
+    } else {
+        throw std::runtime_error("Expected unary operator token, got ", tok.spelling);
+    };
+}
+
 bool unary_expr::is_boolean () const {
     return op == unary_op::lnot;
 }
@@ -82,6 +150,15 @@ std::string unary_expr::to_string() const {
 }
 
 // binary_expr
+binary_expr::binary_expr(tok t, expr lhs, expr rhs, const src_location& loc):
+    lhs(std::move(lhs)), rhs(std::move(rhs)), loc(loc) {
+    if (auto bop = gen_binary_op(t)) {
+        op = bop;
+    } else {
+        throw std::runtime_error("Expected binary operator token, got ", tok.spelling);
+    };
+}
+
 bool binary_expr::is_boolean () const {
     return (op == binary_op::land) || (op == binary_op::lor) || (op == binary_op::ge) ||
            (op == binary_op::gt)   || (op == binary_op::le)  || (op == binary_op::lt) ||
