@@ -46,7 +46,6 @@ using raw_expr = std::variant<
     binary_expr>;
 
 using expr = std::shared_ptr<raw_expr>;
-using type_expr = types::expr;
 
 enum class binary_op {
     add, sub, mul, div, pow,
@@ -107,7 +106,7 @@ struct record_expr {
 struct function_expr {
     std::string name;
     std::vector<expr> args;   // expect identifier_expr
-    std::optional<type_expr> ret;
+//    std::optional<type_expr> ret;
     expr body;
     src_location loc;
 
@@ -235,12 +234,12 @@ struct binary_expr {
 
 // Identifier name and type expression
 struct identifier_expr {  // Is this needed? Can it be used directly and not via a shared pointer and a shared pointer to the variant?
-    type_expr type;
+    types::t_expr type;
     std::string name;
     src_location loc;
 
     identifier_expr(identifier_expr&&) = default;
-    identifier_expr(type_expr type, std::string name, src_location loc): type(type), name(name), loc(loc) {};
+    identifier_expr(types::t_expr type, std::string name, src_location loc): type(type), name(name), loc(loc) {};
 
     inline std::string to_string() const;
 };

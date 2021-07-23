@@ -81,7 +81,7 @@ int main() {
         "\n"
         "} # end of module definition";
 
-    /*lexer lex(module.c_str());
+    lexer lex(module.c_str());
     while (lex.current().type != tok::eof) {
         auto t = lex.current();
 
@@ -92,8 +92,5 @@ int main() {
         std::cout << t << std::endl;
         lex.next();
     }
-    std::cout << lex.current() << std::endl;*/
-
-    parser p(module);
-    p.parse();
+    std::cout << lex.current() << std::endl;
 }

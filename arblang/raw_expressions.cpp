@@ -1,4 +1,5 @@
 #include <optional>
+#include <sstream>
 #include <string>
 
 #include <arblang/raw_expressions.hpp>
@@ -10,20 +11,19 @@ std::optional<binary_op> gen_binary_op(tok t) {
         case tok::plus:
             return binary_op::add;
         case tok::minus:
-            return binary_op::add;
-            return make_expr<binary_expr>(binary_op::sub, std::move(lhs), std::move(rhs), loc);
+            return binary_op::sub;
         case tok::times:
-            return binary_op::add;
+            return binary_op::mul;
         case tok::divide:
-            return binary_op::add;
+            return binary_op::div;
         case tok::pow:
-            return binary_op::add;
+            return binary_op::pow;
         case tok::ne:
-            return binary_op::add;
+            return binary_op::ne;
         case tok::lt:
-            return binary_op::add;
+            return binary_op::lt;
         case tok::le:
-            return binary_op::add;
+            return binary_op::le;
         case tok::gt:
             return binary_op::gt;
         case tok::ge:
@@ -67,7 +67,7 @@ std::optional<unary_op> gen_unary_op(tok t) {
 std::string module_expr::to_string() const {
     std::string str = name + "\n";
     for (const auto& p: parameters) {
-        std::visit([&](auto&& arg){ str+= arg->to_string();}, p);
+        std::visit([&](auto&& arg){ str+= arg.to_string();}, *p);
     }
 }
 
@@ -135,9 +135,9 @@ std::string int_expr::to_string() const {
 unary_expr::unary_expr(tok t, expr value, const src_location& loc):
     value(std::move(value)), loc(loc) {
     if (auto uop = gen_unary_op(t)) {
-        op = uop;
+        op = uop.value();
     } else {
-        throw std::runtime_error("Expected unary operator token, got ", tok.spelling);
+        throw std::runtime_error("Unexpected unary operator token");
     };
 }
 
@@ -153,9 +153,9 @@ std::string unary_expr::to_string() const {
 binary_expr::binary_expr(tok t, expr lhs, expr rhs, const src_location& loc):
     lhs(std::move(lhs)), rhs(std::move(rhs)), loc(loc) {
     if (auto bop = gen_binary_op(t)) {
-        op = bop;
+        op = bop.value();
     } else {
-        throw std::runtime_error("Expected binary operator token, got ", tok.spelling);
+        throw std::runtime_error("Unexpected binary operator token");
     };
 }
 

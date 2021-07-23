@@ -231,7 +231,7 @@ expr parser::parse_conditional() {
 }
 
 expr parser::parse_float() {
-    if (current().type != tok::real) {
+    if (current().type != tok::floatpt) {
         throw std::runtime_error("Expected floating point number, got " + current().spelling);
     }
     auto num = current();
@@ -348,7 +348,7 @@ expr parser::parse_unary() {
             return parse_let();
         case tok::if_stmt:
             return parse_conditional();
-        case tok::real:
+        case tok::floatpt:
             return parse_float();
         case tok::integer:
             return parse_int();
@@ -361,7 +361,6 @@ expr parser::parse_unary() {
 expr parser::parse_binary(expr&& lhs, const token& lop) {
     auto lop_prec = lop.precedence();
     auto rhs = parse_expr(lop_prec);
-    if (!rhs) return nullptr;
 
     auto rop = current();
     auto rop_prec = rop.precedence();
@@ -402,5 +401,70 @@ expr parser::parse_expr(int prec) {
     }
 }
 
-type_expr parser::parse_type() {}
+// Handles infix operations
+t_expr parser::parse_binary_type(t_expr&& lhs, const token& lop) {
+    auto lop_prec = lop.precedence();
+    auto rhs = parse_type(lop_prec);
+
+    auto rop = current();
+    auto rop_prec = rop.precedence();
+
+    if (rop_prec > lop_prec) {
+        throw std::runtime_error("parse_binop() : encountered operator of higher precedence");
+    }
+/*    if (rop_prec < lop_prec) {
+        switch (lop.type) {
+            // New function that automatically creates these functions udenr the hood
+            case tok::times:
+                return make_t_expr<quantity_product_type>(std::move(lhs), std::move(rhs), lop.loc);
+            case tok::divide:
+                return make_t_expr<quantity_quotient_type>(std::move(lhs), std::move(rhs), lop.loc);
+            case tok::pow: {
+                if(auto int_pow = std::get_if<int>(&v))
+                    std::cout << "variant value: " << *pval << '\n';
+                else
+                    std::cout << "failed to get value!" << '\n';
+                return make_t_expr<quantity_product_type>(std::move(lhs), std::move(rhs), lop.loc);
+            }
+        }
+    }*/
+    next(); // consume rop
+    if (rop.right_associative()) {
+        rhs = parse_binary_type(std::move(rhs), rop);
+//        return make_t_expr<binary_expr>(lop.type, std::move(lhs), std::move(rhs), lop.loc);
+    }
+    else {
+//        lhs = make_expr<binary_expr>(lop.type, std::move(lhs), std::move(rhs), lop.loc);
+        return parse_binary_type(std::move(lhs), rop);
+    }
+}
+
+
+t_expr parser::parse_type(int prec) {
+    t_expr lhs;
+    if (current().quantity()) {
+        lhs = make_t_expr<quantity_type>(current().type, current().loc);
+    }
+    else if (current().type == tok::integer) {
+        lhs = make_t_expr<integer_type>(std::stoll(current().spelling), current().loc);
+    }
+    else {
+        throw std::runtime_error("Expected quantity or integer token, got" + current().spelling);
+    }
+
+    // Combine all sub-expressions with precedence greater than prec.
+    for (;;) {
+        auto op = current();
+        auto op_prec = op.precedence();
+
+        // Note: all tokens that are not infix binary operators have a precedence of -1,
+        // so expressions like function calls will short circuit this loop here.
+        if (op_prec <= prec) return lhs;
+
+        next(); // consume the infix binary operator
+
+        lhs = parse_binary_type(std::move(lhs), op);
+    }
+
+}
 } // namespace al

@@ -1,6 +1,7 @@
 set(arblang-sources
     lexer.cpp
     parser.cpp
+    raw_expressions.cpp
     token.cpp)
 
 add_library(arblang ${arblang-sources})

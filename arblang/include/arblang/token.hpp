@@ -6,7 +6,6 @@
 #include <utility>
 
 namespace al {
-
     struct src_location {
     int line;
     int column;
@@ -52,7 +51,7 @@ enum class tok {
     unit,
 
     // numbers
-    real, integer,
+    floatpt, integer,
 
     // logical keywords
     if_stmt, else_stmt,
@@ -69,13 +68,19 @@ enum class tok {
     record, function, import,
     let, as, ret,
 
+    // quantity keywords
+    real, length, mass, time, current,
+    amount, temperature, charge, frequency,
+    voltage, resistance, capacitance, force,
+    energy, power, area, volume, concentration,
+
     // error
     error
 };
 
 struct token {
     // The spelling string contains the text of the token as it was written:
-    //   type = tok::real       : spelling = "3.1415"  (e.g.)
+    //   type = tok::floatpt    : spelling = "3.1415"  (e.g.)
     //   type = tok::identifier : spelling = "foo_bar" (e.g.)
     //   type = tok::plus       : spelling = "+"       (always)
     //   type = tok::if_else    : spelling = "if"      (always)
@@ -83,10 +88,12 @@ struct token {
     tok type;
     std::string spelling;
 
-    friend std::ostream& operator<< (std::ostream&, const token&);
-    static std::optional<tok> is_keyword(const std::string&);
+    static std::optional<tok> tokenize(const std::string&);
+    bool quantity() const;
     int precedence() const;
     bool right_associative() const;
+
+    friend std::ostream& operator<< (std::ostream&, const token&);
 
 private:
     static std::unordered_map<tok, int> binop_prec;

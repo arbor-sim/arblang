@@ -144,8 +144,8 @@ private:
             }
         }
 
-        const bool is_real = uses_scientific_notation || num_point>0;
-        return {start, (is_real? tok::real: tok::integer), std::move(str)};
+        const bool is_float = uses_scientific_notation || num_point>0;
+        return {start, (is_float? tok::floatpt: tok::integer), std::move(str)};
     }
 
     // scan identifier from stream
@@ -178,7 +178,7 @@ private:
             }
         }
 
-        return {start, token::is_keyword(identifier).value_or(tok::identifier), std::move(identifier)};
+        return {start, token::tokenize(identifier).value_or(tok::identifier), std::move(identifier)};
     }
 
     void parse() {

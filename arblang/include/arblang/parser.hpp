@@ -10,6 +10,7 @@
 
 namespace al {
 using namespace raw_ir;
+using namespace types;
 
 class parser: lexer {
 public:
@@ -39,7 +40,8 @@ private:
     expr parse_binary(expr&&, const token&);
     expr parse_expr(int prec=0);
 
-    type_expr parse_type();
+    t_expr parse_binary_type(t_expr&& lhs, const token& lop);
+    t_expr parse_type(int prec=0);
 
     std::vector<expr> modules_;
 };
