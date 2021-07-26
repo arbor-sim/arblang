@@ -33,6 +33,7 @@ expr parser::parse_module() {
     }
 
     m.name = t.spelling;
+    m.loc = t.loc;
     t = next();
     if (t.type != tok::lbrace) {
         throw std::runtime_error(pprintf("Unexpected token '%', expected '{'", t.spelling));
@@ -42,19 +43,19 @@ expr parser::parse_module() {
     while (t.type != tok::rbrace) {
         switch (t.type) {
             case tok::parameter:
-                m.constants.push_back(parse_parameter());
+                m.parameters.push_back(parse_parameter());
                 break;
             case tok::constant:
                 m.constants.push_back(parse_constant());
                 break;
             case tok::record:
-                m.constants.push_back(parse_record());
+                m.records.push_back(parse_record());
                 break;
             case tok::function:
-                m.constants.push_back(parse_function());
+                m.functions.push_back(parse_function());
                 break;
             case tok::import:
-                m.constants.push_back(parse_import());
+                m.imports.push_back(parse_import());
                 break;
             default:
                 throw std::runtime_error(pprintf("Unexpected token '%'", t.spelling));
@@ -401,7 +402,7 @@ expr parser::parse_expr(int prec) {
     }
 }
 
-// Handles infix operations
+// Handles infix type operations
 t_expr parser::parse_binary_type(t_expr&& lhs, const token& lop) {
     auto lop_prec = lop.precedence();
     auto rhs = parse_type(lop_prec);
@@ -412,29 +413,16 @@ t_expr parser::parse_binary_type(t_expr&& lhs, const token& lop) {
     if (rop_prec > lop_prec) {
         throw std::runtime_error("parse_binop() : encountered operator of higher precedence");
     }
-/*    if (rop_prec < lop_prec) {
-        switch (lop.type) {
-            // New function that automatically creates these functions udenr the hood
-            case tok::times:
-                return make_t_expr<quantity_product_type>(std::move(lhs), std::move(rhs), lop.loc);
-            case tok::divide:
-                return make_t_expr<quantity_quotient_type>(std::move(lhs), std::move(rhs), lop.loc);
-            case tok::pow: {
-                if(auto int_pow = std::get_if<int>(&v))
-                    std::cout << "variant value: " << *pval << '\n';
-                else
-                    std::cout << "failed to get value!" << '\n';
-                return make_t_expr<quantity_product_type>(std::move(lhs), std::move(rhs), lop.loc);
-            }
-        }
-    }*/
+    if (rop_prec < lop_prec) {
+        return make_t_expr<quantity_binary_type>(lop.type, std::move(lhs), std::move(rhs), lop.loc);
+    }
     next(); // consume rop
     if (rop.right_associative()) {
         rhs = parse_binary_type(std::move(rhs), rop);
-//        return make_t_expr<binary_expr>(lop.type, std::move(lhs), std::move(rhs), lop.loc);
+        return make_t_expr<quantity_binary_type>(lop.type, std::move(lhs), std::move(rhs), lop.loc);
     }
     else {
-//        lhs = make_expr<binary_expr>(lop.type, std::move(lhs), std::move(rhs), lop.loc);
+        lhs = make_t_expr<quantity_binary_type>(lop.type, std::move(lhs), std::move(rhs), lop.loc);
         return parse_binary_type(std::move(lhs), rop);
     }
 }

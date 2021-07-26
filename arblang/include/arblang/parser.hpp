@@ -10,7 +10,7 @@
 
 namespace al {
 using namespace raw_ir;
-using namespace types;
+using namespace t_raw_ir;
 
 class parser: lexer {
 public:

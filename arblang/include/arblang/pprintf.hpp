@@ -57,6 +57,13 @@ inline std::string white(std::string const& s) {
 
 // variadic printf for easy error messages
 
+template <typename T>
+std::string pprintf(const T& arg) {
+    std::stringstream str;
+    str << arg;
+    return str.str();
+}
+
 inline std::string pprintf(const char* s) {
     return s;
 }

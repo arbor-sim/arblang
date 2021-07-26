@@ -14,7 +14,7 @@ namespace al {
     src_location(int ln, int col): line(ln), column(col) {}
 };
 
-std::ostream& operator<< (std::ostream& os, src_location const& loc);
+std::ostream& operator<< (std::ostream& os, const src_location& loc);
 
 enum class tok {
     eof, // end of file

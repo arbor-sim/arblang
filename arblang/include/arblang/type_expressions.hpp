@@ -1,29 +1,30 @@
 #pragma once
 
+#include <memory>
 #include <string>
+#include <utility>
+#include <variant>
 #include <vector>
 
+#include <arblang/token.hpp>
+
 namespace al {
-namespace types {
+namespace t_raw_ir {
 
 struct integer_type;
 struct quantity_type;
-struct quantity_product_type;
-struct quantity_quotient_type;
-struct quantity_power_type;
+struct quantity_binary_type;
 struct boolean_type;
 struct record_type;
-struct record_alias;
+struct record_alias_type;
 
 using type_expr = std::variant<
     integer_type,
     quantity_type,
-    quantity_product_type,
-    quantity_quotient_type,
-    quantity_power_type,
+    quantity_binary_type,
     boolean_type,
     record_type,
-    record_alias>;
+    record_alias_type>;
 
 using t_expr = std::shared_ptr<type_expr>;
 
@@ -46,6 +47,10 @@ enum class quantity {
     area,
     volume,
     concentration
+};
+
+enum class t_binary_op {
+    mul, div, pow,
 };
 
 std::optional<quantity> gen_quantity(tok t) {
@@ -95,7 +100,7 @@ struct integer_type {
     src_location loc;
 
     integer_type(integer_type&&) = default;
-    integer_type(int val, src_location loc): val(val), loc(loc) {};
+    integer_type(int val, const src_location& loc): val(val), loc(loc) {};
 };
 
 struct quantity_type {
@@ -103,43 +108,25 @@ struct quantity_type {
     src_location loc;
 
     quantity_type(quantity_type&&) = default;
-    quantity_type(tok t, src_location loc): loc(loc) {
-        if (auto q = gen_quantity(t)) {
-            type = q.value();
-        } else {
-            throw std::runtime_error("Unexpected unary operator token");
-        };
-    };
+    quantity_type(tok t, src_location loc);
 };
 
-struct quantity_product_type {
+struct quantity_binary_type {
+    t_binary_op op;
     t_expr lhs;
     t_expr rhs;
     src_location loc;
 
-    quantity_product_type(quantity_product_type&&) = default;
-    quantity_product_type(t_expr lhs, t_expr rhs, src_location loc): lhs(lhs), rhs(rhs), loc(loc) {};
+    quantity_binary_type(quantity_binary_type&&) = default;
+    quantity_binary_type(tok t, t_expr lhs, t_expr rhs, const src_location& loc);
 };
 
-struct quantity_quotient_type {
-    t_expr lhs;
-    t_expr rhs;
+struct boolean_type {
     src_location loc;
 
-    quantity_quotient_type(quantity_quotient_type&&) = default;
-    quantity_quotient_type(t_expr lhs, t_expr rhs, src_location loc): lhs(lhs), rhs(rhs), loc(loc) {};
+    boolean_type(boolean_type&&) = default;
+    boolean_type(src_location loc): loc(loc) {};
 };
-
-struct quantity_power_type {
-    t_expr lhs;
-    int pow;
-    src_location loc;
-
-    quantity_power_type(quantity_power_type&&) = default;
-    quantity_power_type(t_expr lhs, int pow, src_location loc): lhs(lhs), pow(pow), loc(loc) {};
-};
-
-struct boolean_type {};
 
 struct record_type {
     std::vector<t_expr> fields;
@@ -149,18 +136,27 @@ struct record_type {
     record_type(std::vector<t_expr> fields, src_location loc): fields(std::move(fields)), loc(loc) {};
 };
 
-struct record_alias {
+struct record_alias_type {
     std::string name;
     src_location loc;
 
-    record_alias(record_alias&&) = default;
-    record_alias(std::string name, src_location loc): name(std::move(name)), loc(loc) {};
+    record_alias_type(record_alias_type&&) = default;
+    record_alias_type(std::string name, src_location loc): name(std::move(name)), loc(loc) {};
 };
+
+std::ostream& operator<< (std::ostream&, const t_binary_op&);
+std::ostream& operator<< (std::ostream&, const quantity&);
+std::ostream& operator<< (std::ostream&, const integer_type&);
+std::ostream& operator<< (std::ostream&, const quantity_type&);
+std::ostream& operator<< (std::ostream&, const quantity_binary_type&);
+std::ostream& operator<< (std::ostream&, const boolean_type&);
+std::ostream& operator<< (std::ostream&, const record_type&);
+std::ostream& operator<< (std::ostream&, const record_alias_type&);
 
 template <typename T, typename... Args>
 t_expr make_t_expr(Args&&... args) {
     return t_expr(new type_expr(T(std::forward<Args>(args)...)));
 }
 
-} // namespace types
+} // namespace t_raw_ir
 } // namespace al

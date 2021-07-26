@@ -1,13 +1,14 @@
 #include <algorithm>
 #include <optional>
 #include <ostream>
+#include <sstream>
 #include <unordered_map>
 
 #include <arblang/token.hpp>
 
 namespace al {
-std::ostream& operator<< (std::ostream& os, src_location const& loc) {
-    return os << "location(line " << loc.line << ", col " << loc.column << ")";
+std::ostream& operator<< (std::ostream& os, const src_location& loc) {
+    return os << "(location " << loc.line << " " << loc.column << ")";
 }
 
 std::unordered_map<std::string, tok> token::keyword_to_token = {

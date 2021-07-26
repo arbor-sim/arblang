@@ -3,6 +3,7 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <utility>
 #include <vector>
 #include <variant>
 
@@ -69,8 +70,6 @@ struct module_expr {
     std::vector<expr> records;    // expect record_expr
     std::vector<expr> imports;    // expect import_expr
     src_location loc;
-
-    inline std::string to_string() const;
 };
 
 struct parameter_expr {
@@ -79,9 +78,7 @@ struct parameter_expr {
     src_location loc;
 
     parameter_expr(parameter_expr&&) = default;
-    parameter_expr(expr iden, expr value, const src_location& loc): identifier(iden), value(value), loc(loc) {};
-
-    inline std::string to_string() const;
+    parameter_expr(expr iden, expr value, const src_location& loc): identifier(std::move(iden)), value(std::move(value)), loc(loc) {};
 };
 
 // Top level module constants
@@ -90,7 +87,8 @@ struct constant_expr {
     expr value;
     src_location loc;
 
-    inline std::string to_string() const;
+    constant_expr(constant_expr&&) = default;
+    constant_expr(expr iden, expr value, const src_location& loc): identifier(std::move(iden)), value(std::move(value)), loc(loc) {};
 };
 
 // Top level record definitions
@@ -99,18 +97,21 @@ struct record_expr {
     std::vector<expr> fields;  // expect identifier_expr
     src_location loc;
 
-    inline std::string to_string() const;
+    record_expr(record_expr&&) = default;
+    record_expr(std::string name, std::vector<expr> fields, const src_location& loc): name(std::move(name)), fields(std::move(fields)), loc(loc) {};
 };
 
 // Top level function definitions
 struct function_expr {
     std::string name;
     std::vector<expr> args;   // expect identifier_expr
-//    std::optional<type_expr> ret;
+    std::optional<t_raw_ir::t_expr> ret;
     expr body;
     src_location loc;
 
-    inline std::string to_string() const;
+    function_expr(function_expr&&) = default;
+    function_expr(std::string name, std::vector<expr> args, t_raw_ir::t_expr ret, expr body, const src_location& loc):
+        name(std::move(name)), args(std::move(args)), ret(std::move(ret)), body(std::move(body)), loc(loc) {};
 };
 
 // Top level module imports
@@ -119,7 +120,9 @@ struct import_expr {
     std::string module_alias;
     src_location loc;
 
-    inline std::string to_string() const;
+    import_expr(import_expr&&) = default;
+    import_expr(std::string module_name, std::string module_alias, const src_location& loc):
+        module_name(std::move(module_name)), module_alias(std::move(module_alias)), loc(loc) {};
 };
 
 // Function calls
@@ -131,8 +134,6 @@ struct call_expr {
     call_expr(call_expr&&) = default;
     call_expr(std::string iden, std::vector<expr> args, const src_location& loc):
         function_name(std::move(iden)), call_args(std::move(args)), loc(loc) {};
-
-    inline std::string to_string() const;
 };
 
 // Record field access
@@ -144,8 +145,6 @@ struct field_expr {
     field_expr(field_expr&&) = default;
     field_expr(std::string iden, std::string field, const src_location& loc):
         record_name(std::move(iden)), field_name(std::move(field)), loc(loc) {};
-
-    inline std::string to_string() const;
 };
 
 // Let bindings
@@ -158,8 +157,6 @@ struct let_expr {
     let_expr(let_expr&&) = default;
     let_expr(expr iden, expr value, expr body, const src_location& loc):
         identifier(std::move(iden)), value(std::move(value)), body(std::move(body)), loc(loc) {};
-
-    inline std::string to_string() const;
 };
 
 // if/else statements
@@ -172,8 +169,6 @@ struct conditional_expr {
     conditional_expr(conditional_expr&&) = default;
     conditional_expr(expr condition, expr val_true, expr val_false, const src_location& loc):
         condition(std::move(condition)), value_true(std::move(val_true)), value_false(std::move(val_false)), loc(loc) {};
-
-    inline std::string to_string() const;
 };
 
 // Number expression
@@ -186,8 +181,6 @@ struct float_expr {
     float_expr(float_expr&&) = default;
     float_expr(double value, std::string unit, const src_location& loc):
         value(value), unit(std::move(unit)), loc(loc) {};
-
-    inline std::string to_string() const;
 };
 
 
@@ -201,8 +194,6 @@ struct int_expr {
     int_expr(int_expr&&) = default;
     int_expr(int value, std::string unit, const src_location& loc):
             value(value), unit(std::move(unit)), loc(loc) {};
-
-    inline std::string to_string() const;
 };
 
 // Both boolean and arithmetic operations
@@ -215,7 +206,6 @@ struct unary_expr {
     unary_expr(tok t, expr value, const src_location& loc);
 
     bool is_boolean () const;
-    inline std::string to_string() const;
 };
 
 // Both boolean and arithmetic operations
@@ -229,20 +219,35 @@ struct binary_expr {
     binary_expr(tok t, expr lhs, expr rhs, const src_location& loc);
 
     bool is_boolean () const;
-    inline std::string to_string() const;
 };
 
 // Identifier name and type expression
 struct identifier_expr {  // Is this needed? Can it be used directly and not via a shared pointer and a shared pointer to the variant?
-    types::t_expr type;
+    t_raw_ir::t_expr type;
     std::string name;
     src_location loc;
 
     identifier_expr(identifier_expr&&) = default;
-    identifier_expr(types::t_expr type, std::string name, src_location loc): type(type), name(name), loc(loc) {};
-
-    inline std::string to_string() const;
+    identifier_expr(t_raw_ir::t_expr type, std::string name, src_location loc): type(type), name(name), loc(loc) {};
 };
+
+std::ostream& operator<< (std::ostream&, const binary_op&);
+std::ostream& operator<< (std::ostream&, const unary_op&);
+std::ostream& operator<< (std::ostream&, const module_expr&);
+std::ostream& operator<< (std::ostream&, const parameter_expr&);
+std::ostream& operator<< (std::ostream&, const constant_expr&);
+std::ostream& operator<< (std::ostream&, const record_expr&);
+std::ostream& operator<< (std::ostream&, const function_expr&);
+std::ostream& operator<< (std::ostream&, const import_expr&);
+std::ostream& operator<< (std::ostream&, const call_expr&);
+std::ostream& operator<< (std::ostream&, const field_expr&);
+std::ostream& operator<< (std::ostream&, const let_expr&);
+std::ostream& operator<< (std::ostream&, const conditional_expr&);
+std::ostream& operator<< (std::ostream&, const identifier_expr&);
+std::ostream& operator<< (std::ostream&, const float_expr&);
+std::ostream& operator<< (std::ostream&, const int_expr&);
+std::ostream& operator<< (std::ostream&, const unary_expr&);
+std::ostream& operator<< (std::ostream&, const binary_expr&);
 
 template <typename T, typename... Args>
 expr make_expr(Args&&... args) {
