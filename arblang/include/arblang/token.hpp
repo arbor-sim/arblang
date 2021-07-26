@@ -36,7 +36,7 @@ enum class tok {
     arrow,
 
     // ; '
-    semicolon, comma, dot, prime,
+    semicolon, comma, dot,
 
     // { }
     lbrace, rbrace,
@@ -70,8 +70,8 @@ enum class tok {
 
     // quantity keywords
     real, length, mass, time, current,
-    amount, temperature, charge, frequency,
-    voltage, resistance, capacitance, force,
+    amount, temperature, charge, frequency, voltage,
+    resistance, conductance, capacitance, force,
     energy, power, area, volume, concentration,
 
     // error

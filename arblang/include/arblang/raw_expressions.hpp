@@ -20,6 +20,7 @@ struct record_expr;
 struct function_expr;
 struct import_expr;
 struct call_expr;
+struct object_expr;
 struct field_expr;
 struct let_expr;
 struct conditional_expr;
@@ -37,6 +38,7 @@ using raw_expr = std::variant<
     function_expr,
     import_expr,
     call_expr,
+    object_expr,
     field_expr,
     let_expr,
     conditional_expr,
@@ -95,10 +97,12 @@ struct constant_expr {
 struct record_expr {
     std::string name;
     std::vector<expr> fields;  // expect identifier_expr
+    std::vector<std::optional<expr>> init_values;  // expect identifier_expr
     src_location loc;
 
     record_expr(record_expr&&) = default;
-    record_expr(std::string name, std::vector<expr> fields, const src_location& loc): name(std::move(name)), fields(std::move(fields)), loc(loc) {};
+    record_expr(std::string name, std::vector<expr> fields, std::vector<std::optional<expr>> init, const src_location& loc):
+        name(std::move(name)), fields(std::move(fields)), init_values(std::move(init)), loc(loc) {};
 };
 
 // Top level function definitions
@@ -110,7 +114,7 @@ struct function_expr {
     src_location loc;
 
     function_expr(function_expr&&) = default;
-    function_expr(std::string name, std::vector<expr> args, t_raw_ir::t_expr ret, expr body, const src_location& loc):
+    function_expr(std::string name, std::vector<expr> args, std::optional<t_raw_ir::t_expr> ret, expr body, const src_location& loc):
         name(std::move(name)), args(std::move(args)), ret(std::move(ret)), body(std::move(body)), loc(loc) {};
 };
 
@@ -134,6 +138,18 @@ struct call_expr {
     call_expr(call_expr&&) = default;
     call_expr(std::string iden, std::vector<expr> args, const src_location& loc):
         function_name(std::move(iden)), call_args(std::move(args)), loc(loc) {};
+};
+
+// Object creation
+struct object_expr {
+    std::string record_name;
+    std::vector<expr> record_fields;
+    std::vector<expr> record_values;
+    src_location loc;
+
+    object_expr(object_expr&&) = default;
+    object_expr(std::string record_name, std::vector<expr> record_fields, std::vector<expr> records_vals, const src_location& loc):
+            record_name(std::move(record_name)), record_fields(std::move(record_fields)), record_values(std::move(records_vals)), loc(loc) {};
 };
 
 // Record field access
@@ -223,12 +239,13 @@ struct binary_expr {
 
 // Identifier name and type expression
 struct identifier_expr {  // Is this needed? Can it be used directly and not via a shared pointer and a shared pointer to the variant?
-    t_raw_ir::t_expr type;
+    std::optional<t_raw_ir::t_expr> type;
     std::string name;
     src_location loc;
 
     identifier_expr(identifier_expr&&) = default;
     identifier_expr(t_raw_ir::t_expr type, std::string name, src_location loc): type(type), name(name), loc(loc) {};
+    identifier_expr(std::string name, src_location loc): type(std::nullopt), name(name), loc(loc) {};
 };
 
 std::ostream& operator<< (std::ostream&, const binary_op&);
@@ -240,6 +257,7 @@ std::ostream& operator<< (std::ostream&, const record_expr&);
 std::ostream& operator<< (std::ostream&, const function_expr&);
 std::ostream& operator<< (std::ostream&, const import_expr&);
 std::ostream& operator<< (std::ostream&, const call_expr&);
+std::ostream& operator<< (std::ostream&, const object_expr&);
 std::ostream& operator<< (std::ostream&, const field_expr&);
 std::ostream& operator<< (std::ostream&, const let_expr&);
 std::ostream& operator<< (std::ostream&, const conditional_expr&);

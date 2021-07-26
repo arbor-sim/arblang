@@ -1,5 +1,4 @@
 #include <cstdio>
-
 #include <iostream>
 #include <string>
 
@@ -169,7 +168,7 @@ private:
         while(1) {
             c = *stream_;
 
-            if((std::isalnum(c) || c == '_')) {
+            if((std::isalnum(c) || c == '_' || c == '\'')) {
                 identifier += c;
                 ++stream_;
             }
@@ -246,11 +245,9 @@ private:
                 case '_':
                     token_ = identifier();
                     return;
-
                 case '=': {
                     if(peek_char(1)=='=') {
-                        auto c = character();
-                        token_ = {loc(), tok::equality, {c+=character()}};
+                        token_ = {loc(), tok::equality, {character(), character()}};
                     }
                     else {
                         token_ = {loc(), tok::eq, {character()}};
@@ -259,8 +256,7 @@ private:
                 }
                 case '!': {
                     if(peek_char(1)=='=') {
-                        auto c = character();
-                        token_ = {loc(), tok::ne, {c+=character()}};
+                        token_ = {loc(), tok::ne, {character(), character()}};
                     }
                     else {
                         token_ = {loc(), tok::lnot, {character()}};
@@ -271,7 +267,12 @@ private:
                     token_ = {loc(), tok::plus, {character()}};
                     return;
                 case '-':
-                    token_ = {loc(), tok::minus, {character()}};
+                    if (peek_char(1)=='>') {
+                        token_ = {loc(), tok::ret, {character(), character()}};
+                    }
+                    else {
+                        token_ = {loc(), tok::minus, {character()}};
+                    }
                     return;
                 case '/':
                     token_ = {loc(), tok::divide, {character()}};
@@ -284,16 +285,12 @@ private:
                     return;
                 // comparison binary operators and reaction
                 case '<': {
-                    if (peek_char(1)=='-' && peek_char(1)=='>') {
-                        auto c = character();
-                        c+=character();
-                        c+=character();
-                        token_ = {loc(), tok::arrow, {c}};
+                    if (peek_char(1)=='-' && peek_char(2)=='>') {
+                        std::string s = {character(), character(), character()};
+                        token_ = {loc(), tok::arrow, s};
                     }
                     else if (peek_char(1)=='=') {
-                        auto c = character();
-                        c+=character();
-                        token_ = {loc(), tok::le, {c}};
+                        token_ = {loc(), tok::le, {character(), character()}};
                     }
                     else {
                         token_ = {loc(), tok::lt, {character()}};
@@ -302,8 +299,7 @@ private:
                 }
                 case '>': {
                     if (peek_char(1)=='=') {
-                        auto c = character();
-                        token_ = {loc(), tok::ge, {c+=character()}};
+                        token_ = {loc(), tok::ge, {character(), character()}};
                     }
                     else {
                         token_ = {loc(), tok::gt, {character()}};
@@ -315,8 +311,7 @@ private:
                         token_ = {loc(), tok::error, "Expected & in a pair."};
                         return;
                     }
-                    auto c = character();
-                    token_ = {loc(), tok::land, {c+=character()}};
+                    token_ = {loc(), tok::land, {character(), character()}};
                     return;
                 }
                 case '|': {
@@ -325,12 +320,9 @@ private:
                         return;
                     }
                     auto c = character();
-                    token_ = {loc(), tok::lor, {c+=character()}};
+                    token_ = {loc(), tok::lor, {character(), character()}};
                     return;
                 }
-                case '\'':
-                    token_ = {loc(), tok::prime, {character()}};
-                    return;
                 case ',':
                     token_ = {loc(), tok::comma, {character()}};
                     return;

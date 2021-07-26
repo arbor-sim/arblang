@@ -11,27 +11,32 @@ namespace al {
 parser::parser(const std::string& module): lexer(module.c_str()) {}
 
 void parser::parse() {
-    while (current().type != tok::eof) {
-        switch (current().type) {
+    auto t = current();
+    while (t.type != tok::eof) {
+        switch (t.type) {
             case tok::module:
                 modules_.push_back(parse_module());
                 break;
             case tok::error:
-                throw std::runtime_error(current().spelling);
+                throw std::runtime_error(t.spelling);
             default:
-                throw std::runtime_error(pprintf("Unexpected token '%'", current().spelling));
-                break;
+                throw std::runtime_error(pprintf("Unexpected token '%'", t.spelling));
         }
+        t = current();
     }
 }
 
 expr parser::parse_module() {
     module_expr m;
-    auto t = next();
+    auto t = current();
+    if (t.type != tok::module) {
+        throw std::runtime_error(pprintf("Unexpected token '%', expected identifier", t.spelling));
+    }
+    t = next(); // consume module
+
     if (t.type != tok::identifier) {
         throw std::runtime_error(pprintf("Unexpected token '%', expected identifier", t.spelling));
     }
-
     m.name = t.spelling;
     m.loc = t.loc;
     t = next(); // consume name
@@ -72,15 +77,16 @@ expr parser::parse_module() {
 }
 
 expr parser::parse_parameter() {
-    if (current().type != tok::parameter) {
-        throw std::runtime_error("Expected parameter, got " + current().spelling);
+    auto t = current();
+    if (t.type != tok::parameter) {
+        throw std::runtime_error("Expected parameter, got " + t.spelling);
     }
-    auto loc = current().loc;
-    next(); // consume 'parameter'
+    auto loc = t.loc;
+    t = next(); // consume 'parameter'
 
     auto iden = parse_identifier();
 
-    auto t = current();
+    t = current();
     if (t.type != tok::eq) {
         throw std::runtime_error("Expected =, got " + t.spelling);
     }
@@ -95,17 +101,171 @@ expr parser::parse_parameter() {
 
     return make_expr<parameter_expr>(std::move(iden), std::move(value), loc);
 };
-expr parser::parse_constant()  {return nullptr;};
-expr parser::parse_record()    {return nullptr;};
-expr parser::parse_function()  {return nullptr;};
-expr parser::parse_import()    {return nullptr;};
+
+expr parser::parse_constant()  {
+    auto t = current();
+    if (t.type != tok::constant) {
+        throw std::runtime_error("Expected constant, got " + t.spelling);
+    }
+    auto loc = t.loc;
+    next(); // consume 'constant'
+
+    auto iden = parse_identifier();
+
+    t = current();
+    if (t.type != tok::eq) {
+        throw std::runtime_error("Expected =, got " + t.spelling);
+    }
+    next(); // consume '='
+
+    auto value = parse_expr();
+
+    if (current().type != tok::semicolon) {
+        throw std::runtime_error("Expected ;, got " + current().spelling);
+    }
+    next(); // consume ';'
+
+    return make_expr<constant_expr>(std::move(iden), std::move(value), loc);
+};
+
+expr parser::parse_record()    {
+    auto t = current();
+    if (t.type != tok::record) {
+        throw std::runtime_error("Expected record, got " + t.spelling);
+    }
+    auto loc = t.loc;
+    t = next(); // consume 'record'
+
+    if (t.type != tok::identifier) {
+        throw std::runtime_error("Expected identifier, got " + t.spelling);
+    }
+    auto iden = t.spelling;
+    t = next(); // consume identifier
+
+    if (t.type != tok::lbrace) {
+        throw std::runtime_error("Expected {, got " + t.spelling);
+    }
+    t = next(); // consume '{'
+
+    std::vector<expr> fields;
+    std::vector<std::optional<expr>> values;
+    while (t.type != tok::rbrace) {
+        fields.push_back(parse_identifier());
+        t = current();
+        if (t.type == tok::eq) {
+            t = next(); // consume '='
+            values.push_back(parse_expr());
+        } else {
+            values.push_back({});
+        }
+        t = current();
+        if (t.type != tok::semicolon) {
+            throw std::runtime_error("Expected ;, got " + t.spelling);
+        }
+        t = next(); // consume ';'
+    }
+
+    if (t.type != tok::rbrace) {
+        throw std::runtime_error("Expected }, got " + t.spelling);
+    }
+    next(); // consume '}'
+
+    return make_expr<record_expr>(iden, fields, values, loc);
+};
+
+expr parser::parse_function() {
+    auto t = current();
+    if (t.type != tok::function) {
+        throw std::runtime_error("Expected function, got " + t.spelling);
+    }
+    auto loc = t.loc;
+    t = next(); // consume 'function'
+
+    if (t.type != tok::identifier) {
+        throw std::runtime_error("Expected identifier, got " + t.spelling);
+    }
+    auto name = t.spelling;
+    t = next(); // consume identifier
+
+    if (t.type != tok::lparen) {
+        throw std::runtime_error("Expected (, got " + t.spelling);
+    }
+    t = next(); // consume '{'
+
+    std::vector<expr> args;
+    while (t.type != tok::rparen) {
+        args.push_back(parse_identifier());
+        t = current();
+        if (t.type == tok::rparen) break;
+        if (t.type != tok::comma) {
+            throw std::runtime_error("Expected `,`, got " + t.spelling);
+        }
+        t = next(); // consume ','
+    }
+
+    if (t.type != tok::rparen) {
+        throw std::runtime_error("Expected ), got " + t.spelling);
+    }
+    t = next(); // consume ')'
+
+    std::optional<t_expr> ret_quantity = {};
+    if (t.type == tok::ret) {
+        next(); // consume ->
+        ret_quantity = parse_type();
+    }
+
+    t = current();
+    if (t.type != tok::lbrace) {
+        throw std::runtime_error("Expected {, got " + t.spelling);
+    }
+    t = next(); // consume '{'
+
+    auto ret_value = parse_expr();
+
+    t = current();
+    if (t.type != tok::rbrace) {
+        throw std::runtime_error("Expected }, got " + t.spelling);
+    }
+    next(); // consume '}'
+
+    return make_expr<function_expr>(name, args, ret_quantity, ret_value, loc);
+};
+
+expr parser::parse_import() {
+    auto t = current();
+    if (t.type != tok::import) {
+        throw std::runtime_error("Expected import, got " + t.spelling);
+    }
+    auto loc = current().loc;
+    t = next(); // consume 'import'
+
+    if (t.type != tok::identifier) {
+        throw std::runtime_error("Expected identifier, got " + t.spelling);
+    }
+    auto module_name = t.spelling;
+    t = next(); // consume module name
+
+    auto module_alias = module_name;
+    if (t.type == tok::as) {
+        t = next(); //consume as
+
+        if (t.type != tok::identifier) {
+            throw std::runtime_error("Expected identifier, got " + t.spelling);
+        }
+        module_alias = t.spelling;
+        next(); // consume module alias
+    }
+    return make_expr<import_expr>(module_name, module_alias, loc);
+};
 
 expr parser::parse_call() {
-    if (current().type != tok::identifier) {
-        throw std::runtime_error("Expected identifier, got " + current().spelling);
+    auto t = current();
+    if (t.type != tok::identifier) {
+        throw std::runtime_error("Expected identifier, got " + t.spelling);
     }
-    auto iden = current();
-    auto t = next(); // consume function name
+    auto iden = t.spelling;
+    auto loc = t.loc;
+    t = next(); // consume function name
 
     if (t.type != tok::lparen) {
         throw std::runtime_error("Expected '(', got " + t.spelling );
@@ -129,15 +289,17 @@ expr parser::parse_call() {
     }
     next(); // consume ')'
 
-    return make_expr<call_expr>(iden.spelling, std::move(args), iden.loc);
+    return make_expr<call_expr>(iden, std::move(args), loc);
 }
 
 expr parser::parse_field() {
-    if (current().type != tok::identifier) {
-        throw std::runtime_error("Expected identifier, got " + current().spelling);
+    auto t = current();
+    if (t.type != tok::identifier) {
+        throw std::runtime_error("Expected identifier, got " + t.spelling);
     }
-    auto iden = current();
-    auto t = next(); // consume record name
+    auto iden = t.spelling;
+    auto loc = t. loc;
+    t = next(); // consume record name
 
     if (t.type != tok::dot) {
         throw std::runtime_error("Expected '.', got " + t.spelling );
@@ -149,8 +311,49 @@ expr parser::parse_field() {
     }
     next(); // consume field name
 
-    return make_expr<field_expr>(iden.spelling, field.spelling, iden.loc);
+    return make_expr<field_expr>(iden, field.spelling, loc);
 }
+
+expr parser::parse_object() {
+    auto t = current();
+    auto loc = t.loc;
+    std::string record_name = "";
+    if (t.type == tok::identifier) {
+        record_name = t.spelling;
+    }
+    t = next(); // consume record name
+
+    if (t.type != tok::lbrace) {
+        throw std::runtime_error("Expected '{', got " + t.spelling );
+    }
+    t = next(); // consume '{'
+
+    std::vector<expr> fields, values;
+    while (t.type != tok::rbrace) {
+        fields.emplace_back(parse_identifier());
+        t = current();
+        if (t.type != tok::eq) {
+            throw std::runtime_error("Expected '=', got " + t.spelling );
+        }
+        next(); // consume '='
+        values.emplace_back(parse_expr());
+
+        // Check for semicolon between field assignments
+        t = current();
+        if (t.type != tok::semicolon) {
+            throw std::runtime_error("Expected ';' between record fields, got " + t.spelling );
+        }
+        t = next(); // consume ';'
+    }
+
+    if (t.type != tok::rbrace) {
+        throw std::runtime_error("Expected '}', got " + t.spelling );
+    }
+    next(); // consume '}'
+
+    return make_expr<object_expr>(record_name, std::move(fields), std::move(values), loc);
+}
+
 expr parser::parse_let() {
     if (current().type != tok::let) {
         throw std::runtime_error("Expected 'let', got " + current().spelling);
@@ -167,6 +370,11 @@ expr parser::parse_let() {
     t = next(); // consume '='
 
     auto value = parse_expr();
+
+    if (t.type != tok::semicolon) {
+        throw std::runtime_error("Expected ';', got " + t.spelling);
+    }
+    t = next(); // consume ';'
 
     bool expect_rbrace = false;
     if (t.type == tok::lbrace) {
@@ -277,14 +485,22 @@ expr parser::parse_int() {
     return make_expr<int_expr>(std::stoll(num.spelling), unit, num.loc);
 }
 
+// In the case of 2 leading consecutive identifiers, the first must represent a record alias type, and the second the identifier id.
+// In the case of 1 leading identifier, it must represent the identifier id; there is no type.
+// In the case of 0 leading identifiers, the type is a quantity, bool or record type.
 expr parser::parse_identifier() {
-    auto type = parse_type();
-    if (current().type != tok::identifier) {
-        throw std::runtime_error("Expected identifier, got " + current().spelling);
+    auto t = current();
+    if (t.type == tok::identifier && peek().type != tok::identifier) {
+        next(); // consume identifier;
+        return make_expr<identifier_expr>(t.spelling, t.loc);
     }
-    auto iden = current();
-    next(); // cosume identifier
-    return make_expr<identifier_expr>(type, iden.spelling, iden.loc);
+    auto type = parse_type();
+    t = current();
+    if (t.type != tok::identifier) {
+        throw std::runtime_error("Expected identifier, got " + t.spelling);
+    }
+    next(); // consume identifier
+    return make_expr<identifier_expr>(type, t.spelling, t.loc);
 }
 
 expr parser::parse_prefix() {
@@ -339,6 +555,7 @@ expr parser::parse_prefix() {
 // This is one of:
 // - call_expr
 // - field_expr
+// - object_expr
 // - identifier_expr
 // - let_expr
 // - conditional_expr
@@ -357,12 +574,18 @@ expr parser::parse_unary() {
             next(); // consume ')'
             return e;
         }
+        case tok::rbrace: {
+            return parse_object();
+        }
         case tok::identifier:
             if (peek().type == tok::lparen) {
                 return parse_call();
             }
             if (peek().type == tok::dot) {
                 return parse_field();
+            }
+            if (peek().type == tok::lbrace) {
+                return parse_object();
             }
             return parse_identifier();
         case tok::let:
@@ -425,7 +648,7 @@ expr parser::parse_expr(int prec) {
 // Handles infix type operations
 t_expr parser::parse_binary_type(t_expr&& lhs, const token& lop) {
     auto lop_prec = lop.precedence();
-    auto rhs = parse_type(lop_prec);
+    auto rhs = parse_quantity_type(lop_prec);
 
     auto rop = current();
     auto rop_prec = rop.precedence();
@@ -447,8 +670,7 @@ t_expr parser::parse_binary_type(t_expr&& lhs, const token& lop) {
     }
 }
 
-
-t_expr parser::parse_type(int prec) {
+t_expr parser::parse_quantity_type(int prec) {
     t_expr lhs;
     if (current().quantity()) {
         lhs = make_t_expr<quantity_type>(current().type, current().loc);
@@ -474,5 +696,32 @@ t_expr parser::parse_type(int prec) {
 
         lhs = parse_binary_type(std::move(lhs), op);
     }
+}
+
+t_expr parser::parse_type() {
+    t_expr lhs;
+    auto t = current();
+    if (t.type == tok::identifier) {
+        next(); // consume identifier
+        return make_t_expr<record_alias_type>(t.spelling, t.loc);
+    }
+    if (t.type == tok::rbrace) {
+        auto loc = t.loc;
+        t = next(); // consume '{'
+        std::vector<t_expr> field_types;
+        while (t.type != tok::rbrace) {
+            field_types.push_back(parse_type());
+            if (t.type != tok::semicolon) {
+                throw std::runtime_error("Expected ';', got " + current().spelling);
+            }
+            t = next(); // consume ';'
+        }
+        if (t.type != tok::rbrace) {
+            throw std::runtime_error("Expected '}', got " + current().spelling);
+        }
+        t = next(); // consume '}'
+        return make_t_expr<record_type>(field_types, loc);
+    }
+    return parse_quantity_type();
 }
 } // namespace al

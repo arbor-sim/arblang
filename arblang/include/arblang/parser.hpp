@@ -29,6 +29,7 @@ private:
 
     expr parse_call();
     expr parse_field();
+    expr parse_object();
     expr parse_let();
     expr parse_conditional();
     expr parse_identifier();
@@ -41,7 +42,8 @@ private:
     expr parse_expr(int prec=0);
 
     t_expr parse_binary_type(t_expr&& lhs, const token& lop);
-    t_expr parse_type(int prec=0);
+    t_expr parse_quantity_type(int prec=0);
+    t_expr parse_type();
 
     std::vector<expr> modules_;
 };

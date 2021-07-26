@@ -1,3 +1,4 @@
+#include <cassert>
 #include <optional>
 #include <sstream>
 #include <string>
@@ -113,9 +114,13 @@ std::ostream& operator<< (std::ostream& o, const constant_expr& e) {
 
 // record_expr
 std::ostream& operator<< (std::ostream& o, const record_expr& e) {
+    assert(e.fields.size() == e.init_values.size());
     o << "(record_expr " << e.name <<  " ";
-    for (const auto& f: e.fields) {
-        std::visit([&](auto&& c){o << c << " ";}, *f);
+    for (unsigned i = 0; i < e.fields.size(); ++i) {
+        std::visit([&](auto&& c){o << "(" << c << " ";}, *(e.fields[i]));
+        if (e.init_values[i]) {
+            std::visit([&](auto&& c){o << c << ") ";}, *(e.init_values[i].value()));
+        }
     }
     return o << e.loc << ")";
 }
@@ -147,6 +152,17 @@ std::ostream& operator<< (std::ostream& o, const call_expr& e) {
     return o << e.loc << ")";
 }
 
+// object_expr
+std::ostream& operator<< (std::ostream& o, const object_expr& e) {
+    assert(e.record_fields.size() == e.record_values.size());
+    o << "(object_expr " << e.record_name <<  " ";
+    for (unsigned i = 0; i < e.record_fields.size(); ++i) {
+        std::visit([&](auto&& c){o << "(" << c << " ";}, *(e.record_fields[i]));
+        std::visit([&](auto&& c){o << c << ") ";}, *(e.record_values[i]));
+    }
+    return o << e.loc << ")";
+}
+
 // field_expr
 std::ostream& operator<< (std::ostream& o, const field_expr& e) {
     return o << "(field_expr " << e.record_name << " " << e.field_name << " " << e.loc << ")";
@@ -173,7 +189,9 @@ std::ostream& operator<< (std::ostream& o, const conditional_expr& e) {
 // identifier_expr
 std::ostream& operator<< (std::ostream& o, const identifier_expr& e) {
     o << "(identifier_expr " << e.name << " ";
-    std::visit([&](auto&& c){o << c << " ";}, *e.type);
+    if (e.type) {
+        std::visit([&](auto&& c) { o << c << " "; }, *(e.type.value()));
+    }
     return o << e.loc << ")";
 }
 

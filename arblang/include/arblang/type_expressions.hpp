@@ -40,6 +40,7 @@ enum class quantity {
     frequency,
     voltage,
     resistance,
+    conductance,
     capacitance,
     force,
     energy,

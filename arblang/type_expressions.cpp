@@ -22,6 +22,7 @@ std::optional<quantity> gen_quantity(tok t) {
         case tok::frequency:     return quantity::frequency;
         case tok::voltage:       return quantity::voltage;
         case tok::resistance:    return quantity::resistance;
+        case tok::conductance:   return quantity::conductance;
         case tok::capacitance:   return quantity::capacitance;
         case tok::force:         return quantity::force;
         case tok::energy:        return quantity::energy;
@@ -67,6 +68,7 @@ std::ostream& operator<< (std::ostream& o, const quantity& q) {
         case quantity::frequency: return o << "frequency";
         case quantity::voltage: return o << "voltage";
         case quantity::resistance: return o << "resistance";
+        case quantity::conductance: return o << "conductance";
         case quantity::capacitance: return o << "capacitance";
         case quantity::force: return o << "force";
         case quantity::energy: return o << "energy";
