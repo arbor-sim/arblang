@@ -34,12 +34,13 @@ expr parser::parse_module() {
 
     m.name = t.spelling;
     m.loc = t.loc;
-    t = next();
+    t = next(); // consume name
+
     if (t.type != tok::lbrace) {
         throw std::runtime_error(pprintf("Unexpected token '%', expected '{'", t.spelling));
     }
+    t = next(); // consume '{'
 
-    t = next();
     while (t.type != tok::rbrace) {
         switch (t.type) {
             case tok::parameter:
@@ -60,23 +61,37 @@ expr parser::parse_module() {
             default:
                 throw std::runtime_error(pprintf("Unexpected token '%'", t.spelling));
         }
+        t = current();
     }
-    next();
+    if (t.type != tok::rbrace) {
+        throw std::runtime_error(pprintf("Unexpected token '%', expected '}'", t.spelling));
+    }
+    next(); // consume '}'
+
     return make_expr<module_expr>(std::move(m));
 }
 
 expr parser::parse_parameter() {
+    if (current().type != tok::parameter) {
+        throw std::runtime_error("Expected parameter, got " + current().spelling);
+    }
     auto loc = current().loc;
+    next(); // consume 'parameter'
 
     auto iden = parse_identifier();
 
     auto t = current();
     if (t.type != tok::eq) {
-        throw std::runtime_error("Expected e=, got " + t.spelling);
+        throw std::runtime_error("Expected =, got " + t.spelling);
     }
     next(); // consume '='
 
     auto value = parse_expr();
+
+    if (current().type != tok::semicolon) {
+        throw std::runtime_error("Expected ;, got " + current().spelling);
+    }
+    next(); // consume ';'
 
     return make_expr<parameter_expr>(std::move(iden), std::move(value), loc);
 };
@@ -238,6 +253,7 @@ expr parser::parse_float() {
     auto num = current();
     auto t = next(); // consume float
 
+    // not enough!
     std::string unit;
     if (t.type == tok::identifier) {
         unit = t.spelling;
@@ -266,7 +282,9 @@ expr parser::parse_identifier() {
     if (current().type != tok::identifier) {
         throw std::runtime_error("Expected identifier, got " + current().spelling);
     }
-    return make_expr<identifier_expr>(type, current().spelling, current().loc);
+    auto iden = current();
+    next(); // cosume identifier
+    return make_expr<identifier_expr>(type, iden.spelling, iden.loc);
 }
 
 expr parser::parse_prefix() {
@@ -291,8 +309,10 @@ expr parser::parse_prefix() {
             return make_expr<unary_expr>(prefix_op.type, std::move(e), prefix_op.loc);
         }
         case tok::minus:
+            next(); // consume '-'
             return make_expr<unary_expr>(prefix_op.type, parse_expr(), prefix_op.loc);
         case tok::plus:
+            next(); // consume '+'
             return parse_expr();
         case tok::max:
         case tok::min: {
@@ -437,8 +457,9 @@ t_expr parser::parse_type(int prec) {
         lhs = make_t_expr<integer_type>(std::stoll(current().spelling), current().loc);
     }
     else {
-        throw std::runtime_error("Expected quantity or integer token, got" + current().spelling);
+        throw std::runtime_error("Expected quantity or integer token, got " + current().spelling);
     }
+    next(); // consume 'quantity'
 
     // Combine all sub-expressions with precedence greater than prec.
     for (;;) {
@@ -453,6 +474,5 @@ t_expr parser::parse_type(int prec) {
 
         lhs = parse_binary_type(std::move(lhs), op);
     }
-
 }
 } // namespace al

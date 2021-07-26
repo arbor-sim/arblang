@@ -53,47 +53,7 @@ enum class t_binary_op {
     mul, div, pow,
 };
 
-std::optional<quantity> gen_quantity(tok t) {
-    switch (t) {
-        case tok::real:
-            return quantity::real;
-        case tok::length:
-            return quantity::length;
-        case tok::mass:
-            return quantity::mass;
-        case tok::time:
-            return quantity::time;
-        case tok::current:
-            return quantity::current;
-        case tok::amount:
-            return quantity::amount;
-        case tok::temperature:
-            return quantity::temperature;
-        case tok::charge:
-            return quantity::charge;
-        case tok::frequency:
-            return quantity::frequency;
-        case tok::voltage:
-            return quantity::voltage;
-        case tok::resistance:
-            return quantity::resistance;
-        case tok::capacitance:
-            return quantity::capacitance;
-        case tok::force:
-            return quantity::force;
-        case tok::energy:
-            return quantity::energy;
-        case tok::power:
-            return quantity::power;
-        case tok::area:
-            return quantity::area;
-        case tok::volume:
-            return quantity::volume;
-        case tok::concentration:
-            return quantity::concentration;
-        default: return {};
-    }
-}
+std::optional<quantity> gen_quantity(tok t);
 
 struct integer_type {
     int val;
