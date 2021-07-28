@@ -56,17 +56,17 @@ int main() {
         "    }\n"
         "}\n"
         "\n"
-//        "# And maybe the record syntax is too clunky, so we can import field names into scope.\n"
-//        "# \"let\" and \"with\" statements introduce a new scope for the following expression, and\n"
-//        "# functions ultimately provide a single expression.\n"
-//        "\n"
-//        "function evolution3(state s, voltage v) -> state' {\n"
-//        "    with s; # equivalent to: \"let g = s.g\"\n"
-//        "    state' {\n"
-//        "        g' = g / tau;\n"
-//        "    };\n"
-//        "}\n"
-//        "\n"
+        "# And maybe the record syntax is too clunky, so we can import field names into scope.\n"
+        "# \"let\" and \"with\" statements introduce a new scope for the following expression, and\n"
+        "# functions ultimately provide a single expression.\n"
+        "\n"
+        "function evolution3(state s, voltage v) -> state' {\n"
+        "    with s; # equivalent to: \"let g = s.g\"\n"
+        "    state' {\n"
+        "        g' = g / tau;\n"
+        "    }\n"
+        "}\n"
+        "\n"
         "# All of \"evolution\", \"evolution2\", and \"evolution3\" have the same functional type\n"
         "# and the same semantics, and should be able to be used interchangeably.\n"
         "\n"
@@ -93,6 +93,8 @@ int main() {
         lex.next();
     }
     std::cout << lex.current() << std::endl;
+
+    std::cout << std::endl;
 
     parser p(module);
     p.parse();

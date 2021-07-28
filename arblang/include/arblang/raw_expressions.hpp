@@ -23,6 +23,7 @@ struct call_expr;
 struct object_expr;
 struct field_expr;
 struct let_expr;
+struct with_expr;
 struct conditional_expr;
 struct identifier_expr;
 struct float_expr;
@@ -41,6 +42,7 @@ using raw_expr = std::variant<
     object_expr,
     field_expr,
     let_expr,
+    with_expr,
     conditional_expr,
     identifier_expr,
     float_expr,
@@ -175,6 +177,17 @@ struct let_expr {
         identifier(std::move(iden)), value(std::move(value)), body(std::move(body)), loc(loc) {};
 };
 
+// with bindings
+struct with_expr {
+    std::string identifier; // expect identifier_expr
+    expr body;
+    src_location loc;
+
+    with_expr(with_expr&&) = default;
+    with_expr(std::string iden, expr body, const src_location& loc):
+            identifier(std::move(iden)), body(std::move(body)), loc(loc) {};
+};
+
 // if/else statements
 struct conditional_expr {
     expr condition;
@@ -260,6 +273,7 @@ std::ostream& operator<< (std::ostream&, const call_expr&);
 std::ostream& operator<< (std::ostream&, const object_expr&);
 std::ostream& operator<< (std::ostream&, const field_expr&);
 std::ostream& operator<< (std::ostream&, const let_expr&);
+std::ostream& operator<< (std::ostream&, const with_expr&);
 std::ostream& operator<< (std::ostream&, const conditional_expr&);
 std::ostream& operator<< (std::ostream&, const identifier_expr&);
 std::ostream& operator<< (std::ostream&, const float_expr&);

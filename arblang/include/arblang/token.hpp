@@ -66,7 +66,7 @@ enum class tok {
     // keywoards
     module, parameter, constant,
     record, function, import,
-    let, as, ret,
+    with, let, as, ret,
 
     // quantity keywords
     real, length, mass, time, current,

@@ -218,7 +218,7 @@ expr parser::parse_function() {
     if (t.type != tok::lbrace) {
         throw std::runtime_error("Expected {, got " + t.spelling);
     }
-    t = next(); // consume '{'
+    next(); // consume '{'
 
     auto ret_value = parse_expr();
 
@@ -392,6 +392,28 @@ expr parser::parse_let() {
     return make_expr<let_expr>(std::move(iden), std::move(value), std::move(body), let.loc);
 }
 
+expr parser::parse_with() {
+    if (current().type != tok::with) {
+        throw std::runtime_error("Expected 'with', got " + current().spelling);
+    }
+    auto with = current();
+    auto t = next(); // consume 'with'
+
+    if (t.type != tok::identifier) {
+        throw std::runtime_error("Expected identifier, got " + current().spelling);
+    }
+    auto iden = t.spelling;
+    t = next(); // consume identifier
+
+    if (t.type != tok::semicolon) {
+        throw std::runtime_error("Expected ';', got " + t.spelling);
+    }
+    next(); // consume ';'
+    auto body = parse_expr();
+
+    return make_expr<with_expr>(std::move(iden), std::move(body), with.loc);
+}
+
 expr parser::parse_conditional() {
     if (current().type != tok::if_stmt) {
         throw std::runtime_error("Expected 'if', got " + current().spelling);
@@ -558,6 +580,7 @@ expr parser::parse_prefix() {
 // - object_expr
 // - identifier_expr
 // - let_expr
+// - with_expr
 // - conditional_expr
 // - float_expr
 // - int_expr
@@ -590,6 +613,8 @@ expr parser::parse_unary() {
             return parse_identifier();
         case tok::let:
             return parse_let();
+        case tok::with:
+            return parse_with();
         case tok::if_stmt:
             return parse_conditional();
         case tok::floatpt:

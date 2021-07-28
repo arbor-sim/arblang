@@ -31,6 +31,7 @@ private:
     expr parse_field();
     expr parse_object();
     expr parse_let();
+    expr parse_with();
     expr parse_conditional();
     expr parse_identifier();
     expr parse_float();
