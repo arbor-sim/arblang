@@ -5,7 +5,6 @@
 #include <unordered_map>
 #include <vector>
 
-#include <arblang/error.hpp>
 #include <arblang/token.hpp>
 
 namespace al{

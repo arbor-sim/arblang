@@ -2,8 +2,12 @@
 #include <stdexcept>
 #include <string>
 
+#define FMT_HEADER_ONLY YES
+#include <fmt/core.h>
+#include <fmt/format.h>
+#include <fmt/compile.h>
+
 #include <arblang/parser.hpp>
-#include <arblang/pprintf.hpp>
 #include <arblang/token.hpp>
 
 namespace al {
@@ -20,7 +24,7 @@ void parser::parse() {
             case tok::error:
                 throw std::runtime_error(t.spelling);
             default:
-                throw std::runtime_error(pprintf("Unexpected token '%'", t.spelling));
+                throw std::runtime_error(fmt::format("Unexpected token {}", t.spelling));
         }
         t = current();
     }
@@ -30,19 +34,19 @@ expr parser::parse_module() {
     module_expr m;
     auto t = current();
     if (t.type != tok::module) {
-        throw std::runtime_error(pprintf("Unexpected token '%', expected identifier", t.spelling));
+        throw std::runtime_error(fmt::format("Unexpected token '{}', expected identifier", t.spelling));
     }
     t = next(); // consume module
 
     if (t.type != tok::identifier) {
-        throw std::runtime_error(pprintf("Unexpected token '%', expected identifier", t.spelling));
+        throw std::runtime_error(fmt::format("Unexpected token '{}', expected identifier", t.spelling));
     }
     m.name = t.spelling;
     m.loc = t.loc;
     t = next(); // consume name
 
     if (t.type != tok::lbrace) {
-        throw std::runtime_error(pprintf("Unexpected token '%', expected '{'", t.spelling));
+        throw std::runtime_error(fmt::format("Unexpected token '{}', expected '{'", t.spelling));
     }
     t = next(); // consume '{'
 
@@ -64,12 +68,12 @@ expr parser::parse_module() {
                 m.imports.push_back(parse_import());
                 break;
             default:
-                throw std::runtime_error(pprintf("Unexpected token '%'", t.spelling));
+                throw std::runtime_error(fmt::format("Unexpected token '{}'", t.spelling));
         }
         t = current();
     }
     if (t.type != tok::rbrace) {
-        throw std::runtime_error(pprintf("Unexpected token '%', expected '}'", t.spelling));
+        throw std::runtime_error(fmt::format("Unexpected token '{}', expected '}'", t.spelling));
     }
     next(); // consume '}'
 

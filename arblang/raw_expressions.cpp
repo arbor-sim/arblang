@@ -77,21 +77,21 @@ std::ostream& operator<< (std::ostream& o, const unary_op& op) {
 
 // module_expr
 std::ostream& operator<< (std::ostream& o, const module_expr& e) {
-    o << "(module_expr " << e.name << "\n";
+    o << "(module_expr " << e.name << " ";
     for (const auto& p: e.parameters) {
-        std::visit([&](auto&& c){o << c << "\n";}, *p);
+        std::visit([&](auto&& c){o << c << " ";}, *p);
     }
     for (const auto& p: e.constants) {
-        std::visit([&](auto&& c){o << c << "\n";}, *p);
+        std::visit([&](auto&& c){o << c << " ";}, *p);
     }
     for (const auto& p: e.functions) {
-        std::visit([&](auto&& c){o << c << "\n";}, *p);
+        std::visit([&](auto&& c){o << c << " ";}, *p);
     }
     for (const auto& p: e.records) {
-        std::visit([&](auto&& c){o << c << "\n";}, *p);
+        std::visit([&](auto&& c){o << c << " ";}, *p);
     }
     for (const auto& p: e.imports) {
-        std::visit([&](auto&& c){o << c << "\n";}, *p);
+        std::visit([&](auto&& c){o << c << " ";}, *p);
     }
     return o << ")";
 }

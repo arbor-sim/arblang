@@ -3,17 +3,10 @@
 #include <string>
 
 #include <arblang/lexer.hpp>
-#include <arblang/pprintf.hpp>
 #include <arblang/token.hpp>
 
 namespace al{
 // helpers for identifying character types
-inline bool is_alphanumeric(char c) {
-    return std::isalnum(static_cast<unsigned char>(c));
-}
-inline bool is_eof(char c) {
-    return (c==0);
-}
 inline bool is_plusminus(char c) {
     return (c=='+' || c=='-');
 }
@@ -26,10 +19,8 @@ class lexer_impl {
 
 public:
 
-    lexer_impl(const char* begin) :
-            line_start_(begin), stream_(begin), line_(0) {
-        // Prime the first token.
-        parse();
+    lexer_impl(const char* begin): line_start_(begin), stream_(begin), line_(0) {
+        parse(); // prepare the first token
     }
 
     // Return the current token in the stream.
@@ -92,14 +83,13 @@ private:
 
     token number() {
         using namespace std::string_literals;
-
         auto start = loc();
         std::string str;
         char c = *stream_;
 
         // Start counting the number of points in the number.
         auto num_point = (c=='.' ? 1 : 0);
-        auto uses_scientific_notation = 0;
+        auto uses_scientific_notation = false;
 
         str += c;
         ++stream_;
@@ -122,10 +112,10 @@ private:
                 }
             }
             else if (!uses_scientific_notation && (c=='e' || c=='E')) {
-                if ( std::isdigit(peek_char(1)) ||
-                     (is_plusminus(peek_char(1)) && std::isdigit(peek_char(2))))
-                {
-                    uses_scientific_notation++;
+                auto c0 = peek_char(1);
+                auto c1 = peek_char(2);
+                if (std::isdigit(c0) || (is_plusminus(c0) && std::isdigit(c1))) {
+                    uses_scientific_notation = true;
                     str += c;
                     stream_++;
                     // Consume the next char if +/-
@@ -142,17 +132,12 @@ private:
                 break;
             }
         }
-
         const bool is_float = uses_scientific_notation || num_point>0;
         return {start, (is_float? tok::floatpt: tok::integer), std::move(str)};
     }
 
-    // scan identifier from stream
-    //  examples of valid names:
-    //      _1 _a ndfs var9 num_a This_
-    //  examples of invalid names:
-    //      _ __ 9val 9_
-    token identifier() {
+    // Scan identifier from stream
+    token symbol() {
         using namespace std::string_literals;
         auto start = loc();
         std::string identifier;
@@ -160,29 +145,25 @@ private:
 
         // Assert that current position is at the start of an identifier
         if(!(std::isalpha(c) || c == '_')) {
-            return {start, tok::error, "Internal error: lexer attempting to read identifier when none is available '.'"s};
+            return {start, tok::error, "Expected identifier start."s};
         }
-
-        identifier += c;
+        identifier+=c;
         ++stream_;
         while(1) {
             c = *stream_;
-
             if((std::isalnum(c) || c == '_' || c == '\'')) {
-                identifier += c;
+                identifier+=c;
                 ++stream_;
             }
             else {
                 break;
             }
         }
-
         return {start, token::tokenize(identifier).value_or(tok::identifier), std::move(identifier)};
     }
 
     void parse() {
         using namespace std::string_literals;
-
         while(!empty()) {
             switch(*stream_) {
                 // end of file
@@ -209,7 +190,7 @@ private:
                 case '\r':
                     ++stream_;
                     if(*stream_ != '\n') {
-                        token_ = {loc(), tok::error, "Expected new line after cariage return (bad line ending)"};
+                        token_ = {loc(), tok::error, "Expected new line after carriage return (bad line ending)"};
                         return;
                     }
                     continue; // catch the new line on the next pass
@@ -242,8 +223,7 @@ private:
                 // identifier or keyword
                 case 'a' ... 'z':
                 case 'A' ... 'Z':
-                case '_':
-                    token_ = identifier();
+                    token_ = symbol();
                     return;
                 case '=': {
                     if(peek_char(1)=='=') {
@@ -319,7 +299,6 @@ private:
                         token_ = {loc(), tok::error, "Expected | in a pair."};
                         return;
                     }
-                    auto c = character();
                     token_ = {loc(), tok::lor, {character(), character()}};
                     return;
                 }
@@ -345,7 +324,7 @@ private:
 };
 
 lexer::lexer(const char* begin):
-        impl_(new lexer_impl(begin))
+    impl_(new lexer_impl(begin))
 {}
 
 const token& lexer::current() {
