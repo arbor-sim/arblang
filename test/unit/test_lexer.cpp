@@ -13,48 +13,46 @@ TEST(lexer, symbols) {
         auto lex = lexer(symbols.c_str());
 
         auto t1 = lex.current();
-        EXPECT_EQ(t1.type, tok::identifier);
-        EXPECT_EQ(t1.spelling, "foo");
+        EXPECT_EQ(tok::identifier, t1.type);
+        EXPECT_EQ("foo", t1.spelling);
 
         auto t2 = lex.next();
-        EXPECT_EQ(t2.type, tok::identifier);
-        EXPECT_EQ(t2.spelling, "buzz");
+        EXPECT_EQ(tok::identifier, t2.type);
+        EXPECT_EQ("buzz", t2.spelling);
 
         auto t3 = lex.next();
-        EXPECT_EQ(t3.type, tok::comma);
+        EXPECT_EQ(tok::comma, t3.type);
 
         auto t4 = lex.next();
-        EXPECT_EQ(t4.type, tok::identifier);
-        EXPECT_EQ(t4.spelling, "f_zz");
+        EXPECT_EQ(tok::identifier, t4.type);
+        EXPECT_EQ("f_zz", t4.spelling);
 
         auto t5 = lex.next();
-        EXPECT_EQ(t5.type, tok::semicolon);
+        EXPECT_EQ(tok::semicolon, t5.type);
 
         auto t6 = lex.next();
-        EXPECT_EQ(t6.type, tok::identifier);
-        EXPECT_EQ(t6.spelling, "foo'");
+        EXPECT_EQ(tok::identifier, t6.type);
+        EXPECT_EQ("foo'", t6.spelling);
 
         auto t7 = lex.next();
-        EXPECT_EQ(t7.type, tok::identifier);
-        EXPECT_EQ(t7.spelling, "Foo'_");
+        EXPECT_EQ(tok::identifier, t7.type);
+        EXPECT_EQ("Foo'_", t7.spelling);
 
         auto t8 = lex.next();
-        EXPECT_EQ(t8.type, tok::identifier);
-        EXPECT_EQ(t8.spelling, "Foo'bar");
+        EXPECT_EQ(tok::identifier, t8.type);
+        EXPECT_EQ("Foo'bar", t8.spelling);
 
         auto t9 = lex.next();
-        EXPECT_EQ(t9.type, tok::identifier);
-        EXPECT_EQ(t9.spelling, "foo_Bar'_'");
+        EXPECT_EQ(tok::identifier, t9.type);
+        EXPECT_EQ("foo_Bar'_'", t9.spelling);
 
         auto tlast = lex.next();
-        EXPECT_EQ(tlast.type, tok::eof);
+        EXPECT_EQ(tok::eof, tlast.type);
     }
     {
         std::string error = "_foo ";
-        auto lex = lexer(error.c_str());
-
-        auto t1 = lex.current();
-        EXPECT_EQ(t1.type, tok::error);
+        auto t1 = lexer(error.c_str()).current();
+        EXPECT_EQ(tok::error, t1.type);
     }
 }
 
@@ -64,43 +62,43 @@ TEST(lexer, keywords) {
 
     // should skip all white space and go straight to eof
     auto t1 = lex.current();
-    EXPECT_EQ(t1.type, tok::if_stmt);
-    EXPECT_EQ(t1.spelling, "if");
+    EXPECT_EQ(tok::if_stmt, t1.type);
+    EXPECT_EQ("if", t1.spelling);
 
     auto t2 = lex.next();
-    EXPECT_EQ(t2.type, tok::else_stmt);
-    EXPECT_EQ(t2.spelling, "else");
+    EXPECT_EQ(tok::else_stmt, t2.type);
+    EXPECT_EQ("else", t2.spelling);
 
     auto t3 = lex.next();
-    EXPECT_EQ(t3.type, tok::parameter);
-    EXPECT_EQ(t3.spelling, "parameter");
+    EXPECT_EQ(tok::parameter, t3.type);
+    EXPECT_EQ("parameter", t3.spelling);
 
     auto t4 = lex.next();
-    EXPECT_EQ(t4.type, tok::import);
-    EXPECT_EQ(t4.spelling, "import");
+    EXPECT_EQ(tok::import, t4.type);
+    EXPECT_EQ("import", t4.spelling);
 
     auto t5 = lex.next();
-    EXPECT_EQ(t5.type, tok::let);
-    EXPECT_EQ(t5.spelling, "let");
+    EXPECT_EQ(tok::let, t5.type);
+    EXPECT_EQ("let", t5.spelling);
 
     auto t6 = lex.next();
-    EXPECT_EQ(t6.type, tok::with);
-    EXPECT_EQ(t6.spelling, "with");
+    EXPECT_EQ(tok::with, t6.type);
+    EXPECT_EQ("with", t6.spelling);
 
     auto t7 = lex.next();
-    EXPECT_EQ(t7.type, tok::length);
-    EXPECT_EQ(t7.spelling, "length");
+    EXPECT_EQ(tok::length, t7.type);
+    EXPECT_EQ("length", t7.spelling);
 
     auto t8 = lex.next();
-    EXPECT_EQ(t8.type, tok::time);
-    EXPECT_EQ(t8.spelling, "time");
+    EXPECT_EQ(tok::time, t8.type);
+    EXPECT_EQ("time", t8.spelling);
 
     auto t9 = lex.next();
-    EXPECT_EQ(t9.type, tok::conductance);
-    EXPECT_EQ(t9.spelling, "conductance");
+    EXPECT_EQ(tok::conductance, t9.type);
+    EXPECT_EQ("conductance", t9.spelling);
 
     auto tlast = lex.next();
-    EXPECT_EQ(tlast.type, tok::eof);
+    EXPECT_EQ(tok::eof, tlast.type);
 }
 
 TEST(lexer, whitespace) {
@@ -108,7 +106,7 @@ TEST(lexer, whitespace) {
     auto lex = lexer(whitespace.c_str());
 
     auto t1 = lex.current();
-    EXPECT_EQ(t1.type, tok::eof);
+    EXPECT_EQ(tok::eof, t1.type);
 }
 
 TEST(lexer, newline) {
@@ -118,36 +116,36 @@ TEST(lexer, newline) {
 
         // get foo
         auto t1 = lex.current();
-        EXPECT_EQ(t1.type, tok::identifier);
-        EXPECT_EQ(t1.spelling, "foo");
-        EXPECT_EQ(t1.loc.line, 1);
-        EXPECT_EQ(t1.loc.column, 1);
+        EXPECT_EQ(tok::identifier, t1.type);
+        EXPECT_EQ("foo", t1.spelling);
+        EXPECT_EQ(1, t1.loc.line);
+        EXPECT_EQ(1, t1.loc.column);
 
         auto t2 = lex.next();
-        EXPECT_EQ(t2.type, tok::identifier);
-        EXPECT_EQ(t2.spelling, "bar");
-        EXPECT_EQ(t2.loc.line, 2);
-        EXPECT_EQ(t2.loc.column, 5);
+        EXPECT_EQ(tok::identifier, t2.type);
+        EXPECT_EQ("bar", t2.spelling);
+        EXPECT_EQ(2, t2.loc.line);
+        EXPECT_EQ(5, t2.loc.column);
 
         auto t3 = lex.next();
-        EXPECT_EQ(t3.type, tok::plus);
-        EXPECT_EQ(t3.spelling, "+");
-        EXPECT_EQ(t3.loc.line, 3);
-        EXPECT_EQ(t3.loc.column, 2);
+        EXPECT_EQ(tok::plus, t3.type);
+        EXPECT_EQ("+", t3.spelling);
+        EXPECT_EQ(3, t3.loc.line);
+        EXPECT_EQ(2, t3.loc.column);
 
         // test for carriage return + newline, i.e. \r\n
         auto t4 = lex.next();
-        EXPECT_EQ(t4.type, tok::minus);
-        EXPECT_EQ(t4.spelling, "-");
-        EXPECT_EQ(t4.loc.line, 4);
-        EXPECT_EQ(t4.loc.column, 1);
+        EXPECT_EQ(tok::minus, t4.type);
+        EXPECT_EQ("-", t4.spelling);
+        EXPECT_EQ(4, t4.loc.line);
+        EXPECT_EQ(1, t4.loc.column);
     }
     {
         std::string error = " \r";
         auto lex = lexer(error.c_str());
 
         auto t1 = lex.current();
-        EXPECT_EQ(t1.type, tok::error);
+        EXPECT_EQ(tok::error, t1.type);
     }
 }
 
@@ -156,42 +154,42 @@ TEST(lexer, operators) {
     auto lex = lexer(ops.c_str());
 
     auto t1 = lex.current();
-    EXPECT_EQ(t1.type, tok::plus);
+    EXPECT_EQ(tok::plus, t1.type);
 
     auto t2 = lex.next();
-    EXPECT_EQ(t2.type, tok::minus);
+    EXPECT_EQ(tok::minus, t2.type);
 
     auto t3 = lex.next();
-    EXPECT_EQ(t3.type, tok::divide);
+    EXPECT_EQ(tok::divide, t3.type);
 
     auto t4 = lex.next();
-    EXPECT_EQ(t4.type, tok::times);
+    EXPECT_EQ(tok::times, t4.type);
 
     auto t5 = lex.next();
-    EXPECT_EQ(t5.type, tok::comma);
+    EXPECT_EQ(tok::comma, t5.type);
 
     // test that identifier followed by = is parsed correctly
     auto t6 = lex.next();
-    EXPECT_EQ(t6.type, tok::identifier);
+    EXPECT_EQ(tok::identifier, t6.type);
 
     auto t7 = lex.next();
-    EXPECT_EQ(t7.type, tok::eq);
+    EXPECT_EQ(tok::eq, t7.type);
 
     auto t8 = lex.next();
-    EXPECT_EQ(t8.type, tok::pow);
+    EXPECT_EQ(tok::pow, t8.type);
 
     auto t9 = lex.next();
-    EXPECT_EQ(t9.type, tok::identifier);
-    EXPECT_EQ(t9.spelling, "h'");
+    EXPECT_EQ(tok::identifier, t9.type);
+    EXPECT_EQ("h'", t9.spelling);
 
     auto t11 = lex.next();
-    EXPECT_EQ(t11.type, tok::arrow);
+    EXPECT_EQ(tok::arrow, t11.type);
 
     auto t12 = lex.next();
-    EXPECT_EQ(t12.type, tok::ret);
+    EXPECT_EQ(tok::ret, t12.type);
 
     auto tlast = lex.next();
-    EXPECT_EQ(tlast.type, tok::eof);
+    EXPECT_EQ(tok::eof, tlast.type);
 }
 
 TEST(lexer, comparison_operators) {
@@ -200,34 +198,34 @@ TEST(lexer, comparison_operators) {
         auto lex = lexer(ops.c_str());
 
         auto t1 = lex.current();
-        EXPECT_EQ(t1.type, tok::lt);
+        EXPECT_EQ(tok::lt, t1.type);
 
         auto t2 = lex.next();
-        EXPECT_EQ(t2.type, tok::le);
+        EXPECT_EQ(tok::le, t2.type);
 
         auto t3 = lex.next();
-        EXPECT_EQ(t3.type, tok::gt);
+        EXPECT_EQ(tok::gt, t3.type);
 
         auto t4 = lex.next();
-        EXPECT_EQ(t4.type, tok::ge);
+        EXPECT_EQ(tok::ge, t4.type);
 
         auto t5 = lex.next();
-        EXPECT_EQ(t5.type, tok::equality);
+        EXPECT_EQ(tok::equality, t5.type);
 
         auto t6 = lex.next();
-        EXPECT_EQ(t6.type, tok::ne);
+        EXPECT_EQ(tok::ne, t6.type);
 
         auto t7 = lex.next();
-        EXPECT_EQ(t7.type, tok::land);
+        EXPECT_EQ(tok::land, t7.type);
 
         auto t8 = lex.next();
-        EXPECT_EQ(t8.type, tok::lor);
+        EXPECT_EQ(tok::lor, t8.type);
 
         auto t9 = lex.next();
-        EXPECT_EQ(t9.type, tok::lnot);
+        EXPECT_EQ(tok::lnot, t9.type);
 
         auto tlast = lex.next();
-        EXPECT_EQ(tlast.type, tok::eof);
+        EXPECT_EQ(tok::eof, tlast.type);
     }
     {
         auto lex = lexer("&");
@@ -252,13 +250,13 @@ TEST(lexer, braces) {
     auto lex = lexer(str.c_str());
 
     auto t1 = lex.current();
-    EXPECT_EQ(t1.type, tok::identifier);
+    EXPECT_EQ(tok::identifier, t1.type);
 
     auto t2 = lex.next();
-    EXPECT_EQ(t2.type, tok::rbrace);
+    EXPECT_EQ(tok::rbrace, t2.type);
 
     auto t3 = lex.next();
-    EXPECT_EQ(t3.type, tok::eof);
+    EXPECT_EQ(tok::eof, t3.type);
 }
 
 TEST(lexer, comments) {
@@ -268,14 +266,14 @@ TEST(lexer, comments) {
     auto lex = lexer(comments.c_str());
 
     auto t1 = lex.current();
-    EXPECT_EQ(t1.type, tok::identifier);
+    EXPECT_EQ(tok::identifier, t1.type);
 
     auto t2 = lex.next();
-    EXPECT_EQ(t2.type, tok::identifier);
-    EXPECT_EQ(t2.loc.line, 2);
+    EXPECT_EQ(tok::identifier, t2.type);
+    EXPECT_EQ(2, t2.loc.line);
 
     auto t3 = lex.next();
-    EXPECT_EQ(t3.type, tok::eof);
+    EXPECT_EQ(tok::eof, t3.type);
 }
 
 TEST(lexer, numbers) {
