@@ -60,7 +60,6 @@ struct integer_type {
     int val;
     src_location loc;
 
-    integer_type(integer_type&&) = default;
     integer_type(int val, const src_location& loc): val(val), loc(loc) {};
 };
 
@@ -68,7 +67,6 @@ struct quantity_type {
     quantity type;
     src_location loc;
 
-    quantity_type(quantity_type&&) = default;
     quantity_type(tok t, src_location loc);
 };
 
@@ -78,14 +76,12 @@ struct quantity_binary_type {
     t_expr rhs;
     src_location loc;
 
-    quantity_binary_type(quantity_binary_type&&) = default;
     quantity_binary_type(tok t, t_expr lhs, t_expr rhs, const src_location& loc);
 };
 
 struct boolean_type {
     src_location loc;
 
-    boolean_type(boolean_type&&) = default;
     boolean_type(src_location loc): loc(loc) {};
 };
 
@@ -93,7 +89,6 @@ struct record_type {
     std::vector<t_expr> fields;
     src_location loc;
 
-    record_type(record_type&&) = default;
     record_type(std::vector<t_expr> fields, src_location loc): fields(std::move(fields)), loc(loc) {};
 };
 
@@ -101,7 +96,6 @@ struct record_alias_type {
     std::string name;
     src_location loc;
 
-    record_alias_type(record_alias_type&&) = default;
     record_alias_type(std::string name, src_location loc): name(std::move(name)), loc(loc) {};
 };
 

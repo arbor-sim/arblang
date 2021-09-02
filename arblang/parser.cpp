@@ -86,9 +86,9 @@ expr parser::parse_parameter() {
         throw std::runtime_error("Expected parameter, got " + t.spelling);
     }
     auto loc = t.loc;
-    t = next(); // consume 'parameter'
+    next(); // consume 'parameter'
 
-    auto iden = parse_identifier();
+    auto iden = parse_typed_identifier();
 
     t = current();
     if (t.type != tok::eq) {
@@ -114,7 +114,7 @@ expr parser::parse_constant()  {
     auto loc = t.loc;
     next(); // consume 'constant'
 
-    auto iden = parse_identifier();
+    auto iden = parse_typed_identifier();
 
     t = current();
     if (t.type != tok::eq) {
@@ -154,7 +154,7 @@ expr parser::parse_record()    {
     std::vector<expr> fields;
     std::vector<std::optional<expr>> values;
     while (t.type != tok::rbrace) {
-        fields.push_back(parse_identifier());
+        fields.push_back(parse_typed_identifier());
         t = current();
         if (t.type == tok::eq) {
             t = next(); // consume '='
@@ -198,7 +198,7 @@ expr parser::parse_function() {
 
     std::vector<expr> args;
     while (t.type != tok::rparen) {
-        args.push_back(parse_identifier());
+        args.push_back(parse_typed_identifier());
         t = current();
         if (t.type == tok::rparen) break;
         if (t.type != tok::comma) {
@@ -334,7 +334,7 @@ expr parser::parse_object() {
 
     std::vector<expr> fields, values;
     while (t.type != tok::rbrace) {
-        fields.emplace_back(parse_identifier());
+        fields.emplace_back(parse_typed_identifier());
         t = current();
         if (t.type != tok::eq) {
             throw std::runtime_error("Expected '=', got " + t.spelling );
@@ -365,7 +365,7 @@ expr parser::parse_let() {
     auto let = current();
     auto t = next(); // consume 'let'
 
-    auto iden = parse_identifier();
+    auto iden = parse_typed_identifier();
 
     t = current();
     if (t.type != tok::eq) {
@@ -375,6 +375,7 @@ expr parser::parse_let() {
 
     auto value = parse_expr();
 
+    t = current();
     if (t.type != tok::semicolon) {
         throw std::runtime_error("Expected ';', got " + t.spelling);
     }
@@ -511,22 +512,30 @@ expr parser::parse_int() {
     return make_expr<int_expr>(std::stoll(num.spelling), unit, num.loc);
 }
 
+expr parser::parse_identifier() {
+    if (current().type != tok::identifier) {
+        throw std::runtime_error("Expected identifier, got " + current().spelling);
+    }
+    auto t = current();
+    next(); // consume identifier;
+    return make_expr<identifier_expr>(t.spelling, t.loc);
+}
+
 // In the case of 2 leading consecutive identifiers, the first must represent a record alias type, and the second the identifier id.
 // In the case of 1 leading identifier, it must represent the identifier id; there is no type.
 // In the case of 0 leading identifiers, the type is a quantity, bool or record type.
-expr parser::parse_identifier() {
-    auto t = current();
-    if (t.type == tok::identifier && peek().type != tok::identifier) {
-        next(); // consume identifier;
-        return make_expr<identifier_expr>(t.spelling, t.loc);
+expr parser::parse_typed_identifier() {
+    if (current().type != tok::identifier) {
+        throw std::runtime_error("Expected identifier, got " + current().spelling);
     }
-    auto type = parse_type();
-    t = current();
-    if (t.type != tok::identifier) {
-        throw std::runtime_error("Expected identifier, got " + t.spelling);
+    auto iden = current();
+    auto t = next(); // consume identifier;
+    if (t.type == tok::colon) {
+        t = next(); // consume colon;
+        auto type = parse_type();
+        return make_expr<identifier_expr>(type, iden.spelling, iden.loc);
     }
-    next(); // consume identifier
-    return make_expr<identifier_expr>(type, t.spelling, t.loc);
+    return make_expr<identifier_expr>(iden.spelling, iden.loc);
 }
 
 expr parser::parse_prefix() {
@@ -539,12 +548,14 @@ expr parser::parse_prefix() {
         case tok::sin:
         case tok::abs:
         case tok::lnot: {
-            if (current().type != tok::lparen) {
+            auto t = next(); // consume op
+            if (t.type != tok::lparen) {
                 throw std::runtime_error("Expected '(' expression, got " + current().spelling);
             }
-            next(); // consume '('
+            t = next(); // consume '('
             auto e = parse_expr();
-            if (current().type != tok::rparen) {
+            t = current();
+            if (t.type != tok::rparen) {
                 throw std::runtime_error("Expected ')' expression, got " + current().spelling);
             }
             next(); // consume ')'
@@ -558,7 +569,8 @@ expr parser::parse_prefix() {
             return parse_expr();
         case tok::max:
         case tok::min: {
-            if (current().type != tok::lparen) {
+            auto t = next(); // consume op
+            if (t.type != tok::lparen) {
                 throw std::runtime_error("Expected '(' expression, got " + current().spelling);
             }
             next(); // consume '('
@@ -574,7 +586,7 @@ expr parser::parse_prefix() {
             next(); // consume ')'
             return make_expr<binary_expr>(prefix_op.type, std::move(lhs), std::move(rhs), prefix_op.loc);
         }
-        default: throw std::runtime_error("expected prefix operator, got " + prefix_op.spelling);
+        default: throw std::runtime_error("Expected prefix operator, got " + prefix_op.spelling);
     }
 }
 
@@ -593,8 +605,9 @@ expr parser::parse_unary() {
     auto t = current();
     switch (t.type) {
         case tok::lparen: {
-            t = next(); // consume '('
+            next(); // consume '('
             auto e = parse_expr();
+            t = current();
             if (t.type != tok::rparen) {
                 throw std::runtime_error("Expected ')' expression, got " + t.spelling);
             }
@@ -710,7 +723,11 @@ t_expr parser::parse_quantity_type(int prec) {
     else {
         throw std::runtime_error("Expected quantity or integer token, got " + current().spelling);
     }
-    next(); // consume 'quantity'
+    auto t = next(); // consume 'quantity'
+
+    if (!(t.type == tok::times || t.type == tok::divide || t.type == tok::pow)) {
+        return lhs;
+    }
 
     // Combine all sub-expressions with precedence greater than prec.
     for (;;) {
@@ -748,7 +765,7 @@ t_expr parser::parse_type() {
         if (t.type != tok::rbrace) {
             throw std::runtime_error("Expected '}', got " + current().spelling);
         }
-        t = next(); // consume '}'
+        next(); // consume '}'
         return make_t_expr<record_type>(field_types, loc);
     }
     return parse_quantity_type();

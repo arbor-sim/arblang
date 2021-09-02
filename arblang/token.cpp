@@ -10,6 +10,9 @@ namespace al {
 std::ostream& operator<< (std::ostream& os, const src_location& loc) {
     return os << "(location " << loc.line << " " << loc.column << ")";
 }
+bool operator==(const src_location& lhs, const src_location& rhs) {
+    return (lhs.line == rhs.line) && (lhs.column == rhs.column);
+}
 
 std::unordered_map<std::string, tok> token::keyword_to_token = {
     {"if",            tok::if_stmt},
@@ -71,6 +74,7 @@ std::unordered_map<tok, std::string> token::token_to_string = {
     {tok::lor,           "||"},
     {tok::arrow,         "<->"},
     {tok::semicolon,     ";"},
+    {tok::colon,         ":"},
     {tok::comma,         ","},
     {tok::dot,           "."},
     {tok::lbrace,        "{"},
@@ -130,9 +134,9 @@ std::unordered_map<tok, int> token::binop_prec = {
     {tok::equality, 4},
     {tok::ne,       4},
     {tok::lt,       5},
-    {tok::le,      5},
+    {tok::le,       5},
     {tok::gt,       5},
-    {tok::ge,      5},
+    {tok::ge,       5},
     {tok::plus,     6},
     {tok::minus,    6},
     {tok::times,    7},

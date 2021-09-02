@@ -6,7 +6,7 @@
 #include <utility>
 
 namespace al {
-    struct src_location {
+struct src_location {
     int line;
     int column;
 
@@ -15,6 +15,7 @@ namespace al {
 };
 
 std::ostream& operator<< (std::ostream& os, const src_location& loc);
+bool operator==(const src_location& lhs, const src_location& rhs);
 
 enum class tok {
     eof, // end of file
@@ -35,8 +36,8 @@ enum class tok {
     // <->
     arrow,
 
-    // ; '
-    semicolon, comma, dot,
+    // ; : , .
+    semicolon, colon, comma, dot,
 
     // { }
     lbrace, rbrace,

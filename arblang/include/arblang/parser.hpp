@@ -19,7 +19,6 @@ public:
 
     const std::vector<expr>& modules() {return modules_;};
 
-private:
     expr parse_module();
     expr parse_parameter();
     expr parse_constant();
@@ -34,6 +33,7 @@ private:
     expr parse_with();
     expr parse_conditional();
     expr parse_identifier();
+    expr parse_typed_identifier();
     expr parse_float();
     expr parse_int();
     expr parse_prefix();
@@ -46,6 +46,7 @@ private:
     t_expr parse_quantity_type(int prec=0);
     t_expr parse_type();
 
+private:
     std::vector<expr> modules_;
 };
 } // namespace al

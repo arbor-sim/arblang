@@ -308,6 +308,9 @@ private:
                 case ';':
                     token_ = {loc(), tok::semicolon, {character()}};
                     return;
+                case ':':
+                    token_ = {loc(), tok::colon, {character()}};
+                    return;
                 default:
                     token_ = {loc(), tok::error, std::string("Unexpected character '")+character()+"'"};
                     return;
