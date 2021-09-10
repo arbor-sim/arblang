@@ -188,7 +188,7 @@ Symbols correspond to Arblang identifiers and keywords. Arblang keywords are gen
 >
 > _symbol-start_ ::= {L} | {Nl} | {Other_ID_Start}
 >
-> _symbol-continue_ ::= _symbol-start_ | {Nd} | {Mn} | {Mc} | {Pc} | _prime-mark_
+> _symbol-continue_ ::= _symbol-start_ | {Nd} | {Mn} | {Mc} | {Pc} | _prime-mark_ | U+221E `∞` INFINITY | U+2044 FRACTION SLASH
 >
 > _prime-mark_ ::= U+0027 `'` APOSTROPHE | U+02B9 `ʹ` MODIFIER LETTER PRIME | U+2032 `′` PRIME
 >
@@ -205,7 +205,8 @@ Identifiers broadly follow the conventions of Python, except:
 * A ***symbol*** may contain _prime-mark_ characters.
 * Special degree-sign prefixed symbols are permitted, in order to represent temperature scales. Compatibility characters U+2109 `℉` and U+2109 `℃` will be converted to `°F` and `°C` respectively in NFKC normalization.
 * Characters that are only _compatibility_ equivalent to an acceptable _symbol_ character are not permitted. In particular, superscript numerals are not permitted within a _symbol_.
-
+* `∞` is permitted as a non-initial symbol character so that common variable names such as `vinf` or `minf` denoting steady state values can be written instead as e.g. `v∞` and `m∞`.
+* U+2044 FRACTION SLASH is permitted as a non-initial symbol character so that common variable names such as `vhalf` denoting the midpoint voltage value can be written instead as e.g. `v½`. Note that characters such as U+00BD `½` VULGAR FRACTION ONE HALF are represented as a sequence of a digit, followed by U+2044 FRACTION SLASH, followed by another digit after NFC or NFKC normalization.
 
 ### Superscript literals
 <a id="superscript-literals"/>
