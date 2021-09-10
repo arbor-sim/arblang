@@ -43,6 +43,8 @@ The list of possible cellular quantities is open to future extension, but initia
 
 * _Internal concentration_ and _external concentration_ are the intracellular and extracellular concentrations respectively of a species, in the vicinity of the cellular membrane.
 
+* _Nernst potential_ is the reversal potential for a given ion, as determined by the Nernst equation, governed by membrane temperature, ionic charge, and the internal and external ionic concentrations.
+
 Not every mechanism class has access to every cellular quantity. In particular, only concentration models have access to current densities and molar fluxes.
 
 
@@ -1149,7 +1151,7 @@ def b: real = 2*sq(P);
 >
 > _external-binding_ ::= `bind` _identifier_ _type-assertion_? = _bindable_ `;`
 >
-> _bindable_ ::= `state` | `membrane` `potential` | `temperature` | (`current` `density` | `molar` `flux`) _species-name_ | (`internal` | `external`) `concentration` _species-name_ | `charge` _species-name_
+> _bindable_ ::= `state` | `membrane` `potential` | `temperature` | (`current` `density` | `molar` `flux`) _species-name_ | (`internal` | `external`) `concentration` _species-name_ | `charge` _species-name_ | `nernst` `potential` _species-name_
 >
 > _initial-defn_ ::= `initial` ( `regime` _qualified-identifier_ )? ( _initial-post-expr_ `from` )? `state` _type-assertion_? `=` _value-expression_ `;`
 >
@@ -1338,6 +1340,7 @@ As noted in [Mechanisms](#mechanisms), not all effects and bindings are availabl
 | `internal` `concentration` _species_ | `molarity`         | ✓        | ✓         | ✓              |
 | `external` `concentration` _species_ | `molarity`         | ✓        | ✓         | ✓              |
 | `charge` _species_                   | `real`             | ✓        | ✓         | ✓              |
+| `nernst` `potential` _species_       | `voltage`          | ✓        | ✓         | ✓              |
 
 
 | Effect                                      | Type               | Density? | Discrete? | Concentration? |
@@ -1351,6 +1354,23 @@ As noted in [Mechanisms](#mechanisms), not all effects and bindings are availabl
 | `internal` `concentration` `rate` _species_ | `molarity/time`    |          |           | ✓              |
 | `external` `concentration` `rate` _species_ | `molarity/time`    |          |           | ✓              |
 
+The Nernst potential binding is a convenience — it can be computed from other bound values:
+```
+bind Erev = nernst potential "ca";
+
+# is equivalent to:
+bind T = temperature;
+bind z = charge "ca";
+bind ci = internal concentration "ca";
+bind co = external concentration "ca";
+def R = 8.314 462 618 153 24 J/K/mol; # Universal gas constant
+def F = 96 485.332 1233 C/mol;        # Faraday constant
+let Erev = R·T/(z·F) log(co/ci);
+```
+
+The values of the Faraday constant and universal gas constant used to determine the Nernst potential, and for converting between flow rates and currents (or fluxes and current densitites) are the 2019 SI values, which are exactly:
+* Faraday constant F = 96 485.332 1233 C·mol⁻¹
+* Universal gas constant R = 8.314 462 618 153 24 J·K⁻¹·mol⁻¹
 
 # Extensions and alternatives
 
