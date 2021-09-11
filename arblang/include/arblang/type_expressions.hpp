@@ -86,10 +86,10 @@ struct boolean_type {
 };
 
 struct record_type {
-    std::vector<t_expr> fields;
+    std::vector<std::pair<std::string, t_expr>> fields;
     src_location loc;
 
-    record_type(std::vector<t_expr> fields, src_location loc): fields(std::move(fields)), loc(loc) {};
+    record_type(std::vector<std::pair<std::string, t_expr>> fields, src_location loc): fields(std::move(fields)), loc(loc) {};
 };
 
 struct record_alias_type {

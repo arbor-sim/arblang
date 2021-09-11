@@ -123,7 +123,8 @@ std::ostream& operator<< (std::ostream& o, const boolean_type& q) {
 std::ostream& operator<< (std::ostream& o, const record_type& q) {
     o << "(record_type ";
     for (const auto& f: q.fields) {
-        std::visit([&](auto&& c) { o << c << " "; }, *f);
+        o << f.first << ":";
+        std::visit([&](auto&& c) { o << c << " "; }, *(f.second));
     }
     return o << q.loc << ")";
 }

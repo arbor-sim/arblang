@@ -26,18 +26,18 @@ public:
     expr parse_function();
     expr parse_import();
 
+    expr parse_identifier();
+    expr parse_typed_identifier();
     expr parse_call();
     expr parse_field();
     expr parse_object();
     expr parse_let();
     expr parse_with();
     expr parse_conditional();
-    expr parse_identifier();
-    expr parse_typed_identifier();
     expr parse_float();
     expr parse_int();
-    expr parse_prefix();
 
+    expr parse_prefix();
     expr parse_unary();
     expr parse_binary(expr&&, const token&);
     expr parse_expr(int prec=0);

@@ -754,9 +754,23 @@ t_expr parser::parse_type() {
     if (t.type == tok::rbrace) {
         auto loc = t.loc;
         t = next(); // consume '{'
-        std::vector<t_expr> field_types;
+        std::vector<std::pair<std::string,t_expr>> field_types;
         while (t.type != tok::rbrace) {
-            field_types.push_back(parse_type());
+            t = next(); // consume {
+            if (t.type != tok::identifier) {
+                throw std::runtime_error("Expected identifier, got " + current().spelling);
+            }
+            std::string field_name = t.spelling;
+            t = next(); // consume identifier
+
+            if (t.type != tok::colon) {
+                throw std::runtime_error("Expected ':', got " + current().spelling);
+            }
+            t = next(); // consume :
+
+            field_types.push_back({field_name, parse_type()});
+
+            t = current();
             if (t.type != tok::semicolon) {
                 throw std::runtime_error("Expected ';', got " + current().spelling);
             }
