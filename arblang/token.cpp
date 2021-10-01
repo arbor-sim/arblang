@@ -142,6 +142,7 @@ std::unordered_map<tok, int> token::binop_prec = {
     {tok::times,    7},
     {tok::divide,   7},
     {tok::pow,      8},
+    {tok::dot,      9},
 };
 
 int token::precedence() const {

@@ -102,6 +102,15 @@ quantity_binary_type::quantity_binary_type(tok t, t_expr lhs, t_expr rhs, const 
     lhs(std::move(lhs)), rhs(std::move(rhs)), loc(loc) {
     if (auto bop = gen_binary_op(t)) {
         op = bop.value();
+        if (op != t_binary_op::pow) {
+            if (std::get_if<integer_type>(lhs.get()) || std::get_if<integer_type>(rhs.get())) {
+                throw std::runtime_error("Invalid quantity expression");
+            }
+        } else {
+            if (std::get_if<integer_type>(lhs.get())) {
+                throw std::runtime_error("Invalid quantity expression");
+            }
+        };
     } else {
         throw std::runtime_error("Unexpected binary operator token");
     };

@@ -16,12 +16,11 @@ namespace raw_ir {
 struct module_expr;
 struct parameter_expr;
 struct constant_expr;
-struct record_expr;
+struct record_alias_expr;
 struct function_expr;
 struct import_expr;
 struct call_expr;
 struct object_expr;
-struct field_expr;
 struct let_expr;
 struct with_expr;
 struct conditional_expr;
@@ -35,12 +34,11 @@ using raw_expr = std::variant<
     module_expr,
     parameter_expr,
     constant_expr,
-    record_expr,
+    record_alias_expr,
     function_expr,
     import_expr,
     call_expr,
     object_expr,
-    field_expr,
     let_expr,
     with_expr,
     conditional_expr,
@@ -55,7 +53,7 @@ using expr = std::shared_ptr<raw_expr>;
 enum class binary_op {
     add, sub, mul, div, pow,
     lt, le, gt, ge, eq, ne,
-    land, lor, min, max
+    land, lor, min, max, dot
 };
 
 enum class unary_op {
@@ -70,7 +68,7 @@ struct module_expr {
     std::vector<expr> constants;  // expect constant_expr
     std::vector<expr> parameters; // expect parameter_expr
     std::vector<expr> functions;  // expect function_expr
-    std::vector<expr> records;    // expect record_expr
+    std::vector<expr> records;    // expect record_alias_expr
     std::vector<expr> imports;    // expect import_expr
     src_location loc;
 };
@@ -93,14 +91,13 @@ struct constant_expr {
 };
 
 // Top level record definitions
-struct record_expr {
+struct record_alias_expr {
     std::string name;
-    std::vector<expr> fields;  // expect identifier_expr
-    std::vector<std::optional<expr>> init_values;  // expect identifier_expr
+    t_raw_ir::t_expr type;
     src_location loc;
 
-    record_expr(std::string name, std::vector<expr> fields, std::vector<std::optional<expr>> init, const src_location& loc):
-        name(std::move(name)), fields(std::move(fields)), init_values(std::move(init)), loc(loc) {};
+    record_alias_expr(std::string name,t_raw_ir::t_expr type, const src_location& loc):
+        name(std::move(name)), type(std::move(type)), loc(loc) {};
 };
 
 // Top level function definitions
@@ -137,23 +134,13 @@ struct call_expr {
 
 // Object creation
 struct object_expr {
-    std::string record_name;
+    std::optional<std::string> record_name;
     std::vector<expr> record_fields;
     std::vector<expr> record_values;
     src_location loc;
 
-    object_expr(std::string record_name, std::vector<expr> record_fields, std::vector<expr> records_vals, const src_location& loc):
-            record_name(std::move(record_name)), record_fields(std::move(record_fields)), record_values(std::move(records_vals)), loc(loc) {};
-};
-
-// Record field access
-struct field_expr {
-    std::string record_name;
-    std::string field_name;
-    src_location loc;
-
-    field_expr(std::string iden, std::string field, const src_location& loc):
-        record_name(std::move(iden)), field_name(std::move(field)), loc(loc) {};
+    object_expr(std::optional<std::string> record_name, std::vector<expr> record_fields, std::vector<expr> records_vals, const src_location& loc):
+        record_name(std::move(record_name)), record_fields(std::move(record_fields)), record_values(std::move(records_vals)), loc(loc) {};
 };
 
 // Let bindings
@@ -249,12 +236,11 @@ std::ostream& operator<< (std::ostream&, const unary_op&);
 std::ostream& operator<< (std::ostream&, const module_expr&);
 std::ostream& operator<< (std::ostream&, const parameter_expr&);
 std::ostream& operator<< (std::ostream&, const constant_expr&);
-std::ostream& operator<< (std::ostream&, const record_expr&);
+std::ostream& operator<< (std::ostream&, const record_alias_expr&);
 std::ostream& operator<< (std::ostream&, const function_expr&);
 std::ostream& operator<< (std::ostream&, const import_expr&);
 std::ostream& operator<< (std::ostream&, const call_expr&);
 std::ostream& operator<< (std::ostream&, const object_expr&);
-std::ostream& operator<< (std::ostream&, const field_expr&);
 std::ostream& operator<< (std::ostream&, const let_expr&);
 std::ostream& operator<< (std::ostream&, const with_expr&);
 std::ostream& operator<< (std::ostream&, const conditional_expr&);

@@ -58,6 +58,7 @@ std::ostream& operator<< (std::ostream& o, const binary_op& op) {
         case binary_op::eq:   return o << "==";
         case binary_op::max:  return o << "max";
         case binary_op::min:  return o << "min";
+        case binary_op::dot:  return o << ".";
         default: return o;
     }
 }
@@ -112,16 +113,10 @@ std::ostream& operator<< (std::ostream& o, const constant_expr& e) {
     return o << e.loc << ")";
 }
 
-// record_expr
-std::ostream& operator<< (std::ostream& o, const record_expr& e) {
-    assert(e.fields.size() == e.init_values.size());
-    o << "(record_expr " << e.name <<  " (";
-    for (unsigned i = 0; i < e.fields.size(); ++i) {
-        std::visit([&](auto&& c){o << c << " ";}, *(e.fields[i]));
-        if (e.init_values[i]) {
-            std::visit([&](auto&& c){o << c;}, *(e.init_values[i].value()));
-        }
-    }
+// record_alias_expr
+std::ostream& operator<< (std::ostream& o, const record_alias_expr& e) {
+    o << "(record_alias_expr " << e.name <<  " (";
+    std::visit([&](auto&& c) { o << c << " "; }, *(e.type));
     return o << ")" << e.loc << ")";
 }
 
@@ -162,11 +157,6 @@ std::ostream& operator<< (std::ostream& o, const object_expr& e) {
         std::visit([&](auto&& c){o << c << ") ";}, *(e.record_values[i]));
     }
     return o << ")" << e.loc << ")";
-}
-
-// field_expr
-std::ostream& operator<< (std::ostream& o, const field_expr& e) {
-    return o << "(field_expr " << e.record_name << " " << e.field_name << " " << e.loc << ")";
 }
 
 // let_expr
