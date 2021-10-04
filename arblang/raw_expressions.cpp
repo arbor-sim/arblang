@@ -151,7 +151,9 @@ std::ostream& operator<< (std::ostream& o, const call_expr& e) {
 // object_expr
 std::ostream& operator<< (std::ostream& o, const object_expr& e) {
     assert(e.record_fields.size() == e.record_values.size());
-    o << "(object_expr " << e.record_name <<  "( ";
+    o << "(object_expr ";
+    if (e.record_name) o << e.record_name.value() <<  " ";
+    o << "( ";
     for (unsigned i = 0; i < e.record_fields.size(); ++i) {
         std::visit([&](auto&& c){o << "(" << c << " ";}, *(e.record_fields[i]));
         std::visit([&](auto&& c){o << c << ") ";}, *(e.record_values[i]));

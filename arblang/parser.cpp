@@ -345,15 +345,15 @@ expr parser::parse_let() {
         throw std::runtime_error("Expected 'let', got " + current().spelling);
     }
     auto let = current();
-    auto t = next(); // consume 'let'
+    next(); // consume 'let'
 
     auto iden = parse_typed_identifier();
 
-    t = current();
+    auto t = current();
     if (t.type != tok::eq) {
         throw std::runtime_error("Expected '=', got " + t.spelling);
     }
-    t = next(); // consume '='
+    next(); // consume '='
 
     auto value = parse_expr();
 
@@ -663,16 +663,17 @@ t_expr parser::parse_binary_type(t_expr&& lhs, const token& lop) {
 
 t_expr parser::parse_quantity_type(int prec) {
     t_expr type;
-    if (current().quantity()) {
-        type = make_t_expr<quantity_type>(current().type, current().loc);
+    auto t = current();
+    if (t.quantity()) {
+        type = make_t_expr<quantity_type>(t.type, t.loc);
     }
-    else if (current().type == tok::integer) {
-        type = make_t_expr<integer_type>(std::stoll(current().spelling), current().loc);
+    else if (t.type == tok::integer) {
+        type = make_t_expr<integer_type>(std::stoll(t.spelling), t.loc);
     }
     else {
-        throw std::runtime_error("Expected quantity or integer token, got " + current().spelling);
+        throw std::runtime_error("Expected quantity or integer token, got " + t.spelling);
     }
-    auto t = next(); // consume 'quantity'
+    next(); // consume 'quantity'
 
     // Combine all sub-expressions with precedence greater than prec.
     for (;;) {
@@ -695,11 +696,10 @@ t_expr parser::parse_record_type() {
         throw std::runtime_error("Expected '{', got " + t.spelling );
     }
     auto loc = t.loc;
-    t = next(); // consume '{'
+    t = next(); // consume {
 
     std::vector<std::pair<std::string,t_expr>> field_types;
     while (t.type != tok::rbrace) {
-        t = next(); // consume {
         if (t.type != tok::identifier) {
             throw std::runtime_error("Expected identifier, got " + current().spelling);
         }
@@ -714,7 +714,8 @@ t_expr parser::parse_record_type() {
         field_types.emplace_back(field_name, parse_type());
 
         t = current();
-        if (t.type != tok::colon) {
+        if (t.type == tok::rbrace) break;
+        if (t.type != tok::comma) {
             throw std::runtime_error("Expected ',', got " + current().spelling);
         }
         t = next(); // consume ','
@@ -733,7 +734,7 @@ t_expr parser::parse_type() {
         next(); // consume identifier
         return make_t_expr<record_alias_type>(t.spelling, t.loc);
     }
-    if (t.type == tok::rbrace) {
+    if (t.type == tok::lbrace) {
         return parse_record_type();
     }
     auto type = parse_quantity_type();
