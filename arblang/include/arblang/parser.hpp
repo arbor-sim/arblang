@@ -7,10 +7,12 @@
 #include <arblang/lexer.hpp>
 #include <arblang/raw_expressions.hpp>
 #include <arblang/type_expressions.hpp>
+#include <arblang/unit_expressions.hpp>
 
 namespace al {
 using namespace raw_ir;
 using namespace t_raw_ir;
+using namespace u_raw_ir;
 
 class parser: lexer {
 public:
@@ -45,6 +47,10 @@ public:
     t_expr parse_quantity_type(int prec=0);
     t_expr parse_record_type();
     t_expr parse_type();
+
+    std::optional<u_expr> try_parse_binary_unit(u_expr&& lhs, const token& lop, int peek);
+    std::optional<u_expr> try_parse_unit(int peek);
+    std::optional<u_expr> parse_unit(int prec=0, int peek=0);
 
 private:
     std::vector<expr> modules_;
