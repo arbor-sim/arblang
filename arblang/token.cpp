@@ -128,7 +128,6 @@ std::unordered_map<tok, std::string> token::token_to_string = {
 };
 
 std::unordered_map<tok, int> token::binop_prec = {
-    {tok::eq,       1},
     {tok::land,     2},
     {tok::lor,      3},
     {tok::equality, 4},

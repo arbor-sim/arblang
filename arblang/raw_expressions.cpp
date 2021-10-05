@@ -197,12 +197,20 @@ std::ostream& operator<< (std::ostream& o, const identifier_expr& e) {
 
 // float_expr
 std::ostream& operator<< (std::ostream& o, const float_expr& e) {
-    return o << "(float_expr " << e.value << " " << e.unit << " " << e.loc << ")";
+    return o << "(float_expr " << e.value << " ";
+    if (e.unit) {
+        std::visit([&](auto&& c) { o << c << " "; }, *(e.unit.value()));
+    }
+    return o << e.loc << ")";
 }
 
 // int_expr
 std::ostream& operator<< (std::ostream& o, const int_expr& e) {
-    return o << "(int_expr " << e.value << " " << e.unit << " " << e.loc << ")";
+    o << "(int_expr " << e.value << " ";
+    if (e.unit) {
+        std::visit([&](auto&& c) { o << c << " "; }, *(e.unit.value()));
+    }
+    return o << e.loc << ")";
 }
 
 // unary_expr

@@ -9,6 +9,7 @@
 
 #include <arblang/token.hpp>
 #include <arblang/type_expressions.hpp>
+#include <arblang/unit_expressions.hpp>
 
 namespace al {
 namespace raw_ir {
@@ -178,11 +179,10 @@ struct conditional_expr {
 // Number expression
 struct float_expr {
     double value;
-    std::string unit;
-//    type_expr type; // No unit, automatically convert to SI/local arbor unit.
+    std::optional<u_raw_ir::u_expr> unit;
     src_location loc;
 
-    float_expr(double value, std::string unit, const src_location& loc):
+    float_expr(double value, std::optional<u_raw_ir::u_expr> unit, const src_location& loc):
         value(value), unit(std::move(unit)), loc(loc) {};
 };
 
@@ -190,12 +190,11 @@ struct float_expr {
 // Number expression
 struct int_expr {
     int value;
-    std::string unit;
-//    type_expr type; // No unit, automatically convert to SI/local arbor unit.
+    std::optional<u_raw_ir::u_expr> unit;
     src_location loc;
 
-    int_expr(int value, std::string unit, const src_location& loc):
-            value(value), unit(std::move(unit)), loc(loc) {};
+    int_expr(int value,  std::optional<u_raw_ir::u_expr> unit, const src_location& loc):
+        value(value), unit(std::move(unit)), loc(loc) {};
 };
 
 // Both boolean and arithmetic operations

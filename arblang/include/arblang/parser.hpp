@@ -48,9 +48,9 @@ public:
     t_expr parse_record_type();
     t_expr parse_type();
 
-    std::optional<u_expr> try_parse_binary_unit(u_expr&& lhs, const token& lop, int peek);
-    std::optional<u_expr> try_parse_unit(int peek);
-    std::optional<u_expr> parse_unit(int prec=0, int peek=0);
+    u_expr parse_binary_unit(u_expr&& lhs, const token& lop);
+    std::optional<u_expr> try_parse_unit_element(int p = 0);
+    std::optional<u_expr> try_parse_unit(int prec=0);
 
 private:
     std::vector<expr> modules_;
