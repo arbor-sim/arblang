@@ -9,6 +9,14 @@
 
 namespace al{
 class lexer_impl;
+
+struct state {
+    const char* line_start;
+    const char* stream;
+    unsigned line;
+    token tok;
+};
+
 class lexer {
 public:
     lexer(const char* begin);
@@ -16,7 +24,8 @@ public:
     const token& current();
     const token& next(unsigned n=1);
     token peek(unsigned n=1);
-
+    state save();
+    void restore(state);
     ~lexer();
 
 private:

@@ -40,7 +40,6 @@ TEST(parser, unit) {
     {
         std::string unit = "K^-2";
         auto p = parser(unit);
-        auto t = p.try_parse_unit();
         auto u = std::get<binary_unit>(*p.try_parse_unit().value());
         auto lhs = std::get<simple_unit>(*u.lhs);
         auto rhs = std::get<integer_unit>(*u.rhs);
@@ -79,13 +78,13 @@ TEST(parser, unit) {
         EXPECT_EQ(unit_sym::S, rhs_0.val.symbol);
     }
     {
-        std::string unit = "Ohm^2/daC/K^3";
+        std::string unit = "Ohm^2/daC/K^-3";
         auto p = parser(unit);
         auto u = std::get<binary_unit>(*p.try_parse_unit().value());
 
         EXPECT_EQ(u_binary_op::div, u.op);
         auto lhs_0 = std::get<binary_unit>(*u.lhs); // Ohm^2/daC
-        auto rhs_0 = std::get<binary_unit>(*u.rhs); // K^3
+        auto rhs_0 = std::get<binary_unit>(*u.rhs); // K^-3
 
         EXPECT_EQ(u_binary_op::div, lhs_0.op);
         auto lhs_1 = std::get<binary_unit>(*lhs_0.lhs); // Ohm^2
@@ -97,7 +96,7 @@ TEST(parser, unit) {
 
         EXPECT_EQ(u_binary_op::pow, rhs_0.op);
         auto lhs_3 = std::get<simple_unit>(*rhs_0.lhs);  // K
-        auto rhs_3 = std::get<integer_unit>(*rhs_0.rhs); // 3
+        auto rhs_3 = std::get<integer_unit>(*rhs_0.rhs); // -3
 
         EXPECT_EQ("daC", rhs_1.spelling);
         EXPECT_EQ(unit_pref::da, rhs_1.val.prefix);
@@ -113,7 +112,7 @@ TEST(parser, unit) {
         EXPECT_EQ(unit_pref::none, lhs_3.val.prefix);
         EXPECT_EQ(unit_sym::K, lhs_3.val.symbol);
 
-        EXPECT_EQ(3, rhs_3.val);
+        EXPECT_EQ(-3, rhs_3.val);
     }
 }
 TEST(parser, identifier) {

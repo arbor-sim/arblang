@@ -52,6 +52,16 @@ public:
         return t;
     }
 
+    state save() {
+        return {line_start_, stream_, line_, token_};
+    }
+    void restore(state s) {
+        line_start_ = s.line_start;
+        stream_ = s.stream;
+        line_ = s.line;
+        token_ = std::move(s.tok);
+    }
+
 private:
     src_location loc() const {
         return src_location(line_+1, stream_-line_start_+1);
@@ -340,6 +350,14 @@ const token& lexer::next(unsigned n) {
 
 token lexer::peek(unsigned n) {
     return impl_->peek(n);
+}
+
+state lexer::save() {
+    return impl_->save();
+}
+
+void lexer::restore(state s) {
+    return impl_->restore(s);
 }
 
 lexer::~lexer() = default;
