@@ -649,19 +649,50 @@ t_expr parser::parse_binary_type(t_expr&& lhs, const token& lop) {
     }
 }
 
-t_expr parser::parse_quantity_type(int prec) {
-    t_expr type;
+// Handles parenthesis and integer signs
+t_expr parser::parse_type_element() {
     auto t = current();
     if (t.quantity()) {
-        type = make_t_expr<quantity_type>(t.type, t.loc);
+        next(); // consume identifier
+        return make_t_expr<quantity_type>(t.type, t.loc);
     }
-    else if (t.type == tok::integer) {
-        type = make_t_expr<integer_type>(std::stoll(t.spelling), t.loc);
+    switch (t.type) {
+        case tok::lparen: {
+            next(); // consume '('
+            auto type = parse_quantity_type();
+            t = current();
+            if (t.type != tok::rparen) {
+                throw std::runtime_error("Expected ')' expression, got " + t.spelling);
+            }
+            next(); // consume ')'
+            return type;
+        }
+        case tok::minus: {
+            auto t = next();
+            if (t.type == tok::integer) {
+                next(); // consume integer
+                return make_t_expr<integer_type>(-1*std::stoll(t.spelling), t.loc);
+            }
+            throw std::runtime_error("Expected integer after '-' token in type expression, got " + t.spelling);
+        }
+        case tok::plus: {
+            auto t = next();
+            if (t.type == tok::integer) {
+                next(); // consume integer
+                return make_t_expr<integer_type>(std::stoll(t.spelling), t.loc);
+            }
+            throw std::runtime_error("Expected integer after '+' token in type expression, got " + t.spelling);
+        }
+        case tok::integer: {
+            next(); // consume integer
+            return make_t_expr<integer_type>(std::stoll(t.spelling), t.loc);
+        }
+        default: throw std::runtime_error("Uexpected token in type expression: " + t.spelling);
     }
-    else {
-        throw std::runtime_error("Expected quantity or integer token, got " + t.spelling);
-    }
-    next(); // consume 'quantity'
+}
+
+t_expr parser::parse_quantity_type(int prec) {
+    auto type = parse_type_element();
 
     // Combine all sub-expressions with precedence greater than prec.
     for (;;) {
@@ -715,7 +746,7 @@ t_expr parser::parse_record_type() {
     return make_t_expr<record_type>(field_types, loc);
 }
 
-// todo parenthsis?
+// todo: parenthsis?
 t_expr parser::parse_type() {
     auto t = current();
     if (t.type == tok::identifier) {

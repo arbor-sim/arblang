@@ -58,12 +58,12 @@ TEST(parser, unit) {
         auto u = std::get<binary_unit>(*p.try_parse_unit().value());
 
         EXPECT_EQ(u_binary_op::div, u.op);
-        auto lhs_0 = std::get<binary_unit>(*u.lhs);
-        auto rhs_0 = std::get<simple_unit>(*u.rhs);
+        auto lhs_0 = std::get<binary_unit>(*u.lhs); // Ohm*uV
+        auto rhs_0 = std::get<simple_unit>(*u.rhs); // YS
 
         EXPECT_EQ(u_binary_op::mul, lhs_0.op);
-        auto lhs_1 = std::get<simple_unit>(*lhs_0.lhs);
-        auto rhs_1 = std::get<simple_unit>(*lhs_0.rhs);
+        auto lhs_1 = std::get<simple_unit>(*lhs_0.lhs); // Ohm
+        auto rhs_1 = std::get<simple_unit>(*lhs_0.rhs); // uV
 
         EXPECT_EQ("Ohm", lhs_1.spelling);
         EXPECT_EQ(unit_pref::none, lhs_1.val.prefix);
@@ -222,6 +222,7 @@ TEST(parser, unit) {
             "V*2",
             "mA/-2",
             "2^uK",
+            "pV^(2/mV)"
         };
         for (auto u: incorrect_units) {
             auto p = parser(u);
@@ -242,6 +243,160 @@ TEST(parser, unit) {
         }
     }
 }
+
+TEST(parse, type) {
+    {
+        std::string type = "time";
+        auto p = parser(type);
+        auto q = std::get<quantity_type>(*p.parse_type());
+        EXPECT_EQ(quantity::time, q.type);
+    }
+    {
+        std::string type = "bar";
+        auto p = parser(type);
+        auto q = std::get<record_alias_type>(*p.parse_type());
+        EXPECT_EQ("bar", q.name);
+    }
+    {
+        std::string type = "voltage^2";
+        auto p = parser(type);
+        auto q = std::get<quantity_binary_type>(*p.parse_type());
+        EXPECT_EQ(t_binary_op::pow, q.op);
+
+        auto q_lhs = std::get<quantity_type>(*q.lhs);
+        EXPECT_EQ(quantity::voltage, q_lhs.type);
+
+        auto q_rhs = std::get<integer_type>(*q.rhs);
+        EXPECT_EQ(2, q_rhs.val);
+    }
+    {
+        std::string type = "voltage/conductance";
+        auto p = parser(type);
+        auto q = std::get<quantity_binary_type>(*p.parse_type());
+        EXPECT_EQ(t_binary_op::div, q.op);
+
+        auto q_lhs = std::get<quantity_type>(*q.lhs);
+        EXPECT_EQ(quantity::voltage, q_lhs.type);
+
+        auto q_rhs = std::get<quantity_type>(*q.rhs);
+        EXPECT_EQ(quantity::conductance, q_rhs.type);
+    }
+    {
+        std::string type = "current*time/voltage";
+        auto p = parser(type);
+        auto q = std::get<quantity_binary_type>(*p.parse_type());
+        EXPECT_EQ(t_binary_op::div, q.op);
+
+        auto q0 = std::get<quantity_binary_type>(*q.lhs);
+        EXPECT_EQ(t_binary_op::mul, q0.op);
+
+        auto q0_lhs = std::get<quantity_type>(*q0.lhs);
+        EXPECT_EQ(quantity::current, q0_lhs.type);
+
+        auto q0_rhs = std::get<quantity_type>(*q0.rhs);
+        EXPECT_EQ(quantity::time, q0_rhs.type);
+
+        auto q_rhs = std::get<quantity_type>(*q.rhs);
+        EXPECT_EQ(quantity::voltage, q_rhs.type);
+    }
+    {
+        std::string type = "current^-2/temperature*time^-1";
+        auto p = parser(type);
+        auto q = std::get<quantity_binary_type>(*p.parse_type());
+        EXPECT_EQ(t_binary_op::mul, q.op);
+
+        auto q0 = std::get<quantity_binary_type>(*q.lhs); // current^-2/temperature
+        EXPECT_EQ(t_binary_op::div, q0.op);
+
+        auto q1 = std::get<quantity_binary_type>(*q0.lhs); // current^-2
+        EXPECT_EQ(t_binary_op::pow, q1.op);
+
+        auto q1_lhs = std::get<quantity_type>(*q1.lhs); // current
+        EXPECT_EQ(quantity::current, q1_lhs.type);
+
+        auto q1_rhs = std::get<integer_type>(*q1.rhs); // -2
+        EXPECT_EQ(-2, q1_rhs.val);
+
+        auto q0_rhs = std::get<quantity_type>(*q0.rhs); // temperature
+        EXPECT_EQ(quantity::temperature, q0_rhs.type);
+
+        auto q2 = std::get<quantity_binary_type>(*q.rhs); // time^-1
+        EXPECT_EQ(t_binary_op::pow, q2.op);
+
+        auto q2_lhs = std::get<quantity_type>(*q2.lhs); // time
+        EXPECT_EQ(quantity::time, q2_lhs.type);
+
+        auto q2_rhs = std::get<integer_type>(*q2.rhs); // -1
+        EXPECT_EQ(-1, q2_rhs.val);
+    }
+    {
+        std::string type = "current^-2/(temperature*time^-1)";
+        auto p = parser(type);
+        auto q = std::get<quantity_binary_type>(*p.parse_type());
+        EXPECT_EQ(t_binary_op::div, q.op);
+
+        auto q0 = std::get<quantity_binary_type>(*q.lhs); // current^-2
+        EXPECT_EQ(t_binary_op::pow, q0.op);
+
+        auto q0_lhs = std::get<quantity_type>(*q0.lhs); // current
+        EXPECT_EQ(quantity::current, q0_lhs.type);
+
+        auto q0_rhs = std::get<integer_type>(*q0.rhs); // -2
+        EXPECT_EQ(-2, q0_rhs.val);
+
+        auto q1 = std::get<quantity_binary_type>(*q.rhs); // temperature*time^-1
+        EXPECT_EQ(t_binary_op::mul, q1.op);
+
+        auto q1_lhs = std::get<quantity_type>(*q1.lhs); // temperature
+        EXPECT_EQ(quantity::temperature, q1_lhs.type);
+
+        auto q2 = std::get<quantity_binary_type>(*q1.rhs); // time^-1
+        EXPECT_EQ(t_binary_op::pow, q2.op);
+
+        auto q2_lhs = std::get<quantity_type>(*q2.lhs); // time
+        EXPECT_EQ(quantity::time, q2_lhs.type);
+
+        auto q2_rhs = std::get<integer_type>(*q2.rhs); // -1
+        EXPECT_EQ(-1, q2_rhs.val);
+    }
+    {
+        std::string type = "{bar:voltage, baz:current^5}";
+        auto p = parser(type);
+        auto q = std::get<record_type>(*p.parse_type());
+        EXPECT_EQ(2, q.fields.size());
+
+        EXPECT_EQ("bar", q.fields[0].first);
+        EXPECT_EQ("baz", q.fields[1].first);
+
+        auto q0 = std::get<quantity_type>(*q.fields[0].second);
+        EXPECT_EQ(quantity::voltage, q0.type);
+
+        auto q1 = std::get<quantity_binary_type>(*q.fields[1].second);
+        EXPECT_EQ(t_binary_op::pow, q1.op);
+
+        auto q1_lhs = std::get<quantity_type>(*q1.lhs);
+        EXPECT_EQ(quantity::current, q1_lhs.type);
+
+        auto q1_rhs = std::get<integer_type>(*q1.rhs);
+        EXPECT_EQ(5, q1_rhs.val);
+    }
+    {
+        std::vector<std::string> incorrect_types = {
+            "voltage^resistance",
+            "voltage+2",
+            "2^current",
+            "power^(temperature^2)",
+            "{voltage}",
+            "{foo: 2}",
+        };
+        for (auto u: incorrect_types) {
+            auto p = parser(u);
+            auto q = p.parse_type();
+            EXPECT_THROW(p.parse_type(), std::runtime_error);
+        }
+    }
+}
+
 TEST(parser, identifier) {
     {
         std::string identifier = "foo";

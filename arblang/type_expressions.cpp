@@ -100,6 +100,10 @@ std::ostream& operator<< (std::ostream& o, const quantity_type& q) {
 //quantity_binary_type;
 quantity_binary_type::quantity_binary_type(tok t, t_expr l, t_expr r, const src_location& location):
     lhs(std::move(l)), rhs(std::move(r)), loc(location) {
+    auto verify = [](const auto&& t) {return std::get_if<integer_type>(t) || std::get_if<quantity_type>(t) ||std::get_if<quantity_binary_type>(t);};
+    if(!verify(lhs.get()) || !verify(rhs.get())) {
+        throw std::runtime_error("Invalid quantity expression");
+    }
     if (auto bop = gen_binary_op(t)) {
         op = bop.value();
         if (op != t_binary_op::pow) {

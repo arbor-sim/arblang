@@ -96,6 +96,10 @@ std::ostream& operator<< (std::ostream& o, const u_binary_op& op) {
 
 //quantity_binary_type;
 binary_unit::binary_unit(tok t, u_expr l, u_expr r, const src_location& location): lhs(std::move(l)), rhs(std::move(r)), loc(location) {
+    auto verify = [](const auto&& t) {return std::get_if<integer_unit>(t) || std::get_if<simple_unit>(t) ||std::get_if<binary_unit>(t);};
+    if(!verify(lhs.get()) || !verify(rhs.get())) {
+        throw std::runtime_error("Invalid unit expression");
+    }
     if (auto bop = gen_binary_op(t)) {
         op = bop.value();
         if (op != u_binary_op::pow) {
