@@ -736,7 +736,7 @@ t_expr parser::parse_type() {
 // Handles infix unit operations
 std::optional<u_expr> parser::parse_binary_unit(u_expr&& lhs, const token& lop) {
     auto lop_prec = lop.precedence();
-    auto rhs = try_parse_unit(lop_prec);
+    auto rhs = try_parse_unit_expr(lop_prec);
     if (!rhs) {
         return lhs;
     }
@@ -777,7 +777,7 @@ std::optional<u_expr> parser::try_parse_unit_element() {
     switch (t.type) {
         case tok::lparen: {
             next(); // consume '('
-            auto unit = try_parse_unit();
+            auto unit = try_parse_unit_expr();
             t = current();
             if (t.type != tok::rparen) {
                 throw std::runtime_error("Expected ')' expression, got " + t.spelling);
@@ -818,7 +818,7 @@ std::optional<u_expr> parser::try_parse_unit_element() {
     }
 }
 
-std::optional<u_expr> parser::try_parse_unit(int prec) {
+std::optional<u_expr> parser::try_parse_unit_expr(int prec) {
     auto unit = try_parse_unit_element();
     if (!unit) return {};
 
@@ -841,5 +841,15 @@ std::optional<u_expr> parser::try_parse_unit(int prec) {
         }
         unit = unit_t;
     }
+}
+
+std::optional<u_expr> parser::try_parse_unit(int prec) {
+    auto lstate = save();
+    auto u = try_parse_unit_expr(prec);
+    if (u && std::get_if<integer_unit>((*u).get())) {
+        restore(lstate);
+        return {};
+    }
+    return std::move(u);
 }
 } // namespace al

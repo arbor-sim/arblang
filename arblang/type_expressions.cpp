@@ -98,8 +98,8 @@ std::ostream& operator<< (std::ostream& o, const quantity_type& q) {
 }
 
 //quantity_binary_type;
-quantity_binary_type::quantity_binary_type(tok t, t_expr lhs, t_expr rhs, const src_location& loc):
-    lhs(std::move(lhs)), rhs(std::move(rhs)), loc(loc) {
+quantity_binary_type::quantity_binary_type(tok t, t_expr l, t_expr r, const src_location& location):
+    lhs(std::move(l)), rhs(std::move(r)), loc(location) {
     if (auto bop = gen_binary_op(t)) {
         op = bop.value();
         if (op != t_binary_op::pow) {
@@ -107,7 +107,7 @@ quantity_binary_type::quantity_binary_type(tok t, t_expr lhs, t_expr rhs, const 
                 throw std::runtime_error("Invalid quantity expression");
             }
         } else {
-            if (std::get_if<integer_type>(lhs.get())) {
+            if (std::get_if<integer_type>(lhs.get()) || !std::get_if<integer_type>(rhs.get())) {
                 throw std::runtime_error("Invalid quantity expression");
             }
         };

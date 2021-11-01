@@ -114,6 +114,133 @@ TEST(parser, unit) {
 
         EXPECT_EQ(-3, rhs_3.val);
     }
+    {
+        std::string unit = "Ohm^2/daC*mK^-1";
+        auto p = parser(unit);
+        auto u = std::get<binary_unit>(*p.try_parse_unit().value());
+
+        EXPECT_EQ(u_binary_op::mul, u.op);
+        auto lhs_0 = std::get<binary_unit>(*u.lhs); // Ohm^2/daC
+        auto rhs_0 = std::get<binary_unit>(*u.rhs); // K^-3
+
+        EXPECT_EQ(u_binary_op::div, lhs_0.op);
+        auto lhs_1 = std::get<binary_unit>(*lhs_0.lhs); // Ohm^2
+        auto rhs_1 = std::get<simple_unit>(*lhs_0.rhs); // daC
+
+        EXPECT_EQ(u_binary_op::pow, lhs_1.op);
+        auto lhs_2 = std::get<simple_unit>(*lhs_1.lhs);  // Ohm
+        auto rhs_2 = std::get<integer_unit>(*lhs_1.rhs); // 2
+
+        EXPECT_EQ(u_binary_op::pow, rhs_0.op);
+        auto lhs_3 = std::get<simple_unit>(*rhs_0.lhs);  // K
+        auto rhs_3 = std::get<integer_unit>(*rhs_0.rhs); // -3
+
+        EXPECT_EQ("daC", rhs_1.spelling);
+        EXPECT_EQ(unit_pref::da, rhs_1.val.prefix);
+        EXPECT_EQ(unit_sym::C, rhs_1.val.symbol);
+
+        EXPECT_EQ("Ohm", lhs_2.spelling);
+        EXPECT_EQ(unit_pref::none, lhs_2.val.prefix);
+        EXPECT_EQ(unit_sym::Ohm, lhs_2.val.symbol);
+
+        EXPECT_EQ(2, rhs_2.val);
+
+        EXPECT_EQ("mK", lhs_3.spelling);
+        EXPECT_EQ(unit_pref::m, lhs_3.val.prefix);
+        EXPECT_EQ(unit_sym::K, lhs_3.val.symbol);
+
+        EXPECT_EQ(-1, rhs_3.val);
+    }
+    {
+        std::string unit = "(Ohm/V)*A";
+        auto p = parser(unit);
+        auto u = std::get<binary_unit>(*p.try_parse_unit().value());
+
+        EXPECT_EQ(u_binary_op::mul, u.op);
+        auto lhs_0 = std::get<binary_unit>(*u.lhs); // Ohm/V
+        auto rhs_0 = std::get<simple_unit>(*u.rhs); // A
+
+        EXPECT_EQ(u_binary_op::div, lhs_0.op);
+        auto lhs_1 = std::get<simple_unit>(*lhs_0.lhs); // Ohm
+        auto rhs_1 = std::get<simple_unit>(*lhs_0.rhs); // V
+
+        EXPECT_EQ("Ohm", lhs_1.spelling);
+        EXPECT_EQ(unit_pref::none, lhs_1.val.prefix);
+        EXPECT_EQ(unit_sym::Ohm, lhs_1.val.symbol);
+
+        EXPECT_EQ("V", rhs_1.spelling);
+        EXPECT_EQ(unit_pref::none, rhs_1.val.prefix);
+        EXPECT_EQ(unit_sym::V, rhs_1.val.symbol);
+
+        EXPECT_EQ("A", rhs_0.spelling);
+        EXPECT_EQ(unit_pref::none, rhs_0.val.prefix);
+        EXPECT_EQ(unit_sym::A, rhs_0.val.symbol);
+    }
+    {
+        std::string unit = "Ohm/(V*A)";
+        auto p = parser(unit);
+        auto u = std::get<binary_unit>(*p.try_parse_unit().value());
+
+        EXPECT_EQ(u_binary_op::div, u.op);
+        auto lhs_0 = std::get<simple_unit>(*u.lhs); // Ohm
+        auto rhs_0 = std::get<binary_unit>(*u.rhs); // V*A
+
+        EXPECT_EQ(u_binary_op::mul, rhs_0.op);
+        auto lhs_1 = std::get<simple_unit>(*rhs_0.lhs); // V
+        auto rhs_1 = std::get<simple_unit>(*rhs_0.rhs); // A
+
+        EXPECT_EQ("Ohm", lhs_0.spelling);
+        EXPECT_EQ(unit_pref::none, lhs_0.val.prefix);
+        EXPECT_EQ(unit_sym::Ohm, lhs_0.val.symbol);
+
+        EXPECT_EQ("V", lhs_1.spelling);
+        EXPECT_EQ(unit_pref::none, lhs_1.val.prefix);
+        EXPECT_EQ(unit_sym::V, lhs_1.val.symbol);
+
+        EXPECT_EQ("A", rhs_1.spelling);
+        EXPECT_EQ(unit_pref::none, rhs_1.val.prefix);
+        EXPECT_EQ(unit_sym::A, rhs_1.val.symbol);
+    }
+    {
+        std::vector<std::string> units = {
+                "Ohm*identifier",
+                "Ohm+identifier",
+                "Ohm^identifier",
+                "Ohm/identifier",
+        };
+        for (auto u: units) {
+            auto p = parser(u);
+            auto q = std::get<simple_unit>(*p.try_parse_unit().value());
+            EXPECT_EQ("Ohm", q.spelling);
+            EXPECT_EQ(unit_pref::none, q.val.prefix);
+            EXPECT_EQ(unit_sym::Ohm, q.val.symbol);
+        }
+    }
+    {
+        std::vector<std::string> incorrect_units = {
+            "Ohm^A",
+            "V*2",
+            "mA/-2",
+            "2^uK",
+        };
+        for (auto u: incorrect_units) {
+            auto p = parser(u);
+            EXPECT_THROW(p.try_parse_unit(), std::runtime_error);
+        }
+    }
+    {
+        std::vector<std::string> incorrect_units = {
+            "-Ohm",
+            "4.5*Ohm",
+            "+V",
+            "identifier",
+            "7"
+        };
+        for (auto u: incorrect_units) {
+            auto p = parser(u);
+            EXPECT_FALSE(p.try_parse_unit());
+        }
+    }
 }
 TEST(parser, identifier) {
     {
