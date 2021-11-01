@@ -279,6 +279,8 @@ expr parser::parse_call() {
     std::vector<expr> args;
     while (t.type != tok::rparen) {
         args.emplace_back(parse_expr());
+
+        t = current();
         if (t.type == tok::rparen) break;
 
         // Check for comma between arguments
@@ -553,7 +555,7 @@ expr parser::parse_value_expr() {
             next(); // consume ')'
             return e;
         }
-        case tok::rbrace: {
+        case tok::lbrace: {
             return parse_object();
         }
         case tok::identifier:

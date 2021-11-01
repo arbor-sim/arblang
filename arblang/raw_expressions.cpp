@@ -24,6 +24,7 @@ std::optional<binary_op> gen_binary_op(tok t) {
         case tok::equality: return binary_op::eq;
         case tok::max:      return binary_op::max;
         case tok::min:      return binary_op::min;
+        case tok::dot:      return binary_op::dot;
         default: return {};
     }
 }
