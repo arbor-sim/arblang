@@ -157,12 +157,12 @@ struct let_expr {
 
 // with bindings
 struct with_expr {
-    std::string identifier; // expect identifier_expr
+    expr value;
     expr body;
     src_location loc;
 
-    with_expr(std::string iden, expr body, const src_location& loc):
-            identifier(std::move(iden)), body(std::move(body)), loc(loc) {};
+    with_expr(expr value, expr body, const src_location& loc):
+            value(std::move(value)), body(std::move(body)), loc(loc) {};
 };
 
 // if/else statements

@@ -478,10 +478,10 @@ TEST(parser, typed_identifier) {
     }
     {
         std::vector<std::string> invalid = {
-                "a:1",
-                "foo': /time",
-                "bar: ",
-                "bar: {a; b}",
+                "a:1",         // Invalid integer type
+                "foo': /time", // Incomplete type
+                "bar: ",       // Missing type after :
+                "bar: {a; b}", // Invalid record type (identifier+type required)
         };
         for (const auto& s: invalid) {
             auto p = parser(s);
@@ -995,7 +995,7 @@ TEST(parser, let) {
         EXPECT_EQ("b", e_body_body_rhs.name);
         EXPECT_FALSE(e_body_body_rhs.type);
     }
-/*    {
+    {
         std::string let = "let a = { scale = 3.2; pos = { x = 3 m ; y = 4 m; }; }; # binds `a` below.\n"
                           "with a.pos;   # binds `x` to 3 m and `y` to 4 m below.\n"
                           "a.scale*(x+y)";
@@ -1009,6 +1009,7 @@ TEST(parser, let) {
         EXPECT_FALSE(e_id.type);
 
         auto e_val = std::get<object_expr>(*e.value);
+        EXPECT_EQ(src_location(1,1), e.loc);
         EXPECT_FALSE(e_val.record_name);
         EXPECT_EQ(2u, e_val.record_fields.size());
         EXPECT_EQ(2u, e_val.record_values.size());
@@ -1053,19 +1054,106 @@ TEST(parser, let) {
         EXPECT_EQ(unit_sym::m, unit1.val.symbol);
 
         auto e_body = std::get<with_expr>(*e.body);
-        auto e_body_id = std::get<binary_expr>(*e_body.identifier);
+        EXPECT_EQ(src_location(2,1), e_body.loc);
 
-    }*/
+        auto e_body_val = std::get<binary_expr>(*e_body.value);
+        EXPECT_EQ(src_location(2,7), e_body_val.loc);
+        EXPECT_EQ(binary_op::dot, e_body_val.op);
+
+        auto e_body_val_lhs = std::get<identifier_expr>(*e_body_val.lhs);
+        EXPECT_EQ("a", e_body_val_lhs.name);
+        EXPECT_FALSE(e_body_val_lhs.type);
+
+        auto e_body_val_rhs = std::get<identifier_expr>(*e_body_val.rhs);
+        EXPECT_EQ("pos", e_body_val_rhs.name);
+        EXPECT_FALSE(e_body_val_rhs.type);
+
+        auto e_body_body = std::get<binary_expr>(*e_body.body);
+        EXPECT_EQ(src_location(3,8), e_body_body.loc);
+        EXPECT_EQ(binary_op::mul, e_body_body.op);
+
+        auto e_body_body_lhs = std::get<binary_expr>(*e_body_body.lhs);
+        EXPECT_EQ(binary_op::dot, e_body_body_lhs.op);
+
+        auto e_body_body_lhs_lhs = std::get<identifier_expr>(*e_body_body_lhs.lhs);
+        EXPECT_EQ("a", e_body_body_lhs_lhs.name);
+        EXPECT_FALSE(e_body_body_lhs_lhs.type);
+
+        auto e_body_body_lhs_rhs = std::get<identifier_expr>(*e_body_body_lhs.rhs);
+        EXPECT_EQ("scale", e_body_body_lhs_rhs.name);
+        EXPECT_FALSE(e_body_body_lhs_rhs.type);
+
+        auto e_body_body_rhs = std::get<binary_expr>(*e_body_body.rhs);
+        EXPECT_EQ(binary_op::add, e_body_body_rhs.op);
+
+        auto e_body_body_rhs_lhs = std::get<identifier_expr>(*e_body_body_rhs.lhs);
+        EXPECT_EQ("x", e_body_body_rhs_lhs.name);
+        EXPECT_FALSE(e_body_body_rhs_lhs.type);
+
+        auto e_body_body_rhs_rhs = std::get<identifier_expr>(*e_body_body_rhs.rhs);
+        EXPECT_EQ("y", e_body_body_rhs_rhs.name);
+        EXPECT_FALSE(e_body_body_rhs_rhs.type);
+    }
     {
         std::string let = "let g = let a = v*v; a/p1; g*3";
+        auto p = parser(let);
+        auto e = std::get<let_expr>(*p.parse_let());
+        EXPECT_EQ(src_location(1,1), e.loc);
+
+        auto e_id = std::get<identifier_expr>(*e.identifier);
+        EXPECT_EQ(src_location(1,5), e_id.loc);
+        EXPECT_EQ("g", e_id.name);
+        EXPECT_FALSE(e_id.type);
+
+        auto e_val = std::get<let_expr>(*e.value);
+        EXPECT_EQ(src_location(1,9), e_val.loc);
+
+        auto e_val_id = std::get<identifier_expr>(*e_val.identifier);
+        EXPECT_EQ("a", e_val_id.name);
+        EXPECT_FALSE(e_val_id.type);
+
+        auto e_val_val = std::get<binary_expr>(*e_val.value);
+        EXPECT_EQ(binary_op::mul, e_val_val.op);
+
+        auto e_val_val_lhs = std::get<identifier_expr>(*e_val_val.lhs);
+        EXPECT_EQ("v", e_val_val_lhs.name);
+        EXPECT_FALSE(e_val_val_lhs.type);
+
+        auto e_val_val_rhs = std::get<identifier_expr>(*e_val_val.rhs);
+        EXPECT_EQ("v", e_val_val_rhs.name);
+        EXPECT_FALSE(e_val_val_rhs.type);
+
+        auto e_val_body = std::get<binary_expr>(*e_val.body);
+        EXPECT_EQ(binary_op::div, e_val_body.op);
+
+        auto e_val_body_lhs = std::get<identifier_expr>(*e_val_body.lhs);
+        EXPECT_EQ("a", e_val_body_lhs.name);
+        EXPECT_FALSE(e_val_body_lhs.type);
+
+        auto e_val_body_rhs = std::get<identifier_expr>(*e_val_body.rhs);
+        EXPECT_EQ("p1", e_val_body_rhs.name);
+        EXPECT_FALSE(e_val_body_rhs.type);
+
+        auto e_body = std::get<binary_expr>(*e.body);
+        EXPECT_EQ(src_location(1,29), e_body.loc);
+        EXPECT_EQ(binary_op::mul, e_body.op);
+
+        auto e_body_lhs = std::get<identifier_expr>(*e_body.lhs);
+        EXPECT_EQ("g", e_body_lhs.name);
+        EXPECT_FALSE(e_body_lhs.type);
+
+        auto e_body_rhs = std::get<int_expr>(*e_body.rhs);
+        EXPECT_EQ(3, e_body_rhs.value);
+        EXPECT_FALSE(e_body_rhs.unit);
     }
     {
         std::vector<std::string> invalid = {
-            "let a:voltage = -5; a + ",
-            "let a: = 3; 0",
-            "let a = -1e5 0",
-            "let _foo = 0; 0",
-            "let foo = 0;",
+            "let a:voltage = -5; a + ", // Incomplete body expression
+            "let a: = 3; 0",            // Missing type expression
+            "let a = -1e5 0",           // Missing semicolon
+            "let _foo = 0; 0",          // Invalid identifier name
+            "let foo = 0;",             // Missing body
+            "let foo = a:voltage; foo + 1", // Invalid typed identifier on rhs of equal
         };
         for (const auto& s: invalid) {
             auto p = parser(s);
@@ -1073,10 +1161,223 @@ TEST(parser, let) {
         }
     }
 }
-TEST(parser, with) {}
-TEST(parser, conditional) {}
+
+TEST(parser, with) {
+    {
+        std::string with = "with S; a.x";
+        auto p = parser(with);
+        auto e = std::get<with_expr>(*p.parse_with());
+        EXPECT_EQ(src_location(1,1), e.loc);
+
+        auto e_val = std::get<identifier_expr>(*e.value);
+        EXPECT_EQ(src_location(1,6), e_val.loc);
+        EXPECT_EQ("S", e_val.name);
+        EXPECT_FALSE(e_val.type);
+
+        auto e_body = std::get<binary_expr>(*e.body);
+        EXPECT_EQ(src_location(1,10), e_body.loc);
+        EXPECT_EQ(binary_op::dot, e_body.op);
+
+        auto e_body_lhs = std::get<identifier_expr>(*e_body.lhs);
+        EXPECT_EQ("a", e_body_lhs.name);
+        EXPECT_FALSE(e_body_lhs.type);
+
+        auto e_body_rhs = std::get<identifier_expr>(*e_body.rhs);
+        EXPECT_EQ("x", e_body_rhs.name);
+        EXPECT_FALSE(e_body_rhs.type);
+    }
+    {
+        std::string with = "with bar(); x - 1 s";
+        auto p = parser(with);
+        auto e = std::get<with_expr>(*p.parse_with());
+        EXPECT_EQ(src_location(1,1), e.loc);
+
+        auto e_val = std::get<call_expr>(*e.value);
+        EXPECT_EQ(src_location(1,6), e_val.loc);
+        EXPECT_EQ("bar", e_val.function_name);
+        EXPECT_EQ(0u, e_val.call_args.size());
+
+        auto e_body = std::get<binary_expr>(*e.body);
+        EXPECT_EQ(src_location(1,15), e_body.loc);
+        EXPECT_EQ(binary_op::sub, e_body.op);
+
+        auto e_body_lhs = std::get<identifier_expr>(*e_body.lhs);
+        EXPECT_EQ("x", e_body_lhs.name);
+        EXPECT_FALSE(e_body_lhs.type);
+
+        auto e_body_rhs = std::get<int_expr>(*e_body.rhs);
+        EXPECT_EQ(1, e_body_rhs.value);
+        EXPECT_TRUE(e_body_rhs.unit);
+
+        auto unit = std::get<simple_unit>(*e_body_rhs.unit.value());
+        EXPECT_EQ(unit_pref::none, unit.val.prefix);
+        EXPECT_EQ(unit_sym::s, unit.val.symbol);
+    }
+    {
+        std::string with = "with {a = {x = 1 ms;}; b:voltage = 4 V;}.a; x";
+        auto p = parser(with);
+        auto e = std::get<with_expr>(*p.parse_with());
+        EXPECT_EQ(src_location(1,1), e.loc);
+
+        auto e_val = std::get<binary_expr>(*e.value);
+        EXPECT_EQ(src_location(1,41), e_val.loc);
+        EXPECT_EQ(binary_op::dot, e_val.op);
+
+        auto e_val_lhs = std::get<object_expr>(*e_val.lhs);
+        EXPECT_FALSE(e_val_lhs.record_name);
+        EXPECT_EQ(2u, e_val_lhs.record_fields.size());
+        EXPECT_EQ(2u, e_val_lhs.record_values.size());
+
+        auto e_val_lhs_arg0 = std::get<identifier_expr>(*e_val_lhs.record_fields[0]);
+        EXPECT_EQ("a", e_val_lhs_arg0.name);
+        EXPECT_FALSE(e_val_lhs_arg0.type);
+
+        auto e_val_lhs_val0 = std::get<object_expr>(*e_val_lhs.record_values[0]);
+        EXPECT_FALSE(e_val_lhs_val0.record_name);
+        EXPECT_EQ(1u, e_val_lhs_val0.record_fields.size());
+        EXPECT_EQ(1u, e_val_lhs_val0.record_values.size());
+
+        auto e_val_lhs_val0_arg0 = std::get<identifier_expr>(*e_val_lhs_val0.record_fields[0]);
+        EXPECT_EQ("x", e_val_lhs_val0_arg0.name);
+        EXPECT_FALSE(e_val_lhs_val0_arg0.type);
+
+        auto e_val_lhs_val0_val0 = std::get<int_expr>(*e_val_lhs_val0.record_values[0]);
+        EXPECT_EQ(1, e_val_lhs_val0_val0.value);
+        EXPECT_TRUE(e_val_lhs_val0_val0.unit);
+
+        auto unit = std::get<simple_unit>(*e_val_lhs_val0_val0.unit.value());
+        EXPECT_EQ(unit_pref::m, unit.val.prefix);
+        EXPECT_EQ(unit_sym::s, unit.val.symbol);
+
+        auto e_val_lhs_arg1 = std::get<identifier_expr>(*e_val_lhs.record_fields[1]);
+        EXPECT_EQ("b", e_val_lhs_arg1.name);
+        EXPECT_TRUE(e_val_lhs_arg1.type);
+
+        auto type = std::get<quantity_type>(*e_val_lhs_arg1.type.value());
+        EXPECT_EQ(quantity::voltage, type.type);
+
+        auto e_val_lhs_val1 = std::get<int_expr>(*e_val_lhs.record_values[1]);
+        EXPECT_EQ(4, e_val_lhs_val1.value);
+        EXPECT_TRUE(e_val_lhs_val1.unit);
+
+        auto unit1 = std::get<simple_unit>(*e_val_lhs_val1.unit.value());
+        EXPECT_EQ(unit_pref::none, unit1.val.prefix);
+        EXPECT_EQ(unit_sym::V, unit1.val.symbol);
+
+        auto e_val_rhs = std::get<identifier_expr>(*e_val.rhs);
+        EXPECT_EQ("a", e_val_rhs.name);
+        EXPECT_FALSE(e_val_rhs.type);
+
+        auto e_body = std::get<identifier_expr>(*e.body);
+        EXPECT_EQ(src_location(1,45), e_body.loc);
+        EXPECT_EQ("x", e_body.name);
+        EXPECT_FALSE(e_body.type);
+    }
+    {
+        std::string with = "with (let a = 1; {b = a + 3; c = 5 Ohm;}); b*c";
+        auto p = parser(with);
+        auto e = std::get<with_expr>(*p.parse_with());
+        EXPECT_EQ(src_location(1,1), e.loc);
+
+        auto e_val = std::get<let_expr>(*e.value);
+        EXPECT_EQ(src_location(1,7), e_val.loc);
+
+        auto e_val_id = std::get<identifier_expr>(*e_val.identifier);
+        EXPECT_EQ("a", e_val_id.name);
+        EXPECT_FALSE(e_val_id.type);
+
+        auto e_val_val = std::get<int_expr>(*e_val.value);
+        EXPECT_EQ(1, e_val_val.value);
+        EXPECT_FALSE(e_val_val.unit);
+
+        auto e_val_body = std::get<object_expr>(*e_val.body);
+        EXPECT_FALSE(e_val_body.record_name);
+        EXPECT_EQ(2u, e_val_body.record_fields.size());
+        EXPECT_EQ(2u, e_val_body.record_values.size());
+
+        auto e_val_body_arg0 = std::get<identifier_expr>(*e_val_body.record_fields[0]);
+        EXPECT_EQ("b", e_val_body_arg0.name);
+        EXPECT_FALSE(e_val_body_arg0.type);
+
+        auto e_val_body_val0 = std::get<binary_expr>(*e_val_body.record_values[0]);
+        EXPECT_EQ(binary_op::add, e_val_body_val0.op);
+
+        auto e_val_body_val0_lhs = std::get<identifier_expr>(*e_val_body_val0.lhs);
+        EXPECT_EQ("a", e_val_body_val0_lhs.name);
+        EXPECT_FALSE(e_val_body_val0_lhs.type);
+
+        auto e_val_body_val0_rhs = std::get<int_expr>(*e_val_body_val0.rhs);
+        EXPECT_EQ(3, e_val_body_val0_rhs.value);
+        EXPECT_FALSE(e_val_body_val0_rhs.unit);
+
+        auto e_val_body_arg1 = std::get<identifier_expr>(*e_val_body.record_fields[1]);
+        EXPECT_EQ("c", e_val_body_arg1.name);
+        EXPECT_FALSE(e_val_body_arg1.type);
+
+        auto e_val_body_val1 = std::get<int_expr>(*e_val_body.record_values[1]);
+        EXPECT_EQ(5, e_val_body_val1.value);
+        EXPECT_TRUE(e_val_body_val1.unit);
+
+        auto unit = std::get<simple_unit>(*e_val_body_val1.unit.value());
+        EXPECT_EQ(unit_pref::none, unit.val.prefix);
+        EXPECT_EQ(unit_sym::Ohm, unit.val.symbol);
+
+        auto e_body = std::get<binary_expr>(*e.body);
+        EXPECT_EQ(src_location(1,45), e_body.loc);
+        EXPECT_EQ(binary_op::mul, e_body.op);
+
+        auto e_body_lhs = std::get<identifier_expr>(*e_body.lhs);
+        EXPECT_EQ("b", e_body_lhs.name);
+        EXPECT_FALSE(e_body_lhs.type);
+
+        auto e_body_rhs = std::get<identifier_expr>(*e_body.rhs);
+        EXPECT_EQ("c", e_body_rhs.name);
+        EXPECT_FALSE(e_body_rhs.type);
+    }
+    {
+        std::string with = "with a + 2; a";
+        auto p = parser(with);
+        auto e = std::get<with_expr>(*p.parse_with());
+        EXPECT_EQ(src_location(1,1), e.loc);
+
+        auto e_val = std::get<binary_expr>(*e.value);
+        EXPECT_EQ(src_location(1,8), e_val.loc);
+        EXPECT_EQ(binary_op::add, e_val.op);
+
+        auto e_val_lhs = std::get<identifier_expr>(*e_val.lhs);
+        EXPECT_EQ("a", e_val_lhs.name);
+        EXPECT_FALSE(e_val_lhs.type);
+
+        auto e_val_rhs = std::get<int_expr>(*e_val.rhs);
+        EXPECT_EQ(2, e_val_rhs.value);
+        EXPECT_FALSE(e_val_rhs.unit);
+
+        auto e_body = std::get<identifier_expr>(*e.body);
+        EXPECT_EQ(src_location(1,13), e_body.loc);
+        EXPECT_EQ("a", e_body.name);
+        EXPECT_FALSE(e_body.type);
+    }
+}
+
+TEST(parser, conditional) {
+    {
+        std::string cond = "if a then 1 else 0";
+    }
+    {
+        std::string cond = "if a&&b then x*y else x/y";
+    }
+    {
+        std::string cond = "if foo(a) then (let a = 2; a+5) else (let b = 0; 0)";
+    }
+    {
+        std::string cond = "if X.y then 0 else 1";
+    }
+}
+
 TEST(parser, unary_expr) {}
+
 TEST(parser, binary_expr) {} // TODO 2.X? For `.` we can't have number expressions on the lhs, but maybe that's for type checking stage?
+
 TEST(parser, parameter) {}
 TEST(parser, constant) {}
 TEST(parser, record) {}

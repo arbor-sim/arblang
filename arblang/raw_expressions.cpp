@@ -173,7 +173,8 @@ std::ostream& operator<< (std::ostream& o, const let_expr& e) {
 
 // with_expr
 std::ostream& operator<< (std::ostream& o, const with_expr& e) {
-    o << "(with_expr " << e.identifier << " ";
+    o << "(with_expr ";
+    std::visit([&](auto&& c){o << c << " ";}, *e.value);
     std::visit([&](auto&& c){o << c << " ";}, *e.body);
     return o << e.loc << ")";
 }

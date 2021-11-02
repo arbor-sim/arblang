@@ -377,11 +377,8 @@ expr parser::parse_with() {
     auto with = current();
     auto t = next(); // consume 'with'
 
-    if (t.type != tok::identifier) {
-        throw std::runtime_error("Expected identifier, got " + current().spelling);
-    }
-    auto iden = t.spelling;
-    t = next(); // consume identifier
+    auto val = parse_expr();
+    t = current(); // consume identifier
 
     if (t.type != tok::semicolon) {
         throw std::runtime_error("Expected ';', got " + t.spelling);
@@ -390,7 +387,7 @@ expr parser::parse_with() {
 
     auto body = parse_expr();
 
-    return make_expr<with_expr>(std::move(iden), std::move(body), with.loc);
+    return make_expr<with_expr>(std::move(val), std::move(body), with.loc);
 }
 
 // A conditional expression of the form:
