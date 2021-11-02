@@ -1,3 +1,4 @@
+#include <cmath>
 #include <string>
 #include <variant>
 #include <vector>
@@ -221,13 +222,12 @@ TEST(parser, unit) {
     {
         std::vector<std::string> incorrect_units = {
             "Ohm^A",
-            "V*2",
-            "mA/-2",
             "2^uK",
             "pV^(2/mV)"
         };
         for (auto u: incorrect_units) {
             auto p = parser(u);
+            auto q = p.try_parse_unit();
             EXPECT_THROW(p.try_parse_unit(), std::runtime_error);
         }
     }
@@ -1362,21 +1362,416 @@ TEST(parser, with) {
 TEST(parser, conditional) {
     {
         std::string cond = "if a then 1 else 0";
+        auto p = parser(cond);
+        auto e = std::get<conditional_expr>(*p.parse_conditional());
+        EXPECT_EQ(src_location(1,1), e.loc);
+
+        auto e_cond = std::get<identifier_expr>(*e.condition);
+        EXPECT_EQ(src_location(1,4), e_cond.loc);
+        EXPECT_EQ("a", e_cond.name);
+        EXPECT_FALSE(e_cond.type);
+
+        auto e_true = std::get<int_expr>(*e.value_true);
+        EXPECT_EQ(src_location(1,11), e_true.loc);
+        EXPECT_EQ(1, e_true.value);
+        EXPECT_FALSE(e_true.unit);
+
+        auto e_false = std::get<int_expr>(*e.value_false);
+        EXPECT_EQ(src_location(1,18), e_false.loc);
+        EXPECT_EQ(0, e_false.value);
+        EXPECT_FALSE(e_false.unit);
     }
     {
         std::string cond = "if a&&b then x*y else x/y";
+        auto p = parser(cond);
+        auto e = std::get<conditional_expr>(*p.parse_conditional());
+        EXPECT_EQ(src_location(1,1), e.loc);
+
+        auto e_cond = std::get<binary_expr>(*e.condition);
+        EXPECT_EQ(src_location(1,5), e_cond.loc);
+        EXPECT_EQ(binary_op::land, e_cond.op);
+
+        auto e_cond_lhs = std::get<identifier_expr>(*e_cond.lhs);
+        EXPECT_EQ("a", e_cond_lhs.name);
+        EXPECT_FALSE(e_cond_lhs.type);
+
+        auto e_cond_rhs = std::get<identifier_expr>(*e_cond.rhs);
+        EXPECT_EQ("b", e_cond_rhs.name);
+        EXPECT_FALSE(e_cond_rhs.type);
+
+        auto e_true = std::get<binary_expr>(*e.value_true);
+        EXPECT_EQ(src_location(1,15), e_true.loc);
+        EXPECT_EQ(binary_op::mul, e_true.op);
+
+        auto e_true_lhs = std::get<identifier_expr>(*e_true.lhs);
+        EXPECT_EQ("x", e_true_lhs.name);
+        EXPECT_FALSE(e_true_lhs.type);
+
+        auto e_true_rhs = std::get<identifier_expr>(*e_true.rhs);
+        EXPECT_EQ("y", e_true_rhs.name);
+        EXPECT_FALSE(e_true_rhs.type);
+
+        auto e_false = std::get<binary_expr>(*e.value_false);
+        EXPECT_EQ(src_location(1,24), e_false.loc);
+        EXPECT_EQ(binary_op::div, e_false.op);
+
+        auto e_false_lhs = std::get<identifier_expr>(*e_false.lhs);
+        EXPECT_EQ("x", e_false_lhs.name);
+        EXPECT_FALSE(e_false_lhs.type);
+
+        auto e_false_rhs = std::get<identifier_expr>(*e_false.rhs);
+        EXPECT_EQ("y", e_false_rhs.name);
+        EXPECT_FALSE(e_false_rhs.type);
     }
     {
         std::string cond = "if foo(a) then (let a = 2; a+5) else (let b = 0; 0)";
+        auto p = parser(cond);
+        auto e = std::get<conditional_expr>(*p.parse_conditional());
+        EXPECT_EQ(src_location(1,1), e.loc);
+
+        auto e_cond = std::get<call_expr>(*e.condition);
+        EXPECT_EQ(src_location(1,4), e_cond.loc);
+        EXPECT_EQ("foo", e_cond.function_name);
+        EXPECT_EQ(1u, e_cond.call_args.size());
+
+        auto e_cond_arg = std::get<identifier_expr>(*e_cond.call_args[0]);
+        EXPECT_EQ("a", e_cond_arg.name);
+        EXPECT_FALSE(e_cond_arg.type);
+
+        auto e_true = std::get<let_expr>(*e.value_true);
+        EXPECT_EQ(src_location(1,17), e_true.loc);
+
+        auto e_true_id = std::get<identifier_expr>(*e_true.identifier);
+        EXPECT_EQ("a", e_true_id.name);
+        EXPECT_FALSE(e_true_id.type);
+
+        auto e_true_val = std::get<int_expr>(*e_true.value);
+        EXPECT_EQ(2, e_true_val.value);
+        EXPECT_FALSE(e_true_val.unit);
+
+        auto e_true_body = std::get<binary_expr>(*e_true.body);
+        EXPECT_EQ(binary_op::add, e_true_body.op);
+
+        auto e_true_body_lhs = std::get<identifier_expr>(*e_true_body.lhs);
+        EXPECT_EQ("a", e_true_body_lhs.name);
+        EXPECT_FALSE(e_true_body_lhs.type);
+
+        auto e_true_body_rhs = std::get<int_expr>(*e_true_body.rhs);
+        EXPECT_EQ(5, e_true_body_rhs.value);
+        EXPECT_FALSE(e_true_body_rhs.unit);
+
+        auto e_false = std::get<let_expr>(*e.value_false);
+        EXPECT_EQ(src_location(1,39), e_false.loc);
+
+        auto e_false_id = std::get<identifier_expr>(*e_false.identifier);
+        EXPECT_EQ("b", e_false_id.name);
+        EXPECT_FALSE(e_false_id.type);
+
+        auto e_false_val = std::get<int_expr>(*e_false.value);
+        EXPECT_EQ(0, e_false_val.value);
+        EXPECT_FALSE(e_false_val.unit);
+
+        auto e_false_body = std::get<int_expr>(*e_false.body);
+        EXPECT_EQ(0, e_false_body.value);
+        EXPECT_FALSE(e_false_body.unit);
     }
     {
         std::string cond = "if X.y then 0 else 1";
+        auto p = parser(cond);
+        auto e = std::get<conditional_expr>(*p.parse_conditional());
+        EXPECT_EQ(src_location(1,1), e.loc);
+
+        auto e_cond = std::get<binary_expr>(*e.condition);
+        EXPECT_EQ(binary_op::dot, e_cond.op);
+
+        auto e_cond_lhs = std::get<identifier_expr>(*e_cond.lhs);
+        EXPECT_EQ("X", e_cond_lhs.name);
+        EXPECT_FALSE(e_cond_lhs.type);
+
+        auto e_cond_rhs = std::get<identifier_expr>(*e_cond.rhs);
+        EXPECT_EQ("y", e_cond_rhs.name);
+        EXPECT_FALSE(e_cond_rhs.type);
+
+        auto e_true = std::get<int_expr>(*e.value_true);
+        EXPECT_EQ(0, e_true.value);
+        EXPECT_FALSE(e_true.unit);
+
+        auto e_false = std::get<int_expr>(*e.value_false);
+        EXPECT_EQ(1, e_false.value);
+        EXPECT_FALSE(e_false.unit);
     }
 }
 
-TEST(parser, unary_expr) {}
+// exp, exprelr, log, cos, sin, abs, !, -, +, max, min
+TEST(parser, prefix_expr) {
+    {
+        std::string val = "exp(-3)";
+        auto p = parser(val);
+        auto e = std::get<unary_expr>(*p.parse_prefix_expr());
+        EXPECT_EQ(unary_op::exp, e.op);
+        EXPECT_EQ(src_location(1,1), e.loc);
 
-TEST(parser, binary_expr) {} // TODO 2.X? For `.` we can't have number expressions on the lhs, but maybe that's for type checking stage?
+        auto e_arg = std::get<unary_expr>(*e.value);
+        EXPECT_EQ(src_location(1,5), e_arg.loc);
+        EXPECT_EQ(unary_op::neg, e_arg.op);
+
+        auto e_arg_arg = std::get<int_expr>(*e_arg.value);
+        EXPECT_EQ(src_location(1,6), e_arg_arg.loc);
+        EXPECT_EQ(3, e_arg_arg.value);
+        EXPECT_FALSE(e_arg_arg.unit);
+    }
+    {
+        std::string val = "exprelr(-exp(3))";
+        auto p = parser(val);
+        auto e = std::get<unary_expr>(*p.parse_prefix_expr());
+        EXPECT_EQ(unary_op::exprelr, e.op);
+        EXPECT_EQ(src_location(1,1), e.loc);
+
+        auto e_arg = std::get<unary_expr>(*e.value);
+        EXPECT_EQ(src_location(1,9), e_arg.loc);
+        EXPECT_EQ(unary_op::neg, e_arg.op);
+
+        auto e_arg_arg = std::get<unary_expr>(*e_arg.value);
+        EXPECT_EQ(src_location(1,10), e_arg_arg.loc);
+        EXPECT_EQ(unary_op::exp, e_arg_arg.op);
+
+        auto e_arg_arg_arg = std::get<int_expr>(*e_arg_arg.value);
+        EXPECT_EQ(src_location(1,14), e_arg_arg_arg.loc);
+        EXPECT_EQ(3, e_arg_arg_arg.value);
+        EXPECT_FALSE(e_arg_arg_arg.unit);
+    }
+    {
+        std::string val = "log(foo(+3.2e3))";
+        auto p = parser(val);
+        auto e = std::get<unary_expr>(*p.parse_prefix_expr());
+        EXPECT_EQ(unary_op::log, e.op);
+        EXPECT_EQ(src_location(1,1), e.loc);
+
+        auto e_arg = std::get<call_expr>(*e.value);
+        EXPECT_EQ(src_location(1,5), e_arg.loc);
+        EXPECT_EQ("foo", e_arg.function_name);
+        EXPECT_EQ(1, e_arg.call_args.size());
+
+        auto e_arg_arg = std::get<float_expr>(*e_arg.call_args[0]);
+        EXPECT_EQ(src_location(1,10), e_arg_arg.loc);
+        EXPECT_EQ(3.2e3, e_arg_arg.value);
+        EXPECT_FALSE(e_arg_arg.unit);
+    }
+    {
+        std::string val = "cos({a = -3.14159;}.a)";
+        auto p = parser(val);
+        auto e = std::get<unary_expr>(*p.parse_prefix_expr());
+        EXPECT_EQ(unary_op::cos, e.op);
+        EXPECT_EQ(src_location(1,1), e.loc);
+
+        auto e_arg = std::get<binary_expr>(*e.value);
+        EXPECT_EQ(src_location(1,20), e_arg.loc);
+        EXPECT_EQ(binary_op::dot, e_arg.op);
+
+        auto e_arg_lhs = std::get<object_expr>(*e_arg.lhs);
+        EXPECT_EQ(src_location(1,5), e_arg_lhs.loc);
+        EXPECT_FALSE(e_arg_lhs.record_name);
+        EXPECT_EQ(1u, e_arg_lhs.record_fields.size());
+        EXPECT_EQ(1u, e_arg_lhs.record_values.size());
+
+        auto e_arg_lhs_arg = std::get<identifier_expr>(*e_arg_lhs.record_fields[0]);
+        EXPECT_EQ("a", e_arg_lhs_arg.name);
+        EXPECT_FALSE(e_arg_lhs_arg.type);
+
+        auto e_arg_lhs_val = std::get<unary_expr>(*e_arg_lhs.record_values[0]);
+        EXPECT_EQ(unary_op::neg, e_arg_lhs_val.op);
+
+        auto e_arg_lhs_val_val = std::get<float_expr>(*e_arg_lhs_val.value);
+        EXPECT_EQ(3.14159, e_arg_lhs_val_val.value);
+        EXPECT_FALSE(e_arg_lhs_val_val.unit);
+
+        auto e_arg_rhs = std::get<identifier_expr>(*e_arg.rhs);
+        EXPECT_EQ("a", e_arg_rhs.name);
+        EXPECT_FALSE(e_arg_rhs.type);
+    }
+    {
+        std::string val = "let a = 2; sin(a)";
+        auto p = parser(val);
+        auto e = std::get<let_expr>(*p.parse_let());
+        EXPECT_EQ(src_location(1,1), e.loc);
+
+        auto e_id = std::get<identifier_expr>(*e.identifier);
+        EXPECT_EQ(src_location(1,5), e_id.loc);
+        EXPECT_EQ("a", e_id.name);
+        EXPECT_FALSE(e_id.type);
+
+        auto e_val = std::get<int_expr>(*e.value);
+        EXPECT_EQ(src_location(1,9), e_val.loc);
+        EXPECT_EQ(2, e_val.value);
+        EXPECT_FALSE(e_val.unit);
+
+        auto e_body = std::get<unary_expr>(*e.body);
+        EXPECT_EQ(src_location(1,12), e_body.loc);
+        EXPECT_EQ(unary_op::sin, e_body.op);
+
+        auto e_body_val = std::get<identifier_expr>(*e_body.value);
+        EXPECT_EQ(src_location(1,16), e_body_val.loc);
+        EXPECT_EQ("a", e_body_val.name);
+        EXPECT_FALSE(e_body_val.type);
+    }
+    {
+        std::string val = "abs(if a>3 then a else b)";
+        auto p = parser(val);
+        auto e = std::get<unary_expr>(*p.parse_prefix_expr());
+        EXPECT_EQ(src_location(1,1), e.loc);
+        EXPECT_EQ(unary_op::abs, e.op);
+
+        auto e_val = std::get<conditional_expr>(*e.value);
+        EXPECT_EQ(src_location(1,5), e_val.loc);
+
+        auto e_val_cond = std::get<binary_expr>(*e_val.condition);
+        EXPECT_EQ(binary_op::gt, e_val_cond.op);
+
+        auto e_val_cond_lhs = std::get<identifier_expr>(*e_val_cond.lhs);
+        EXPECT_EQ("a", e_val_cond_lhs.name);
+        EXPECT_FALSE(e_val_cond_lhs.type);
+
+        auto e_val_cond_rhs = std::get<int_expr>(*e_val_cond.rhs);
+        EXPECT_EQ(3, e_val_cond_rhs.value);
+        EXPECT_FALSE(e_val_cond_rhs.unit);
+
+        auto e_val_true = std::get<identifier_expr>(*e_val.value_true);
+        EXPECT_EQ("a", e_val_true.name);
+        EXPECT_FALSE(e_val_true.type);
+
+        auto e_val_false = std::get<identifier_expr>(*e_val.value_false);
+        EXPECT_EQ("b", e_val_false.name);
+        EXPECT_FALSE(e_val_false.type);
+    }
+    {
+        std::string val = "max(+3 mV, min(a, b))";
+        auto p = parser(val);
+        auto e = std::get<binary_expr>(*p.parse_prefix_expr());
+        EXPECT_EQ(src_location(1,1), e.loc);
+        EXPECT_EQ(binary_op::max, e.op);
+
+        auto e_lhs = std::get<int_expr>(*e.lhs);
+        EXPECT_EQ(3, e_lhs.value);
+        EXPECT_TRUE(e_lhs.unit);
+
+        auto unit = std::get<simple_unit>(*e_lhs.unit.value());
+        EXPECT_EQ(unit_pref::m, unit.val.prefix);
+        EXPECT_EQ(unit_sym::V, unit.val.symbol);
+
+        auto e_rhs = std::get<binary_expr>(*e.rhs);
+        EXPECT_EQ(binary_op::min, e_rhs.op);
+
+        auto e_rhs_lhs = std::get<identifier_expr>(*e_rhs.lhs);
+        EXPECT_EQ("a", e_rhs_lhs.name);
+        EXPECT_FALSE(e_rhs_lhs.type);
+
+        auto e_rhs_rhs = std::get<identifier_expr>(*e_rhs.rhs);
+        EXPECT_EQ("b", e_rhs_rhs.name);
+        EXPECT_FALSE(e_rhs_rhs.type);
+    }
+}
+
+namespace {
+double eval(expr e) {
+    if (auto v = std::get_if<int_expr>(e.get())) {
+        return v->value;
+    }
+    if (auto v = std::get_if<float_expr>(e.get())) {
+        return v->value;
+    }
+    if (auto v = std::get_if<binary_expr>(e.get())) {
+        auto lhs = eval(v->lhs);
+        auto rhs = eval(v->rhs);
+        switch (v->op) {
+            case binary_op::add:  return lhs + rhs;
+            case binary_op::sub:  return lhs - rhs;
+            case binary_op::mul:  return lhs * rhs;
+            case binary_op::div:  return lhs / rhs;
+            case binary_op::lt:   return lhs < rhs;
+            case binary_op::le:   return lhs <= rhs;
+            case binary_op::gt:   return lhs > rhs;
+            case binary_op::ge:   return lhs >= rhs;
+            case binary_op::ne:   return lhs != rhs;
+            case binary_op::eq:   return lhs == rhs;
+            case binary_op::land: return lhs && rhs;
+            case binary_op::lor:  return lhs || rhs;
+            case binary_op::pow:  return std::pow(lhs, rhs);
+            case binary_op::min:  return std::min(lhs, rhs);
+            case binary_op::max:  return std::max(lhs, rhs);
+            default:;
+        }
+    }
+    if (auto v = std::get_if<unary_expr>(e.get())) {
+        auto val = eval(v->value);
+        switch (v->op) {
+            case unary_op::neg: return -val;
+            default:;
+        }
+    }
+    return std::numeric_limits<double>::quiet_NaN();
+}
+}
+TEST(parser, infix_expr) {
+    using std::pow;
+
+    std::pair<std::string, double> tests[] = {
+            // simple
+            {"2+3",      2. + 3.},
+            {"2-3",      2. - 3.},
+            {"2*3",      2. * 3.},
+            {"2/3",      2. / 3.},
+            {"2^3",      pow(2., 3.)},
+            {"min(2,3)", 2.},
+            {"min(3,2)", 2.},
+            {"max(2,3)", 3.},
+            {"max(3,2)", 3.},
+
+            // more complicated
+            {"2+3*4", 2. + (3 * 4)},
+            {"2*3-5", (2. * 3) - 5.},
+            {"2+3*(-2)", 2. + (3 * -2)},
+            {"2+3*(-+2)", 2. + (3 * -+2)},
+            {"2/3*4", (2. / 3.) * 4.},
+            {"min(2+3, 4/2)", 4. / 2},
+            {"max(2+3, 4/2)", 2. + 3.},
+            {"max(2+3, min(12, 24))", 12.},
+            {"max(min(12, 24), 2+3)", 12.},
+            {"2 * 7 - 3 * 11 + 4 * 13", 2. * 7. - 3. * 11. + 4. * 13.},
+
+            // right associative
+            {"2^3^1.5", pow(2., pow(3., 1.5))},
+            {"2^3^1.5^2", pow(2., pow(3., pow(1.5, 2.)))},
+            {"2^2^3", pow(2., pow(2., 3.))},
+            {"(2^2)^3", pow(pow(2., 2.), 3.)},
+            {"3./2^7.", 3. / pow(2., 7.)},
+            {"3^2*5.", pow(3., 2.) * 5.},
+
+            // multilevel
+            {"1-2*3^4*5^2^3-3^2^3/4/8-5", 1. - 2 * pow(3., 4.) * pow(5., pow(2., 3.)) - pow(3, pow(2., 3.)) / 4. / 8. - 5}
+    };
+
+    for (const auto& test_case: tests) {
+        auto p = parser(test_case.first);
+        auto e = p.parse_expr();
+        EXPECT_NEAR(eval(e), test_case.second, 1e-10);
+    }
+
+/*    std::pair<std::string, bool> bool_tests[] = {
+            {"0 && 0 || 1", true},
+            {"(0 && 0) || 1", true},
+            {"0 && (0 || 1)", false},
+            {"3<2 && 1 || 4>1", true},
+            {"(3<2 && 1) || 4>1", true},
+            {"3<2 && (1 || 4>1)", false},
+            {"(3<2) && (1 || (4>1))", false},
+    };
+
+    for (const auto& test_case: bool_tests) {
+        auto p = parser(test_case.first);
+        auto e = p.parse_expr();
+        EXPECT_NEAR(eval(e), test_case.second, 1e-10);
+    }*/
+}
 
 TEST(parser, parameter) {}
 TEST(parser, constant) {}

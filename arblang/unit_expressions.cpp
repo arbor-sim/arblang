@@ -96,25 +96,30 @@ std::ostream& operator<< (std::ostream& o, const u_binary_op& op) {
 
 //quantity_binary_type;
 binary_unit::binary_unit(tok t, u_expr l, u_expr r, const src_location& location): lhs(std::move(l)), rhs(std::move(r)), loc(location) {
-    auto verify = [](const auto&& t) {return std::get_if<integer_unit>(t) || std::get_if<simple_unit>(t) ||std::get_if<binary_unit>(t);};
-    if(!verify(lhs.get()) || !verify(rhs.get())) {
-        throw std::runtime_error("Invalid unit expression");
-    }
     if (auto bop = gen_binary_op(t)) {
         op = bop.value();
-        if (op != u_binary_op::pow) {
-            if (std::get_if<integer_unit>(lhs.get()) || std::get_if<integer_unit>(rhs.get())) {
-                throw std::runtime_error("Invalid unit expression");
-            }
-        } else {
-            if (std::get_if<integer_unit>(lhs.get()) || !std::get_if<integer_unit>(rhs.get())) {
-                throw std::runtime_error("Invalid unit expression");
-            }
-        };
     } else {
         throw std::runtime_error("Unexpected binary operator token");
-    };
+    }
 }
+
+bool binary_unit::verify() const {
+    auto is_simple = [](const u_expr& t) {return std::get_if<simple_unit>(t.get());};
+    auto is_int    = [](const u_expr& t) {return std::get_if<integer_unit>(t.get());};
+    auto is_binary = [](const u_expr& t) {return std::get_if<binary_unit>(t.get());};
+
+    if (is_int(lhs) || (!is_simple(lhs) && !is_binary(lhs))) {
+        return false;
+    }
+    if (!is_simple(rhs) && !is_binary(rhs) && !is_int(rhs)) {
+        return false;
+    }
+    if ((op == u_binary_op::pow) && !is_int(rhs)) {
+        return false;
+    }
+    return true;
+}
+
 std::ostream& operator<< (std::ostream& o, const binary_unit& u) {
     o << "(binary_unit " << u.op << " ";
     std::visit([&](auto&& c){o << c;}, *u.lhs);
@@ -129,5 +134,16 @@ std::ostream& operator<< (std::ostream& o, const integer_unit& u) {
 std::ostream& operator<< (std::ostream& o, const simple_unit& u) {
     return o << "(simple_unit " << u.spelling << " " << u.loc << ")";
 }
+
+bool verify_unit(const u_expr& u) {
+    bool verified;
+    std::visit(overloaded {
+            [&](const simple_unit& u) {verified = true;},
+            [&](const binary_unit& u) {verified = u.verify();},
+            [&](const integer_unit& u) {verified = false;}
+    }, *u);
+    return verified;
+}
+
 } // namespace u_raw_ir
 } // namespace al

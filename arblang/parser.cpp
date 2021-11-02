@@ -400,20 +400,16 @@ expr parser::parse_conditional() {
     auto t = next(); // consume 'if'
 
     auto condition = parse_expr();
-    if (auto binary = std::get_if<binary_expr>(condition.get())) {
-        if (!binary->is_boolean()) {
-            throw std::runtime_error("Expected boolean expression");
-        }
-    } else if (auto unary = std::get_if<unary_expr>(condition.get())) {
-        if (!unary->is_boolean()) {
-            throw std::runtime_error("Expected boolean expression");
-        }
-    } else {
-        throw std::runtime_error("Expected boolean expression");
-    };
+
+    t = current();
+    if (t.type != tok::then_stmt) {
+        throw std::runtime_error("Expected 'then', got " + current().spelling);
+    }
+    next(); // consume 'else'
 
     auto if_true = parse_expr();
 
+    t = current();
     if (t.type != tok::else_stmt) {
         throw std::runtime_error("Expected 'else', got " + current().spelling);
     }
@@ -765,7 +761,9 @@ t_expr parser::parse_type() {
 // Unit expressions
 // Handles infix unit operations
 std::optional<u_expr> parser::parse_binary_unit(u_expr&& lhs, const token& lop) {
+    auto lstate = save();
     auto lop_prec = lop.precedence();
+
     auto rhs = try_parse_unit_expr(lop_prec);
     if (!rhs) {
         return lhs;
@@ -778,21 +776,36 @@ std::optional<u_expr> parser::parse_binary_unit(u_expr&& lhs, const token& lop) 
         throw std::runtime_error("parse_binary_unit() : encountered operator of higher precedence");
     }
     if (rop_prec < lop_prec) {
-        return make_u_expr<binary_unit>(lop.type, std::move(lhs), std::move(rhs.value()), lop.loc);
+        auto bin_unit = make_u_expr<binary_unit>(lop.type, lhs, std::move(rhs.value()), lop.loc);
+        if (!verify_unit(bin_unit)) {
+            restore(lstate);
+            return {};
+        }
+        return std::move(bin_unit);
     }
-    auto lstate = save();
+
     next(); // consume rop
     if (rop.right_associative()) {
         rhs = parse_binary_unit(std::move(rhs.value()), rop);
         if (!rhs) {
             restore(lstate);
-            return lhs;
+            return {};
         }
-        return make_u_expr<binary_unit>(lop.type, std::move(lhs), std::move(rhs.value()), lop.loc);
+        auto bin_unit = make_u_expr<binary_unit>(lop.type, lhs, std::move(rhs.value()), lop.loc);
+        if (!verify_unit(bin_unit)) {
+            restore(lstate);
+            return {};
+        }
+        return std::move(bin_unit);
     }
     else {
-        lhs = make_u_expr<binary_unit>(lop.type, std::move(lhs), std::move(rhs.value()), lop.loc);
-        rhs = parse_binary_unit(std::move(lhs), rop);
+        auto bin_unit = make_u_expr<binary_unit>(lop.type, lhs, std::move(rhs.value()), lop.loc);
+        if (!verify_unit(bin_unit)) {
+            restore(lstate);
+            return {};
+        }
+        auto lhs_copy = bin_unit;
+        rhs = parse_binary_unit(std::move(bin_unit), rop);
         if (!rhs) {
             restore(lstate);
             return lhs;
@@ -806,8 +819,13 @@ std::optional<u_expr> parser::try_parse_unit_element() {
     auto t = current();
     switch (t.type) {
         case tok::lparen: {
+            auto lstate = save();
             next(); // consume '('
             auto unit = try_parse_unit_expr();
+            if (!unit || !verify_unit(unit.value())) {
+                restore(lstate);
+                return {};
+            }
             t = current();
             if (t.type != tok::rparen) {
                 throw std::runtime_error("Expected ')' expression, got " + t.spelling);
@@ -849,6 +867,7 @@ std::optional<u_expr> parser::try_parse_unit_element() {
 }
 
 std::optional<u_expr> parser::try_parse_unit_expr(int prec) {
+    auto state = save();
     auto unit = try_parse_unit_element();
     if (!unit) return {};
 
@@ -867,6 +886,10 @@ std::optional<u_expr> parser::try_parse_unit_expr(int prec) {
         auto unit_t = parse_binary_unit(std::move(unit.value()), op);
         if (!unit_t) {
             restore(lstate);
+            if(!verify_unit(unit.value())) {
+                restore(state);
+                return {};
+            }
             return unit;
         }
         unit = unit_t;
@@ -876,7 +899,7 @@ std::optional<u_expr> parser::try_parse_unit_expr(int prec) {
 std::optional<u_expr> parser::try_parse_unit(int prec) {
     auto lstate = save();
     auto u = try_parse_unit_expr(prec);
-    if (u && std::get_if<integer_unit>((*u).get())) {
+    if (u && !verify_unit(u.value())) {
         restore(lstate);
         return {};
     }

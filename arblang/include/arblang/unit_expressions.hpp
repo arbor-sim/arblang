@@ -7,6 +7,7 @@
 #include <variant>
 
 #include <arblang/token.hpp>
+#include <arblang/visitor.hpp>
 
 namespace al {
 namespace u_raw_ir {
@@ -100,6 +101,7 @@ struct binary_unit {
     src_location loc;
 
     binary_unit(tok t, u_expr lhs, u_expr rhs, const src_location& loc);
+    bool verify() const;
 };
 
 std::ostream& operator<< (std::ostream&, const binary_unit&);
@@ -110,6 +112,8 @@ template <typename T, typename... Args>
 u_expr make_u_expr(Args&&... args) {
     return u_expr(new unit_expr(T(std::forward<Args>(args)...)));
 }
+
+bool verify_unit(const u_expr& u);
 
 } // namespace u_raw_ir
 } // namespace al

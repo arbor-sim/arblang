@@ -16,6 +16,7 @@ bool operator==(const src_location& lhs, const src_location& rhs) {
 
 std::unordered_map<std::string, tok> token::keyword_to_token = {
     {"if",            tok::if_stmt},
+    {"then",          tok::then_stmt},
     {"else",          tok::else_stmt},
     {"min",           tok::min},
     {"max",           tok::max},
@@ -86,6 +87,7 @@ std::unordered_map<tok, std::string> token::token_to_string = {
     {tok::floatpt,       "float"},
     {tok::integer,       "integer"},
     {tok::if_stmt,       "if"},
+    {tok::then_stmt,     "then"},
     {tok::else_stmt,     "else"},
     {tok::min,           "min"},
     {tok::max,           "max"},

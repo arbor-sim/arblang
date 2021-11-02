@@ -55,7 +55,7 @@ enum class tok {
     floatpt, integer,
 
     // logical keywords
-    if_stmt, else_stmt,
+    if_stmt, then_stmt, else_stmt,
 
     // prefix binary operators
     min, max,
