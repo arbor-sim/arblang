@@ -765,53 +765,45 @@ std::optional<u_expr> parser::parse_binary_unit(u_expr&& lhs, const token& lop) 
     auto lop_prec = lop.precedence();
 
     auto rhs = try_parse_unit_expr(lop_prec);
-    if (!rhs) {
-        return lhs;
-    }
 
     auto rop = current();
     auto rop_prec = rop.precedence();
+
+    if (!rhs) goto restore_and_return;
 
     if (rop_prec > lop_prec) {
         throw std::runtime_error("parse_binary_unit() : encountered operator of higher precedence");
     }
     if (rop_prec < lop_prec) {
-        auto bin_unit = make_u_expr<binary_unit>(lop.type, lhs, std::move(rhs.value()), lop.loc);
-        if (!verify_unit(bin_unit)) {
-            restore(lstate);
-            return {};
-        }
+        auto bin_unit = make_u_expr<binary_unit>(lop.type, std::move(lhs), std::move(rhs.value()), lop.loc);
+        if (!verify_unit(bin_unit)) goto restore_and_return;
+
         return std::move(bin_unit);
     }
 
     next(); // consume rop
     if (rop.right_associative()) {
         rhs = parse_binary_unit(std::move(rhs.value()), rop);
-        if (!rhs) {
-            restore(lstate);
-            return {};
-        }
-        auto bin_unit = make_u_expr<binary_unit>(lop.type, lhs, std::move(rhs.value()), lop.loc);
-        if (!verify_unit(bin_unit)) {
-            restore(lstate);
-            return {};
-        }
+        if (!rhs) goto restore_and_return;
+
+        auto bin_unit = make_u_expr<binary_unit>(lop.type, std::move(lhs), std::move(rhs.value()), lop.loc);
+        if (!verify_unit(bin_unit)) goto restore_and_return;
+
         return std::move(bin_unit);
     }
     else {
-        auto bin_unit = make_u_expr<binary_unit>(lop.type, lhs, std::move(rhs.value()), lop.loc);
-        if (!verify_unit(bin_unit)) {
-            restore(lstate);
-            return {};
-        }
-        auto lhs_copy = bin_unit;
+        auto bin_unit = make_u_expr<binary_unit>(lop.type, std::move(lhs), std::move(rhs.value()), lop.loc);
+        if (!verify_unit(bin_unit)) goto restore_and_return;
+
         rhs = parse_binary_unit(std::move(bin_unit), rop);
-        if (!rhs) {
-            restore(lstate);
-            return lhs;
-        }
+        if (!rhs) goto restore_and_return;
+
         return rhs;
     }
+
+restore_and_return:
+    restore(lstate);
+    return std::nullopt;
 }
 
 std::optional<u_expr> parser::try_parse_unit_element() {
@@ -867,13 +859,13 @@ std::optional<u_expr> parser::try_parse_unit_element() {
 }
 
 std::optional<u_expr> parser::try_parse_unit_expr(int prec) {
-    auto state = save();
+    auto state0 = save();
     auto unit = try_parse_unit_element();
     if (!unit) return {};
 
     // Combine all sub-expressions with precedence greater than prec.
     for (;;) {
-        auto lstate = save();
+        auto state1 = save();
         auto op = current();
         auto op_prec = op.precedence();
 
@@ -883,14 +875,16 @@ std::optional<u_expr> parser::try_parse_unit_expr(int prec) {
 
         next(); // consume the infix binary operator
 
+        auto valid = verify_unit(unit.value());
+        auto save_unit = unit;
         auto unit_t = parse_binary_unit(std::move(unit.value()), op);
+        if (!unit_t && !valid) {
+            restore(state0);
+            return {};
+        }
         if (!unit_t) {
-            restore(lstate);
-            if(!verify_unit(unit.value())) {
-                restore(state);
-                return {};
-            }
-            return unit;
+            restore(state1);
+            return save_unit;
         }
         unit = unit_t;
     }
