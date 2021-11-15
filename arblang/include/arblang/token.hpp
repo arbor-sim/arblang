@@ -45,6 +45,9 @@ enum class tok {
     // ( )
     lparen, rparen,
 
+    // [ ]
+    lbracket, rbracket,
+
     // variable/function names
     identifier,
 

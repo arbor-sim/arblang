@@ -49,9 +49,9 @@ public:
     t_expr parse_record_type();
     t_expr parse_type();
 
-    std::optional<u_expr> parse_binary_unit(u_expr&& lhs, const token& lop);
-    std::optional<u_expr> try_parse_unit_element();
-    std::optional<u_expr> try_parse_unit_expr(int prec=0);
+    u_expr parse_binary_unit(u_expr&& lhs, const token& lop);
+    u_expr parse_unit_element();
+    u_expr parse_unit_expr(int prec=0);
     std::optional<u_expr> try_parse_unit(int prec=0);
 
 private:

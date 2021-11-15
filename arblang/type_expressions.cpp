@@ -146,5 +146,34 @@ std::ostream& operator<< (std::ostream& o, const record_type& q) {
 std::ostream& operator<< (std::ostream& o, const record_alias_type& q) {
     return o << "(record_alias_type " << q.name << " " << q.loc << ")";
 }
+
+bool verify_sub_types(const t_expr& u) {
+    auto is_int  = [](const t_expr& t) {return std::get_if<integer_type>(t.get());};
+    return std::visit(overloaded {
+            [&](const boolean_type& t)      {return false;},
+            [&](const record_type& t)       {return false;},
+            [&](const record_alias_type& t) {return false;},
+            [&](const quantity_type& t)     {return true;},
+            [&](const integer_type& t)      {return true;},
+            [&](const quantity_binary_type& t) {
+                if (is_int(t.lhs)) return false;
+                if ((t.op == t_binary_op::pow) && !is_int(t.rhs)) return false;
+                if ((t.op != t_binary_op::pow) && is_int(t.rhs))  return false;
+                return verify_sub_types(t.lhs) && verify_sub_types(t.rhs);
+            },
+    }, *u);
+}
+
+bool verify_type(const t_expr& u) {
+    return std::visit(overloaded {
+        [&](const boolean_type& t)      {return true;},
+        [&](const record_type& t)       {return true;},
+        [&](const record_alias_type& t) {return true;},
+        [&](const quantity_type& t)     {return true;},
+        [&](const integer_type& t)      {return false;},
+        [&](const quantity_binary_type& t) {return verify_sub_types(u);}
+    }, *u);
+}
+
 } // namespace t_raw_ir
 } // namespace al

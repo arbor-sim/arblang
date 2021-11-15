@@ -214,6 +214,12 @@ private:
                 case ')':
                     token_ = {loc(), tok::rparen, {character()}};
                     return;
+                case '[':
+                    token_ = {loc(), tok::lbracket, {character()}};
+                    return;
+                case ']':
+                    token_ = {loc(), tok::rbracket, {character()}};
+                    return;
                 case '{':
                     token_ = {loc(), tok::lbrace, {character()}};
                     return;

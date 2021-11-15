@@ -16,7 +16,7 @@ using namespace raw_ir;
 TEST(parser, unit) {
     using namespace u_raw_ir;
     {
-        std::string unit = "mV";
+        std::string unit = "[mV]";
         auto p = parser(unit);
         auto u = std::get<simple_unit>(*p.try_parse_unit().value());
         EXPECT_EQ("mV", u.spelling);
@@ -24,7 +24,7 @@ TEST(parser, unit) {
         EXPECT_EQ(unit_sym::V, u.val.symbol);
     }
     {
-        std::string unit = "mmol/kA";
+        std::string unit = "[mmol/kA]";
         auto p = parser(unit);
         auto u = std::get<binary_unit>(*p.try_parse_unit().value());
         auto lhs = std::get<simple_unit>(*u.lhs);
@@ -41,7 +41,7 @@ TEST(parser, unit) {
         EXPECT_EQ(u_binary_op::div, u.op);
     }
     {
-        std::string unit = "K^-2";
+        std::string unit = "[K^-2]";
         auto p = parser(unit);
         auto u = std::get<binary_unit>(*p.try_parse_unit().value());
         auto lhs = std::get<simple_unit>(*u.lhs);
@@ -56,7 +56,7 @@ TEST(parser, unit) {
         EXPECT_EQ(u_binary_op::pow, u.op);
     }
     {
-        std::string unit = "Ohm*uV/YS";
+        std::string unit = "[Ohm*uV/YS]";
         auto p = parser(unit);
         auto u = std::get<binary_unit>(*p.try_parse_unit().value());
 
@@ -81,7 +81,7 @@ TEST(parser, unit) {
         EXPECT_EQ(unit_sym::S, rhs_0.val.symbol);
     }
     {
-        std::string unit = "Ohm^2/daC/K^-3";
+        std::string unit = "[Ohm^2/daC/K^-3]";
         auto p = parser(unit);
         auto u = std::get<binary_unit>(*p.try_parse_unit().value());
 
@@ -118,7 +118,7 @@ TEST(parser, unit) {
         EXPECT_EQ(-3, rhs_3.val);
     }
     {
-        std::string unit = "Ohm^2/daC*mK^-1";
+        std::string unit = "[Ohm^2/daC*mK^-1]";
         auto p = parser(unit);
         auto u = std::get<binary_unit>(*p.try_parse_unit().value());
 
@@ -155,7 +155,7 @@ TEST(parser, unit) {
         EXPECT_EQ(-1, rhs_3.val);
     }
     {
-        std::string unit = "(Ohm/V)*A";
+        std::string unit = "[(Ohm/V)*A]";
         auto p = parser(unit);
         auto u = std::get<binary_unit>(*p.try_parse_unit().value());
 
@@ -180,7 +180,7 @@ TEST(parser, unit) {
         EXPECT_EQ(unit_sym::A, rhs_0.val.symbol);
     }
     {
-        std::string unit = "Ohm/(V*A)";
+        std::string unit = "[Ohm/(V*A)]";
         auto p = parser(unit);
         auto u = std::get<binary_unit>(*p.try_parse_unit().value());
 
@@ -205,44 +205,25 @@ TEST(parser, unit) {
         EXPECT_EQ(unit_sym::A, rhs_1.val.symbol);
     }
     {
-        std::vector<std::string> units = {
-                "Ohm*identifier",
-                "Ohm+identifier",
-                "Ohm^identifier",
-                "Ohm/identifier",
+        std::vector<std::string> invalid_units = {
+            "[Ohm^A]",
+            "[2^uK]",
+            "[pV^(2/mV)]",
+            "[-Ohm]",
+            "[4.5*Ohm]",
+            "[+V]",
+            "[identifier]",
+            "[7]"
         };
-        for (auto u: units) {
+        for (auto u: invalid_units) {
             auto p = parser(u);
-            auto q = std::get<simple_unit>(*p.try_parse_unit().value());
-            EXPECT_EQ("Ohm", q.spelling);
-            EXPECT_EQ(unit_pref::none, q.val.prefix);
-            EXPECT_EQ(unit_sym::Ohm, q.val.symbol);
-        }
-    }
-    {
-        std::vector<std::string> incorrect_units = {
-            "Ohm^A",
-            "2^uK",
-            "pV^(2/mV)"
-        };
-        for (auto u: incorrect_units) {
-            auto p = parser(u);
-            auto q = p.try_parse_unit();
             EXPECT_THROW(p.try_parse_unit(), std::runtime_error);
         }
     }
     {
-        std::vector<std::string> incorrect_units = {
-            "-Ohm",
-            "4.5*Ohm",
-            "+V",
-            "identifier",
-            "7"
-        };
-        for (auto u: incorrect_units) {
-            auto p = parser(u);
-            EXPECT_FALSE(p.try_parse_unit());
-        }
+        std::string iden = "identifier";
+        auto p = parser(iden);
+        EXPECT_FALSE(p.try_parse_unit());
     }
 }
 
@@ -498,7 +479,7 @@ TEST(parser, float_pt) {
         EXPECT_FALSE(v.unit);
     }
     {
-        std::string fpt = "2.22 mV";
+        std::string fpt = "2.22 [mV]";
         auto p = parser(fpt);
         auto v = std::get<float_expr>(*p.parse_float());
         EXPECT_EQ(2.22, v.value);
@@ -509,7 +490,7 @@ TEST(parser, float_pt) {
         EXPECT_EQ(unit_sym::V, u.val.symbol);
     }
     {
-        std::string fpt = "2e-4 A/s";
+        std::string fpt = "2e-4 [A/s]";
         auto p = parser(fpt);
         auto v = std::get<float_expr>(*p.parse_float());
         EXPECT_EQ(2e-4, v.value);
@@ -528,7 +509,7 @@ TEST(parser, float_pt) {
         EXPECT_EQ(unit_sym::s, u_rhs.val.symbol);
     }
     {
-        std::string fpt = "2E2 Ohm^2";
+        std::string fpt = "2E2 [Ohm^2]";
         auto p = parser(fpt);
         auto v = std::get<float_expr>(*p.parse_float());
         EXPECT_EQ(2e2, v.value);
@@ -555,7 +536,7 @@ TEST(parser, integer) {
         EXPECT_FALSE(v.unit);
     }
     {
-        std::string fpt = "11 mV";
+        std::string fpt = "11 [mV]";
         auto p = parser(fpt);
         auto v = std::get<int_expr>(*p.parse_int());
         EXPECT_EQ(11, v.value);
@@ -597,7 +578,7 @@ TEST(parser, call) {
         EXPECT_EQ(src_location(1, 8), arg_1.loc);
     }
     {
-        std::string expr = "foo_bar(2.5, a, -1 A)";
+        std::string expr = "foo_bar(2.5, a, -1 [A])";
         auto p = parser(expr);
         auto c = std::get<call_expr>(*p.parse_call());
 
@@ -654,7 +635,7 @@ TEST(parser, call) {
         EXPECT_EQ(src_location(1, 10), arg1.loc);
     }
     {
-        std::string expr = "foo(let b: voltage = 6 mV; b, bar.X)";
+        std::string expr = "foo(let b: voltage = 6 [mV]; b, bar.X)";
         auto p = parser(expr);
         auto c = std::get<call_expr>(*p.parse_call());
 
@@ -684,7 +665,7 @@ TEST(parser, call) {
         EXPECT_FALSE(arg0_b.type);
 
         auto arg1 = std::get<binary_expr>(*c.call_args[1]);
-        EXPECT_EQ(src_location(1, 34), arg1.loc);
+        EXPECT_EQ(src_location(1, 36), arg1.loc);
         EXPECT_EQ(binary_op::dot, arg1.op);
 
         auto arg1_lhs = std::get<identifier_expr>(*arg1.lhs);
@@ -880,7 +861,7 @@ TEST(parser, let) {
 
     }
     {
-        std::string let = "let F = { u = G.t; }; F.u / 20 s";
+        std::string let = "let F = { u = G.t; }; F.u / 20 [s]";
         auto p = parser(let);
         auto e = std::get<let_expr>(*p.parse_let());
         EXPECT_EQ(src_location(1,1), e.loc);
@@ -934,7 +915,7 @@ TEST(parser, let) {
         EXPECT_EQ(unit_sym::s, unit.val.symbol);
     }
     {
-        std::string let = "let a = 3 m;\n"
+        std::string let = "let a = 3 [m];\n"
                           "let r = { a = 4; b = a; };\n"
                           "r.b";
 
@@ -996,7 +977,7 @@ TEST(parser, let) {
         EXPECT_FALSE(e_body_body_rhs.type);
     }
     {
-        std::string let = "let a = { scale = 3.2; pos = { x = 3 m ; y = 4 m; }; }; # binds `a` below.\n"
+        std::string let = "let a = { scale = 3.2; pos = { x = 3 [m]; y = 4 [m]; }; }; # binds `a` below.\n"
                           "with a.pos;   # binds `x` to 3 m and `y` to 4 m below.\n"
                           "a.scale*(x+y)";
 
@@ -1187,7 +1168,7 @@ TEST(parser, with) {
         EXPECT_FALSE(e_body_rhs.type);
     }
     {
-        std::string with = "with bar(); x - 1 s";
+        std::string with = "with bar(); x - 1 [s]";
         auto p = parser(with);
         auto e = std::get<with_expr>(*p.parse_with());
         EXPECT_EQ(src_location(1,1), e.loc);
@@ -1214,13 +1195,13 @@ TEST(parser, with) {
         EXPECT_EQ(unit_sym::s, unit.val.symbol);
     }
     {
-        std::string with = "with {a = {x = 1 ms;}; b:voltage = 4 V;}.a; x";
+        std::string with = "with {a = {x = 1 [ms];}; b:voltage = 4 [V];}.a; x";
         auto p = parser(with);
         auto e = std::get<with_expr>(*p.parse_with());
         EXPECT_EQ(src_location(1,1), e.loc);
 
         auto e_val = std::get<binary_expr>(*e.value);
-        EXPECT_EQ(src_location(1,41), e_val.loc);
+        EXPECT_EQ(src_location(1,45), e_val.loc);
         EXPECT_EQ(binary_op::dot, e_val.op);
 
         auto e_val_lhs = std::get<object_expr>(*e_val.lhs);
@@ -1269,12 +1250,12 @@ TEST(parser, with) {
         EXPECT_FALSE(e_val_rhs.type);
 
         auto e_body = std::get<identifier_expr>(*e.body);
-        EXPECT_EQ(src_location(1,45), e_body.loc);
+        EXPECT_EQ(src_location(1,49), e_body.loc);
         EXPECT_EQ("x", e_body.name);
         EXPECT_FALSE(e_body.type);
     }
     {
-        std::string with = "with (let a = 1; {b = a + 3; c = 5 Ohm;}); b*c";
+        std::string with = "with (let a = 1; {b = a + 3; c = 5 [Ohm];}); b*c";
         auto p = parser(with);
         auto e = std::get<with_expr>(*p.parse_with());
         EXPECT_EQ(src_location(1,1), e.loc);
@@ -1323,7 +1304,7 @@ TEST(parser, with) {
         EXPECT_EQ(unit_sym::Ohm, unit.val.symbol);
 
         auto e_body = std::get<binary_expr>(*e.body);
-        EXPECT_EQ(src_location(1,45), e_body.loc);
+        EXPECT_EQ(src_location(1,47), e_body.loc);
         EXPECT_EQ(binary_op::mul, e_body.op);
 
         auto e_body_lhs = std::get<identifier_expr>(*e_body.lhs);
@@ -1644,7 +1625,7 @@ TEST(parser, prefix_expr) {
         EXPECT_FALSE(e_val_false.type);
     }
     {
-        std::string val = "max(+3 mV, min(a, b))";
+        std::string val = "max(+3 [mV], min(a, b))";
         auto p = parser(val);
         auto e = std::get<binary_expr>(*p.parse_prefix_expr());
         EXPECT_EQ(src_location(1,1), e.loc);
@@ -1756,7 +1737,7 @@ TEST(parser, infix_expr) {
         EXPECT_NEAR(eval(e), test_case.second, 1e-10);
     }
 
-/*    std::pair<std::string, bool> bool_tests[] = {
+    std::pair<std::string, bool> bool_tests[] = {
             {"0 && 0 || 1", true},
             {"(0 && 0) || 1", true},
             {"0 && (0 || 1)", false},
@@ -1770,7 +1751,7 @@ TEST(parser, infix_expr) {
         auto p = parser(test_case.first);
         auto e = p.parse_expr();
         EXPECT_NEAR(eval(e), test_case.second, 1e-10);
-    }*/
+    }
 }
 
 TEST(parser, parameter) {}

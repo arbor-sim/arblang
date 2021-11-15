@@ -79,7 +79,7 @@ enum class u_binary_op {
     mul, div, pow,
 };
 
-std::optional<unit> is_unit(const std::string& s);
+std::optional<unit> check_simple_unit(const std::string& s);
 
 struct integer_unit {
     int val;
@@ -101,7 +101,6 @@ struct binary_unit {
     src_location loc;
 
     binary_unit(tok t, u_expr lhs, u_expr rhs, const src_location& loc);
-    bool verify() const;
 };
 
 std::ostream& operator<< (std::ostream&, const binary_unit&);

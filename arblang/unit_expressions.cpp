@@ -55,7 +55,7 @@ std::unordered_map<std::string, unit_pref> string_to_pref = {
         {"y",  unit_pref::y},
 };
 
-std::optional<unit> is_unit(const std::string& s) {
+std::optional<unit> check_simple_unit(const std::string& s) {
     // If the string is a unit symbol, return with no prefix.
     if (string_to_sym.count(s)) return unit{unit_pref::none, string_to_sym.at(s)};
 
@@ -103,23 +103,6 @@ binary_unit::binary_unit(tok t, u_expr l, u_expr r, const src_location& location
     }
 }
 
-bool binary_unit::verify() const {
-    auto is_simple = [](const u_expr& t) {return std::get_if<simple_unit>(t.get());};
-    auto is_int    = [](const u_expr& t) {return std::get_if<integer_unit>(t.get());};
-    auto is_binary = [](const u_expr& t) {return std::get_if<binary_unit>(t.get());};
-
-    if (is_int(lhs) || (!is_simple(lhs) && !is_binary(lhs))) {
-        return false;
-    }
-    if (!is_simple(rhs) && !is_binary(rhs) && !is_int(rhs)) {
-        return false;
-    }
-    if ((op == u_binary_op::pow) && !is_int(rhs)) {
-        return false;
-    }
-    return true;
-}
-
 std::ostream& operator<< (std::ostream& o, const binary_unit& u) {
     o << "(binary_unit " << u.op << " ";
     std::visit([&](auto&& c){o << c;}, *u.lhs);
@@ -135,14 +118,26 @@ std::ostream& operator<< (std::ostream& o, const simple_unit& u) {
     return o << "(simple_unit " << u.spelling << " " << u.loc << ")";
 }
 
-bool verify_unit(const u_expr& u) {
-    bool verified;
-    std::visit(overloaded {
-            [&](const simple_unit& u) {verified = true;},
-            [&](const binary_unit& u) {verified = u.verify();},
-            [&](const integer_unit& u) {verified = false;}
+bool verify_sub_units(const u_expr& u) {
+    auto is_int  = [](const u_expr& t) {return std::get_if<integer_unit>(t.get());};
+    return std::visit(overloaded {
+        [&](const simple_unit& t) {return true;},
+        [&](const integer_unit& t) {return true;},
+        [&](const binary_unit& t) {
+            if (is_int(t.lhs)) return false;
+            if ((t.op == u_binary_op::pow) && !is_int(t.rhs)) return false;
+            if ((t.op != u_binary_op::pow) && is_int(t.rhs))  return false;
+            return verify_sub_units(t.lhs) && verify_sub_units(t.rhs);
+        }
     }, *u);
-    return verified;
+}
+
+bool verify_unit(const u_expr& u) {
+    return std::visit(overloaded {
+        [&](const simple_unit& t) {return true;},
+        [&](const binary_unit& t) {return verify_sub_units(u);},
+        [&](const integer_unit& t) {return false;}
+    }, *u);
 }
 
 } // namespace u_raw_ir

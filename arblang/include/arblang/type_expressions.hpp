@@ -7,6 +7,7 @@
 #include <vector>
 
 #include <arblang/token.hpp>
+#include <arblang/visitor.hpp>
 
 namespace al {
 namespace t_raw_ir {
@@ -112,6 +113,8 @@ template <typename T, typename... Args>
 t_expr make_t_expr(Args&&... args) {
     return t_expr(new type_expr(T(std::forward<Args>(args)...)));
 }
+
+bool verify_type(const t_expr& u);
 
 } // namespace t_raw_ir
 } // namespace al

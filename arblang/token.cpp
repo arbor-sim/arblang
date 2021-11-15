@@ -82,6 +82,8 @@ std::unordered_map<tok, std::string> token::token_to_string = {
     {tok::rbrace,        "}"},
     {tok::lparen,        "("},
     {tok::rparen,        ")"},
+    {tok::lbracket,      "["},
+    {tok::rbracket,      "]"},
     {tok::identifier,    "identifier"},
     {tok::unit,          "unit"},
     {tok::floatpt,       "float"},
@@ -130,8 +132,8 @@ std::unordered_map<tok, std::string> token::token_to_string = {
 };
 
 std::unordered_map<tok, int> token::binop_prec = {
-    {tok::land,     2},
-    {tok::lor,      3},
+    {tok::lor,      2},
+    {tok::land,     3},
     {tok::equality, 4},
     {tok::ne,       4},
     {tok::lt,       5},
