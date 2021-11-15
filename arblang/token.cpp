@@ -7,6 +7,9 @@
 #include <arblang/token.hpp>
 
 namespace al {
+std::string src_location::to_string() const {
+    return "(location " + std::to_string(line) + " " + std::to_string(column) + ")";
+}
 std::ostream& operator<< (std::ostream& os, const src_location& loc) {
     return os << "(location " << loc.line << " " << loc.column << ")";
 }
@@ -27,11 +30,21 @@ std::unordered_map<std::string, tok> token::keyword_to_token = {
     {"abs",           tok::abs},
     {"exprelr",       tok::exprelr},
     {"module",        tok::module},
+    {"mechanism",     tok::mechanism},
+    {"junction",      tok::junction},
+    {"point",         tok::point},
     {"parameter",     tok::parameter},
     {"constant",      tok::constant},
+    {"state",         tok::state},
     {"record",        tok::record},
     {"function",      tok::function},
     {"import",        tok::import},
+    {"effect",        tok::effect},
+    {"evolve",        tok::evolve},
+    {"initial",       tok::initial},
+    {"export",        tok::param_export},
+    {"density",       tok::density},
+    {"bind",          tok::bind},
     {"as",            tok::function},
     {"let",           tok::let},
     {"with",          tok::with},
@@ -77,6 +90,7 @@ std::unordered_map<tok, std::string> token::token_to_string = {
     {tok::semicolon,     ";"},
     {tok::colon,         ":"},
     {tok::comma,         ","},
+    {tok::quote,         "\""},
     {tok::dot,           "."},
     {tok::lbrace,        "{"},
     {tok::rbrace,        "}"},
@@ -99,16 +113,26 @@ std::unordered_map<tok, std::string> token::token_to_string = {
     {tok::log,           "log"},
     {tok::abs,           "abs"},
     {tok::exprelr,       "exprelr"},
+    {tok::mechanism,     "mechanism"},
+    {tok::point,         "mechanism"},
+    {tok::junction,      "junction"},
     {tok::module,        "module"},
     {tok::parameter,     "parameter"},
     {tok::constant,      "constant"},
+    {tok::state,         "state"},
     {tok::record,        "record"},
     {tok::function,      "function"},
     {tok::import,        "import"},
     {tok::as,            "as"},
     {tok::let,           "let"},
     {tok::with,          "with"},
-    {tok::ret,           "->"},
+    {tok::effect,        "effect"},
+    {tok::evolve,        "evolve"},
+    {tok::initial,       "initial"},
+    {tok::param_export,  "export"},
+    {tok::density,       "density"},
+    {tok::bind,          "bind"},
+    {tok::ret,           ":"},
     {tok::real,          "real"},
     {tok::length,        "length"},
     {tok::mass,          "mass"},
@@ -179,6 +203,17 @@ bool token::quantity() const {
         case tok::volume:
         case tok::concentration:
         case tok::error:
+            return true;
+        default: return false;
+    }
+}
+
+bool token::mechanism_kind() const {
+    switch (type) {
+        case tok::density:
+        case tok::concentration:
+        case tok::point:
+        case tok::junction:
             return true;
         default: return false;
     }

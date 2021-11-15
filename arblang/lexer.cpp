@@ -226,6 +226,9 @@ private:
                 case '}':
                     token_ = {loc(), tok::rbrace, {character()}};
                     return;
+                case '"':
+                    token_ = {loc(), tok::quote, {character()}};
+                    return;
                 case '0' ... '9':
                     token_ = number();
                     return;

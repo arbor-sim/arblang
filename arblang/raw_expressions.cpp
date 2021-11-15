@@ -42,6 +42,16 @@ std::optional<unary_op> gen_unary_op(tok t) {
     }
 }
 
+std::optional<mechanism_kind> gen_mechanism_kind(tok t) {
+    switch (t) {
+        case tok::density:       return mechanism_kind ::density;
+        case tok::concentration: return mechanism_kind ::concentration;
+        case tok::junction:      return mechanism_kind ::junction;
+        case tok::point:         return mechanism_kind ::point;
+        default: return {};
+    }
+}
+
 std::ostream& operator<< (std::ostream& o, const binary_op& op) {
     switch (op) {
         case binary_op::add:  return o << "+";
@@ -78,7 +88,7 @@ std::ostream& operator<< (std::ostream& o, const unary_op& op) {
 }
 
 // module_expr
-std::ostream& operator<< (std::ostream& o, const module_expr& e) {
+/*std::ostream& operator<< (std::ostream& o, const module_expr& e) {
     o << "(module_expr " << e.name << " ";
     for (const auto& p: e.parameters) {
         std::visit([&](auto&& c){o << c << " ";}, *p);
@@ -96,6 +106,50 @@ std::ostream& operator<< (std::ostream& o, const module_expr& e) {
         std::visit([&](auto&& c){o << c << " ";}, *p);
     }
     return o << ")";
+}*/
+
+// mechanism_expr
+bool mechanism_expr::set_kind(tok t) {
+    if (auto k = gen_mechanism_kind(t)) {
+        kind = k.value();
+        return true;
+    }
+    return false;
+}
+
+std::ostream& operator<< (std::ostream& o, const mechanism_expr& e) {
+    o << "(module_expr " << e.name << " ";
+    for (const auto& p: e.parameters) {
+        std::visit([&](auto&& c){o << c << " ";}, *p);
+    }
+    for (const auto& p: e.constants) {
+        std::visit([&](auto&& c){o << c << " ";}, *p);
+    }
+    for (const auto& p: e.states) {
+        std::visit([&](auto&& c){o << c << " ";}, *p);
+    }
+    for (const auto& p: e.bindings) {
+        std::visit([&](auto&& c){o << c << " ";}, *p);
+    }
+    for (const auto& p: e.functions) {
+        std::visit([&](auto&& c){o << c << " ";}, *p);
+    }
+    for (const auto& p: e.records) {
+        std::visit([&](auto&& c){o << c << " ";}, *p);
+    }
+    for (const auto& p: e.initilizations) {
+        std::visit([&](auto&& c){o << c << " ";}, *p);
+    }
+    for (const auto& p: e.evolutions) {
+        std::visit([&](auto&& c){o << c << " ";}, *p);
+    }
+    for (const auto& p: e.effects) {
+        std::visit([&](auto&& c){o << c << " ";}, *p);
+    }
+    for (const auto& p: e.exports) {
+        std::visit([&](auto&& c){o << c << " ";}, *p);
+    }
+    return o << e.loc << ")";
 }
 
 // parameter_expr
@@ -111,6 +165,13 @@ std::ostream& operator<< (std::ostream& o, const constant_expr& e) {
     o << "(constant_expr ";
     std::visit([&](auto&& c){o << c << " ";}, *e.identifier);
     std::visit([&](auto&& c){o << c << " ";}, *e.value);
+    return o << e.loc << ")";
+}
+
+// state_expr
+std::ostream& operator<< (std::ostream& o, const state_expr& e) {
+    o << "(state_expr ";
+    std::visit([&](auto&& c){o << c << " ";}, *e.identifier);
     return o << e.loc << ")";
 }
 
@@ -136,9 +197,9 @@ std::ostream& operator<< (std::ostream& o, const function_expr& e) {
 }
 
 // import_expr
-std::ostream& operator<< (std::ostream& o, const import_expr& e) {
+/*std::ostream& operator<< (std::ostream& o, const import_expr& e) {
     return o << "(import_expr " << e.module_name <<  " " << e.module_alias << " " << e.loc << ")";
-}
+}*/
 
 // call_expr
 std::ostream& operator<< (std::ostream& o, const call_expr& e) {

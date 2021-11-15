@@ -12,14 +12,14 @@
 
 namespace al {
 
-parser::parser(const std::string& module): lexer(module.c_str()) {}
+parser::parser(const std::string& description): lexer(description.c_str()) {}
 
 void parser::parse() {
     auto t = current();
     while (t.type != tok::eof) {
         switch (t.type) {
-            case tok::module:
-                modules_.push_back(parse_module());
+            case tok::mechanism:
+                mechanisms_.push_back(parse_mechanism());
                 break;
             case tok::error:
                 throw std::runtime_error(t.spelling);
@@ -30,23 +30,38 @@ void parser::parse() {
     }
 }
 
-expr parser::parse_module() {
-    module_expr m;
+expr parser::parse_mechanism() {
+    mechanism_expr m;
     auto t = current();
-    if (t.type != tok::module) {
+    m.loc = t.loc;
+    if (t.type != tok::mechanism) {
         throw std::runtime_error(fmt::format("Unexpected token '{}', expected identifier", t.spelling));
     }
-    t = next(); // consume module
+    t = next(); // consume mechanism
+
+    if (!m.set_kind(t.type)) {
+        throw std::runtime_error(fmt::format("Unexpected token '{}', expected mechanism kind identifier", t.spelling));
+    }
+    t = next(); // consume kind
+
+    if (t.type != tok::quote) {
+        throw std::runtime_error(fmt::format("Unexpected token '{}', expected \"", t.spelling));
+    }
+    t = next(); // consume "
 
     if (t.type != tok::identifier) {
-        throw std::runtime_error(fmt::format("Unexpected token '{}', expected identifier", t.spelling));
+        throw std::runtime_error(fmt::format("Unexpected token '{}', expected mechanism name identifier", t.spelling));
     }
     m.name = t.spelling;
-    m.loc = t.loc;
     t = next(); // consume name
 
+    if (t.type != tok::quote) {
+        throw std::runtime_error(fmt::format("Unexpected token '{}', expected \"", t.spelling));
+    }
+    t = next(); // consume "
+
     if (t.type != tok::lbrace) {
-        throw std::runtime_error(fmt::format("Unexpected token '{}', expected '{'", t.spelling));
+        throw std::runtime_error(fmt::format("Unexpected token '{}' at {}, expected '{'", t.spelling));
     }
     t = next(); // consume '{'
 
@@ -58,14 +73,28 @@ expr parser::parse_module() {
             case tok::constant:
                 m.constants.push_back(parse_constant());
                 break;
+            case tok::state:
+                m.states.push_back(parse_state());
+                break;
+            case tok::bind:
+                m.bindings.push_back(parse_binding());
+                break;
             case tok::record:
                 m.records.push_back(parse_record_alias());
                 break;
             case tok::function:
                 m.functions.push_back(parse_function());
+            case tok::effect:
+                m.effects.push_back(parse_effect());
                 break;
-            case tok::import:
-                m.imports.push_back(parse_import());
+            case tok::evolve:
+                m.evolutions.push_back(parse_evolve());
+                break;
+            case tok::initial:
+                m.initilizations.push_back(parse_binding());
+                break;
+            case tok::param_export:
+                m.exports.push_back(parse_export());
                 break;
             default:
                 throw std::runtime_error(fmt::format("Unexpected token '{}'", t.spelling));
@@ -77,7 +106,7 @@ expr parser::parse_module() {
     }
     next(); // consume '}'
 
-    return make_expr<module_expr>(std::move(m));
+    return make_expr<mechanism_expr>(std::move(m));
 }
 
 // A parameter declaration of the form:
@@ -134,6 +163,29 @@ expr parser::parse_constant()  {
     next(); // consume ';'
 
     return make_expr<constant_expr>(std::move(iden), std::move(value), loc);
+};
+
+// A state declaration of the form:
+// state `iden` [: `type`];
+expr parser::parse_state()  {
+    auto t = current();
+    if (t.type != tok::state) {
+        throw std::runtime_error("Expected state, got " + t.spelling);
+    }
+    auto loc = t.loc;
+    next(); // consume 'state'
+
+    auto iden = parse_typed_identifier();
+
+    t = current();
+    if (t.type == tok::eq) {
+        throw std::runtime_error("'state' variables can only be initialized using an 'initial' statement");
+    }
+    if (t.type != tok::semicolon) {
+        throw std::runtime_error("Expected ;, got " + current().spelling);
+    }
+    next(); // consume ';'
+    return make_expr<state_expr>(std::move(iden), loc);
 };
 
 // A record definition (type alias) of the form:
@@ -237,7 +289,7 @@ expr parser::parse_function() {
 
 // A module import of the form:
 // import `iden` [as `alias`][;]
-expr parser::parse_import() {
+/*expr parser::parse_import() {
     auto t = current();
     if (t.type != tok::import) {
         throw std::runtime_error("Expected import, got " + t.spelling);
@@ -265,7 +317,7 @@ expr parser::parse_import() {
         next(); // consume ;
     }
     return make_expr<import_expr>(module_name, module_alias, loc);
-};
+};*/
 
 // A function call of the form:
 // `func_name`(`value_expression0`, `value_exprssion1`, ...)

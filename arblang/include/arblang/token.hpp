@@ -12,6 +12,7 @@ struct src_location {
 
     src_location(): src_location(1, 1) {}
     src_location(int ln, int col): line(ln), column(col) {}
+    std::string to_string() const;
 };
 
 std::ostream& operator<< (std::ostream& os, const src_location& loc);
@@ -36,8 +37,8 @@ enum class tok {
     // <->
     arrow,
 
-    // ; : , .
-    semicolon, colon, comma, dot,
+    // ; : , . "
+    semicolon, colon, comma, dot, quote
 
     // { }
     lbrace, rbrace,
@@ -67,10 +68,15 @@ enum class tok {
     exp, sin, cos, log, abs,
     exprelr, // equivalent to x/(exp(x)-1) with exprelr(0)=1
 
-    // keywoards
-    module, parameter, constant,
+    // keywords
+    mechanism,
+    point, junction, // density, concentration already exist
+    module,
+    parameter, constant, state,
     record, function, import,
     with, let, as, ret,
+    effect, evolve, initial,
+    bind, param_export, density,
 
     // quantity keywords
     real, length, mass, time, current,
@@ -94,6 +100,7 @@ struct token {
 
     static std::optional<tok> tokenize(const std::string&);
     bool quantity() const;
+    bool mechanism_kind() const;
     int precedence() const;
     bool right_associative() const;
 

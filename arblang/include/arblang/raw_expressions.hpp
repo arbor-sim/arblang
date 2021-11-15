@@ -14,12 +14,14 @@
 namespace al {
 namespace raw_ir {
 
-struct module_expr;
+//struct module_expr;
+struct mechanism_expr;
 struct parameter_expr;
 struct constant_expr;
+struct state_expr;
 struct record_alias_expr;
 struct function_expr;
-struct import_expr;
+//struct import_expr;
 struct call_expr;
 struct object_expr;
 struct let_expr;
@@ -32,12 +34,14 @@ struct unary_expr;
 struct binary_expr;
 
 using raw_expr = std::variant<
-    module_expr,
+    mechanism_expr,
+//    module_expr,
     parameter_expr,
     constant_expr,
+    state_expr,
     record_alias_expr,
     function_expr,
-    import_expr,
+//    import_expr,
     call_expr,
     object_expr,
     let_expr,
@@ -61,8 +65,11 @@ enum class unary_op {
     exp, log, cos, sin, abs, exprelr, lnot, neg
 };
 
-// Top level module parameters
-struct module_expr {
+enum class mechanism_kind {
+    density, point, concentration, junction,
+};
+
+/*struct module_expr {
     module_expr() {};
 
     std::string name;
@@ -70,10 +77,30 @@ struct module_expr {
     std::vector<expr> parameters; // expect parameter_expr
     std::vector<expr> functions;  // expect function_expr
     std::vector<expr> records;    // expect record_alias_expr
-    std::vector<expr> imports;    // expect import_expr
     src_location loc;
+};*/
+
+struct mechanism_expr {
+    mechanism_expr() {};
+
+    std::string name;
+    mechanism_kind kind;
+    std::vector<expr> constants;  // expect constant_expr
+    std::vector<expr> parameters; // expect parameter_expr
+    std::vector<expr> states;     // expect state_expr
+    std::vector<expr> functions;  // expect function_expr
+    std::vector<expr> records;    // expect record_alias_expr
+    std::vector<expr> effects;
+    std::vector<expr> evolutions;
+    std::vector<expr> initilizations;
+    std::vector<expr> bindings;
+    std::vector<expr> exports;
+    src_location loc;
+
+    bool set_kind(tok t);
 };
 
+// Top level parameters
 struct parameter_expr {
     expr identifier; // expect identifier_expr
     expr value;
@@ -82,13 +109,21 @@ struct parameter_expr {
     parameter_expr(expr iden, expr value, const src_location& loc): identifier(std::move(iden)), value(std::move(value)), loc(loc) {};
 };
 
-// Top level module constants
+// Top level constants
 struct constant_expr {
     expr identifier; // expect identifier_expr
     expr value;
     src_location loc;
 
     constant_expr(expr iden, expr value, const src_location& loc): identifier(std::move(iden)), value(std::move(value)), loc(loc) {};
+};
+
+// Top level states
+struct state_expr {
+    expr identifier; // expect identifier_expr
+    src_location loc;
+
+    state_expr(expr iden,const src_location& loc): identifier(std::move(iden)), loc(loc) {};
 };
 
 // Top level record definitions
@@ -114,14 +149,14 @@ struct function_expr {
 };
 
 // Top level module imports
-struct import_expr {
+/*struct import_expr {
     std::string module_name;
     std::string module_alias;
     src_location loc;
 
     import_expr(std::string module_name, std::string module_alias, const src_location& loc):
         module_name(std::move(module_name)), module_alias(std::move(module_alias)), loc(loc) {};
-};
+};*/
 
 // Function calls
 struct call_expr {
@@ -232,12 +267,14 @@ struct identifier_expr {  // Is this needed? Can it be used directly and not via
 
 std::ostream& operator<< (std::ostream&, const binary_op&);
 std::ostream& operator<< (std::ostream&, const unary_op&);
-std::ostream& operator<< (std::ostream&, const module_expr&);
+//std::ostream& operator<< (std::ostream&, const module_expr&);
+std::ostream& operator<< (std::ostream&, const mechanism_expr&);
 std::ostream& operator<< (std::ostream&, const parameter_expr&);
 std::ostream& operator<< (std::ostream&, const constant_expr&);
+std::ostream& operator<< (std::ostream&, const state_expr&);
 std::ostream& operator<< (std::ostream&, const record_alias_expr&);
 std::ostream& operator<< (std::ostream&, const function_expr&);
-std::ostream& operator<< (std::ostream&, const import_expr&);
+//std::ostream& operator<< (std::ostream&, const import_expr&);
 std::ostream& operator<< (std::ostream&, const call_expr&);
 std::ostream& operator<< (std::ostream&, const object_expr&);
 std::ostream& operator<< (std::ostream&, const let_expr&);

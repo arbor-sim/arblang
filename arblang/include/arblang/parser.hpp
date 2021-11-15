@@ -19,14 +19,22 @@ public:
     parser(std::string const&);
     void parse();
 
-    const std::vector<expr>& modules() {return modules_;};
+    const std::vector<expr>& mechanisms() {return mechanisms_;};
 
-    expr parse_module();
+    expr parse_mechanism();
+//    expr parse_module();
+//    expr parse_import();
+
     expr parse_parameter();
     expr parse_constant();
+    expr parse_state();
     expr parse_record_alias();
     expr parse_function();
-    expr parse_import();
+    expr parse_binding();
+    expr parse_effect();
+    expr parse_evolve();
+    expr parse_initial();
+    expr parse_export();
 
     expr parse_identifier();
     expr parse_typed_identifier();
@@ -55,6 +63,7 @@ public:
     std::optional<u_expr> try_parse_unit(int prec=0);
 
 private:
-    std::vector<expr> modules_;
+//    std::vector<expr> modules_;
+    std::vector<expr> mechanisms_;
 };
 } // namespace al
