@@ -1696,39 +1696,39 @@ TEST(parser, infix_expr) {
     using std::pow;
 
     std::pair<std::string, double> tests[] = {
-            // simple
-            {"2+3",      2. + 3.},
-            {"2-3",      2. - 3.},
-            {"2*3",      2. * 3.},
-            {"2/3",      2. / 3.},
-            {"2^3",      pow(2., 3.)},
-            {"min(2,3)", 2.},
-            {"min(3,2)", 2.},
-            {"max(2,3)", 3.},
-            {"max(3,2)", 3.},
+        // simple
+        {"2+3",      2. + 3.},
+        {"2-3",      2. - 3.},
+        {"2*3",      2. * 3.},
+        {"2/3",      2. / 3.},
+        {"2^3",      pow(2., 3.)},
+        {"min(2,3)", 2.},
+        {"min(3,2)", 2.},
+        {"max(2,3)", 3.},
+        {"max(3,2)", 3.},
 
-            // more complicated
-            {"2+3*4", 2. + (3 * 4)},
-            {"2*3-5", (2. * 3) - 5.},
-            {"2+3*(-2)", 2. + (3 * -2)},
-            {"2+3*(-+2)", 2. + (3 * -+2)},
-            {"2/3*4", (2. / 3.) * 4.},
-            {"min(2+3, 4/2)", 4. / 2},
-            {"max(2+3, 4/2)", 2. + 3.},
-            {"max(2+3, min(12, 24))", 12.},
-            {"max(min(12, 24), 2+3)", 12.},
-            {"2 * 7 - 3 * 11 + 4 * 13", 2. * 7. - 3. * 11. + 4. * 13.},
+        // more complicated
+        {"2+3*4", 2. + (3 * 4)},
+        {"2*3-5", (2. * 3) - 5.},
+        {"2+3*(-2)", 2. + (3 * -2)},
+        {"2+3*(-+2)", 2. + (3 * -+2)},
+        {"2/3*4", (2. / 3.) * 4.},
+        {"min(2+3, 4/2)", 4. / 2},
+        {"max(2+3, 4/2)", 2. + 3.},
+        {"max(2+3, min(12, 24))", 12.},
+        {"max(min(12, 24), 2+3)", 12.},
+        {"2 * 7 - 3 * 11 + 4 * 13", 2. * 7. - 3. * 11. + 4. * 13.},
 
-            // right associative
-            {"2^3^1.5", pow(2., pow(3., 1.5))},
-            {"2^3^1.5^2", pow(2., pow(3., pow(1.5, 2.)))},
-            {"2^2^3", pow(2., pow(2., 3.))},
-            {"(2^2)^3", pow(pow(2., 2.), 3.)},
-            {"3./2^7.", 3. / pow(2., 7.)},
-            {"3^2*5.", pow(3., 2.) * 5.},
+        // right associative
+        {"2^3^1.5", pow(2., pow(3., 1.5))},
+        {"2^3^1.5^2", pow(2., pow(3., pow(1.5, 2.)))},
+        {"2^2^3", pow(2., pow(2., 3.))},
+        {"(2^2)^3", pow(pow(2., 2.), 3.)},
+        {"3./2^7.", 3. / pow(2., 7.)},
+        {"3^2*5.", pow(3., 2.) * 5.},
 
-            // multilevel
-            {"1-2*3^4*5^2^3-3^2^3/4/8-5", 1. - 2 * pow(3., 4.) * pow(5., pow(2., 3.)) - pow(3, pow(2., 3.)) / 4. / 8. - 5}
+        // multilevel
+        {"1-2*3^4*5^2^3-3^2^3/4/8-5", 1. - 2 * pow(3., 4.) * pow(5., pow(2., 3.)) - pow(3, pow(2., 3.)) / 4. / 8. - 5}
     };
 
     for (const auto& test_case: tests) {
@@ -1738,13 +1738,13 @@ TEST(parser, infix_expr) {
     }
 
     std::pair<std::string, bool> bool_tests[] = {
-            {"0 && 0 || 1", true},
-            {"(0 && 0) || 1", true},
-            {"0 && (0 || 1)", false},
-            {"3<2 && 1 || 4>1", true},
-            {"(3<2 && 1) || 4>1", true},
-            {"3<2 && (1 || 4>1)", false},
-            {"(3<2) && (1 || (4>1))", false},
+        {"0 && 0 || 1", true},
+        {"(0 && 0) || 1", true},
+        {"0 && (0 || 1)", false},
+        {"3<2 && 1 || 4>1", true},
+        {"(3<2 && 1) || 4>1", true},
+        {"3<2 && (1 || 4>1)", false},
+        {"(3<2) && (1 || (4>1))", false},
     };
 
     for (const auto& test_case: bool_tests) {
@@ -1754,9 +1754,188 @@ TEST(parser, infix_expr) {
     }
 }
 
+TEST(parser, function) {
+    {
+        std::string fun = "function foo(){0};";
+        auto p = parser(fun);
+        auto e = std::get<function_expr>(*p.parse_function());
+        EXPECT_EQ("foo", e.name);
+        EXPECT_EQ(0u, e.args.size());
+
+        auto body = std::get<int_expr>(*e.body);
+        EXPECT_EQ(0, body.value);
+        EXPECT_FALSE(body.unit);
+
+        EXPECT_FALSE(e.ret);
+    }
+    {
+        std::string fun = "function foo(a: voltage): voltage {a;};";
+        auto p = parser(fun);
+        auto e = std::get<function_expr>(*p.parse_function());
+        EXPECT_EQ("foo", e.name);
+        EXPECT_EQ(1u, e.args.size());
+
+        auto arg0 = std::get<identifier_expr>(*e.args.front());
+        EXPECT_EQ("a", arg0.name);
+        EXPECT_TRUE(arg0.type);
+
+        auto arg0_type = std::get<quantity_type>(*arg0.type.value());
+        EXPECT_EQ(quantity::voltage, arg0_type.type);
+
+        auto body = std::get<identifier_expr>(*e.body);
+        EXPECT_EQ("a", body.name);
+        EXPECT_FALSE(body.type);
+
+        EXPECT_TRUE(e.ret);
+        auto ret_type = std::get<quantity_type>(*e.ret.value());
+        EXPECT_EQ(quantity::voltage, ret_type.type);
+    }
+    {
+        std::string fun =
+            "function bar(a:resistance/time, b:rec0, c:{a: voltage}) {\n"
+            "  let x = c.a + b.a * a;\n"
+            "  x;\n"
+            "};";
+        auto p = parser(fun);
+        auto e = std::get<function_expr>(*p.parse_function());
+        EXPECT_EQ("bar", e.name);
+        EXPECT_EQ(3u, e.args.size());
+
+        auto arg0 = std::get<identifier_expr>(*e.args[0]);
+        EXPECT_EQ("a", arg0.name);
+        EXPECT_TRUE(arg0.type);
+
+        auto arg0_type = std::get<quantity_binary_type>(*arg0.type.value());
+        EXPECT_EQ(t_binary_op::div, arg0_type.op);
+
+        auto arg0_lhs = std::get<quantity_type>(*arg0_type.lhs);
+        auto arg0_rhs = std::get<quantity_type>(*arg0_type.rhs);
+        EXPECT_EQ(quantity::resistance, arg0_lhs.type);
+        EXPECT_EQ(quantity::time, arg0_rhs.type);
+
+        auto arg1 = std::get<identifier_expr>(*e.args[1]);
+        EXPECT_EQ("b", arg1.name);
+        EXPECT_TRUE(arg1.type);
+
+        auto arg1_type = std::get<record_alias_type>(*arg1.type.value());
+        EXPECT_EQ("rec0", arg1_type.name);
+
+        auto arg2 = std::get<identifier_expr>(*e.args[2]);
+        EXPECT_EQ("c", arg2.name);
+        EXPECT_TRUE(arg2.type);
+
+        auto arg2_type = std::get<record_type>(*arg2.type.value());
+        EXPECT_EQ(1u, arg2_type.fields.size());
+
+        EXPECT_EQ("a", arg2_type.fields[0].first);
+        auto arg2_arg0 = std::get<quantity_type>(*arg2_type.fields[0].second);
+        EXPECT_EQ(quantity::voltage, arg2_arg0.type);
+
+        auto body = std::get<let_expr>(*e.body);
+        auto body_iden = std::get<identifier_expr>(*body.identifier);
+        EXPECT_EQ("x", body_iden.name);
+        EXPECT_FALSE(body_iden.type);
+
+        auto body_val  = std::get<binary_expr>(*body.value);
+        EXPECT_EQ(binary_op::add, body_val.op);
+
+        auto val_lhs = std::get<binary_expr>(*body_val.lhs);
+        EXPECT_EQ(binary_op::dot, val_lhs.op);
+
+        auto val_lhs_lhs = std::get<identifier_expr>(*val_lhs.lhs);
+        EXPECT_EQ("c", val_lhs_lhs.name);
+        EXPECT_FALSE(val_lhs_lhs.type);
+
+        auto val_lhs_rhs = std::get<identifier_expr>(*val_lhs.rhs);
+        EXPECT_EQ("a", val_lhs_rhs.name);
+        EXPECT_FALSE(val_lhs_rhs.type);
+
+        auto val_rhs = std::get<binary_expr>(*body_val.rhs);
+        EXPECT_EQ(binary_op::mul, val_rhs.op);
+
+        auto val_rhs_lhs = std::get<binary_expr>(*val_rhs.lhs);
+        EXPECT_EQ(binary_op::dot, val_rhs_lhs.op);
+
+        auto val_rhs_lhs_lhs = std::get<identifier_expr>(*val_rhs_lhs.lhs);
+        EXPECT_EQ("b", val_rhs_lhs_lhs.name);
+        EXPECT_FALSE(val_rhs_lhs_lhs.type);
+
+        auto val_rhs_lhs_rhs = std::get<identifier_expr>(*val_rhs_lhs.rhs);
+        EXPECT_EQ("a", val_rhs_lhs_rhs.name);
+        EXPECT_FALSE(val_rhs_lhs_rhs.type);
+
+        auto val_rhs_rhs = std::get<identifier_expr>(*val_rhs.rhs);
+        EXPECT_EQ("a", val_rhs_rhs.name);
+        EXPECT_FALSE(val_rhs_rhs.type);
+
+        auto body_body = std::get<identifier_expr>(*body.body);
+        EXPECT_EQ("x", body_body.name);
+        EXPECT_FALSE(body_body.type);
+
+        EXPECT_FALSE(e.ret);
+    }
+    {
+        std::vector<std::string> invalid_functions = {
+            "function foo{};",
+            "function foo(){};",
+            "function foo(a, b){};",
+        };
+        for (const auto& test_case: invalid_functions) {
+            auto p = parser(test_case);
+            EXPECT_THROW(p.parse_function(), std::runtime_error);
+        }
+    }
+}
+
+TEST(parser, record) {
+    {
+        std::string rec = "record rec {};";
+        auto p = parser(rec);
+        auto e = std::get<record_alias_expr>(*p.parse_record_alias());
+        EXPECT_EQ("rec", e.name);
+
+        auto body = std::get<record_type>(*e.type);
+        EXPECT_EQ(0u, body.fields.size());
+    }
+    {
+        std::string rec = "record rec {a: voltage, b: time};";
+        auto p = parser(rec);
+        auto e = std::get<record_alias_expr>(*p.parse_record_alias());
+        EXPECT_EQ("rec", e.name);
+
+        auto body = std::get<record_type>(*e.type);
+        EXPECT_EQ(2u, body.fields.size());
+        EXPECT_EQ("a", body.fields[0].first);
+        EXPECT_EQ("b", body.fields[1].first);
+
+        auto field0 = std::get<quantity_type>(*body.fields[0].second);
+        EXPECT_EQ(quantity::voltage, field0.type);
+
+        auto field1 = std::get<quantity_type>(*body.fields[1].second);
+        EXPECT_EQ(quantity::time, field1.type);
+    }
+    {
+        std::vector<std::string> invalid_functions = {
+                "record foo{};",
+                "record foo{a};",
+                "record foo(a: voltage)",
+                "record foo{a: voltage; b:voltage};",
+                "record foo{time};",
+        };
+        for (const auto& test_case: invalid_functions) {
+            auto p = parser(test_case);
+            EXPECT_THROW(p.parse_function(), std::runtime_error);
+        }
+    }
+}
+
+// including "density" keyword
 TEST(parser, parameter) {}
 TEST(parser, constant) {}
-TEST(parser, record) {}
-TEST(parser, function) {}
-TEST(parser, import) {}
-TEST(parser, module) {}
+TEST(parser, state) {}
+TEST(parser, bind) {}
+TEST(parser, initial) {}
+TEST(parser, evolve) {}
+TEST(parser, effect) {}
+TEST(parser, export) {}
+TEST(parser, mechanism) {}

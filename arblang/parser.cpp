@@ -211,11 +211,18 @@ expr parser::parse_function() {
     if (t.type != tok::lbrace) {
         throw std::runtime_error("Expected {, got " + t.spelling);
     }
-    next(); // consume '{'
+    t = next(); // consume '{'
 
+    if (t.type == tok::rbrace) {
+        throw std::runtime_error("Expected expression, got }");
+    }
     auto ret_value = parse_expr();
-
     t = current();
+
+    if (t.type == tok::semicolon) {
+        t = next(); // consume ;
+    }
+
     if (t.type != tok::rbrace) {
         throw std::runtime_error("Expected }, got " + t.spelling);
     }
