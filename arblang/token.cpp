@@ -67,6 +67,12 @@ std::unordered_map<std::string, tok> token::keyword_to_token = {
     {"area",          tok::area},
     {"volume",        tok::volume},
     {"concentration", tok::concentration},
+    {"membrane_potential",     tok::membrane_potential},
+    {"current_density",        tok::current_density},
+    {"molar_flux",             tok::molar_flux},
+    {"internal_concentration", tok::internal_concentration},
+    {"external_concentration", tok::external_concentration},
+    {"nernst_potential",       tok::nernst_potential},
 };
 
 std::unordered_map<tok, std::string> token::token_to_string = {
@@ -153,6 +159,12 @@ std::unordered_map<tok, std::string> token::token_to_string = {
     {tok::volume,        "volume"},
     {tok::concentration, "concentration"},
     {tok::error,         "error"},
+    {tok::membrane_potential,     "membrane_potential"},
+    {tok::current_density,        "current_density"},
+    {tok::molar_flux,             "molar_flux"},
+    {tok::internal_concentration, "internal_concentration"},
+    {tok::external_concentration, "external_concentration"},
+    {tok::nernst_potential,       "nernst_potential"},
 };
 
 std::unordered_map<tok, int> token::binop_prec = {
@@ -214,6 +226,35 @@ bool token::mechanism_kind() const {
         case tok::concentration:
         case tok::point:
         case tok::junction:
+            return true;
+        default: return false;
+    }
+}
+
+
+bool token::bindable() const {
+    switch (type) {
+        case tok::membrane_potential:
+        case tok::temperature:
+        case tok::current_density:
+        case tok::molar_flux:
+        case tok::charge:
+        case tok::internal_concentration:
+        case tok::external_concentration:
+        case tok::nernst_potential:
+            return true;
+        default: return false;
+    }
+}
+
+bool token::ion_bindable() const {
+    switch (type) {
+        case tok::molar_flux:
+        case tok::current_density:
+        case tok::charge:
+        case tok::internal_concentration:
+        case tok::external_concentration:
+        case tok::nernst_potential:
             return true;
         default: return false;
     }

@@ -44,22 +44,9 @@ expr parser::parse_mechanism() {
     }
     t = next(); // consume kind
 
-    if (t.type != tok::quote) {
-        throw std::runtime_error(fmt::format("Unexpected token '{}', expected \"", t.spelling));
-    }
-    t = next(); // consume "
+    m.name = parse_quoted();
 
-    if (t.type != tok::identifier) {
-        throw std::runtime_error(fmt::format("Unexpected token '{}', expected mechanism name identifier", t.spelling));
-    }
-    m.name = t.spelling;
-    t = next(); // consume name
-
-    if (t.type != tok::quote) {
-        throw std::runtime_error(fmt::format("Unexpected token '{}', expected \"", t.spelling));
-    }
-    t = next(); // consume "
-
+    t = current();
     if (t.type != tok::lbrace) {
         throw std::runtime_error(fmt::format("Unexpected token '{}' at {}, expected '{'", t.spelling));
     }
@@ -119,22 +106,8 @@ expr parser::parse_parameter() {
     auto loc = t.loc;
     next(); // consume 'parameter'
 
-    auto iden = parse_typed_identifier();
-
-    t = current();
-    if (t.type != tok::eq) {
-        throw std::runtime_error("Expected =, got " + t.spelling);
-    }
-    next(); // consume '='
-
-    auto value = parse_expr();
-
-    if (current().type != tok::semicolon) {
-        throw std::runtime_error("Expected ;, got " + current().spelling);
-    }
-    next(); // consume ';'
-
-    return make_expr<parameter_expr>(std::move(iden), std::move(value), loc);
+    auto assign = parse_assignment();
+    return make_expr<parameter_expr>(std::move(assign.first), std::move(assign.second), loc);
 };
 
 // A constant declaration of the form:
@@ -147,22 +120,8 @@ expr parser::parse_constant()  {
     auto loc = t.loc;
     next(); // consume 'constant'
 
-    auto iden = parse_typed_identifier();
-
-    t = current();
-    if (t.type != tok::eq) {
-        throw std::runtime_error("Expected =, got " + t.spelling);
-    }
-    next(); // consume '='
-
-    auto value = parse_expr();
-
-    if (current().type != tok::semicolon) {
-        throw std::runtime_error("Expected ;, got " + current().spelling);
-    }
-    next(); // consume ';'
-
-    return make_expr<constant_expr>(std::move(iden), std::move(value), loc);
+    auto assign = parse_assignment();
+    return make_expr<constant_expr>(std::move(assign.first), std::move(assign.second), loc);
 };
 
 // A state declaration of the form:
@@ -170,7 +129,7 @@ expr parser::parse_constant()  {
 expr parser::parse_state()  {
     auto t = current();
     if (t.type != tok::state) {
-        throw std::runtime_error("Expected state, got " + t.spelling);
+        throw std::runtime_error("Expected `state`, got " + t.spelling);
     }
     auto loc = t.loc;
     next(); // consume 'state'
@@ -193,7 +152,7 @@ expr parser::parse_state()  {
 expr parser::parse_record_alias()    {
     auto t = current();
     if (t.type != tok::record) {
-        throw std::runtime_error("Expected record, got " + t.spelling);
+        throw std::runtime_error("Expected `record`, got " + t.spelling);
     }
     auto loc = t.loc;
     t = next(); // consume 'record'
@@ -218,7 +177,7 @@ expr parser::parse_record_alias()    {
 expr parser::parse_function() {
     auto t = current();
     if (t.type != tok::function) {
-        throw std::runtime_error("Expected function, got " + t.spelling);
+        throw std::runtime_error("Expected `function`, got " + t.spelling);
     }
     auto loc = t.loc;
     t = next(); // consume 'function'
@@ -287,37 +246,112 @@ expr parser::parse_function() {
     return make_expr<function_expr>(name, args, ret_quantity, ret_value, loc);
 };
 
-// A module import of the form:
-// import `iden` [as `alias`][;]
-/*expr parser::parse_import() {
+// A binding of the form
+// bind `iden`[:`type`] = `bindable`;
+expr parser::parse_binding() {
     auto t = current();
-    if (t.type != tok::import) {
-        throw std::runtime_error("Expected import, got " + t.spelling);
+    if (t.type != tok::bind) {
+        throw std::runtime_error("Expected `bind`, got " + t.spelling);
     }
-    auto loc = current().loc;
-    t = next(); // consume 'import'
+    auto loc = t.loc;
+    next(); // consume 'bind'
 
-    if (t.type != tok::identifier) {
-        throw std::runtime_error("Expected identifier, got " + t.spelling);
+    auto iden = parse_typed_identifier();
+
+    t = current();
+    if (t.type != tok::eq) {
+        throw std::runtime_error("Expected =, got " + current().spelling);
     }
-    auto module_name = t.spelling;
-    t = next(); // consume module name
+    t = next(); // consume =
 
-    auto module_alias = module_name;
-    if (t.type == tok::as) {
-        t = next(); //consume as
+    if(!t.bindable()) {
+        throw std::runtime_error("Expected a valid bindable, got " + current().spelling);
+    }
 
-        if (t.type != tok::identifier) {
-            throw std::runtime_error("Expected identifier, got " + t.spelling);
+    auto bindable = t;
+    std::string ion_name;
+    if(t.ion_bindable()) {
+        t = next(); // consume bindable
+        if (t.type != tok::lparen) {
+            throw std::runtime_error("Expected (, got " + current().spelling);
         }
-        module_alias = t.spelling;
-        next(); // consume module alias
+        next(); // consume (
+
+        ion_name = parse_quoted();
+
+        t = current();
+        if (t.type != tok::rparen) {
+            throw std::runtime_error("Expected ), got " + current().spelling);
+        }
+        t = next(); // consume )
     }
+
     if (t.type == tok::semicolon) {
-        next(); // consume ;
+        next(); // consume ';'
     }
-    return make_expr<import_expr>(module_name, module_alias, loc);
-};*/
+    return make_expr<bind_expr>(std::move(iden), bindable, ion_name, loc);
+}
+
+// An initialization of the form
+// `initial` `identifier`[:`type`] = `value_expression`;
+expr parser::parse_initial() {
+    auto t = current();
+    if (t.type != tok::initial) {
+        throw std::runtime_error("Expected `initial`, got " + t.spelling);
+    }
+    auto loc = t.loc;
+    next(); // consume 'initial'
+
+    auto assign = parse_assignment();
+    return make_expr<initial_expr>(std::move(assign.first), std::move(assign.second), loc);
+}
+
+// An effect of the form
+// `effect` `affectable`[:`type`] = `value_expression`;
+expr parser::parse_effect() {
+    auto t = current();
+    if (t.type != tok::effect) {
+        throw std::runtime_error("Expected `effect`, got " + t.spelling);
+    }
+    auto loc = t.loc;
+    next(); // consume 'effect'
+
+    auto assign = parse_assignment();
+    return make_expr<effect_expr>(std::move(assign.first), std::move(assign.second), loc);
+}
+
+// An evolution of the form
+// `evolve` `identifier`[:`type`] = `value_expression`;
+expr parser::parse_evolve() {
+    auto t = current();
+    if (t.type != tok::evolve) {
+        throw std::runtime_error("Expected `evolve`, got " + t.spelling);
+    }
+    auto loc = t.loc;
+    next(); // consume 'evolve'
+
+    auto assign = parse_assignment();
+    return make_expr<evolve_expr>(std::move(assign.first), std::move(assign.second), loc);
+}
+
+// An export of the form
+// `export` `identifier`[;]
+expr parser::parse_export() {
+    auto t = current();
+    if (t.type != tok::param_export) {
+        throw std::runtime_error("Expected `export`, got " + t.spelling);
+    }
+    auto loc = t.loc;
+    next(); // consume 'export'
+
+    auto iden = parse_identifier();
+
+    t = current();
+    if (current().type == tok::semicolon) {
+        next(); // consume ';'
+    }
+    return make_expr<export_expr>(std::move(iden), loc);
+}
 
 // A function call of the form:
 // `func_name`(`value_expression0`, `value_exprssion1`, ...)
@@ -921,4 +955,42 @@ std::optional<u_expr> parser::try_parse_unit(int prec) {
     }
     return std::move(u);
 }
+
+std::string parser::parse_quoted() {
+    auto t = current();
+    if (t.type != tok::quote) {
+        throw std::runtime_error("Expected \", got " + current().spelling);
+    }
+    t = next(); // consume "
+
+    if (t.type != tok::identifier) {
+        throw std::runtime_error("Expected identifier, got " + current().spelling);
+    }
+    auto str = t.spelling;
+    t = next(); // consume name
+
+    if (t.type != tok::quote) {
+        throw std::runtime_error("Expected \", got " + current().spelling);
+    }
+    t = next(); // consume "
+    return str;
+}
+
+std::pair<expr, expr> parser::parse_assignment()  {
+    auto iden = parse_typed_identifier();
+    auto t = current();
+    if (t.type != tok::eq) {
+        throw std::runtime_error("Expected =, got " + t.spelling);
+    }
+    next(); // consume '='
+
+    auto value = parse_expr();
+
+    if (current().type != tok::semicolon) {
+        throw std::runtime_error("Expected ;, got " + current().spelling);
+    }
+    next(); // consume ';'
+
+    return {iden, value};
+};
 } // namespace al

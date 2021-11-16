@@ -38,7 +38,7 @@ enum class tok {
     arrow,
 
     // ; : , . "
-    semicolon, colon, comma, dot, quote
+    semicolon, colon, comma, dot, quote,
 
     // { }
     lbrace, rbrace,
@@ -84,6 +84,12 @@ enum class tok {
     resistance, conductance, capacitance, force,
     energy, power, area, volume, concentration,
 
+    // bindable keywords
+    membrane_potential, // temperature already exists
+    current_density, molar_flux, //charge already exists
+    internal_concentration, external_concentration,
+    nernst_potential,
+
     // error
     error
 };
@@ -101,6 +107,8 @@ struct token {
     static std::optional<tok> tokenize(const std::string&);
     bool quantity() const;
     bool mechanism_kind() const;
+    bool bindable() const;
+    bool ion_bindable() const;
     int precedence() const;
     bool right_associative() const;
 

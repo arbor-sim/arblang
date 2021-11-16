@@ -44,10 +44,24 @@ std::optional<unary_op> gen_unary_op(tok t) {
 
 std::optional<mechanism_kind> gen_mechanism_kind(tok t) {
     switch (t) {
-        case tok::density:       return mechanism_kind ::density;
-        case tok::concentration: return mechanism_kind ::concentration;
-        case tok::junction:      return mechanism_kind ::junction;
-        case tok::point:         return mechanism_kind ::point;
+        case tok::density:       return mechanism_kind::density;
+        case tok::concentration: return mechanism_kind::concentration;
+        case tok::junction:      return mechanism_kind::junction;
+        case tok::point:         return mechanism_kind::point;
+        default: return {};
+    }
+}
+
+std::optional<bindable> gen_bindable(tok t) {
+    switch (t) {
+        case tok::membrane_potential:     return bindable::membrane_potential;
+        case tok::temperature:            return bindable::temperature;
+        case tok::current_density:        return bindable::current_density;
+        case tok::molar_flux:             return bindable::molar_flux;
+        case tok::charge:                 return bindable::charge;
+        case tok::internal_concentration: return bindable::internal_concentration;
+        case tok::external_concentration: return bindable::external_concentration;
+        case tok::nernst_potential:       return bindable::nernst_potential;
         default: return {};
     }
 }
@@ -87,26 +101,28 @@ std::ostream& operator<< (std::ostream& o, const unary_op& op) {
     }
 }
 
-// module_expr
-/*std::ostream& operator<< (std::ostream& o, const module_expr& e) {
-    o << "(module_expr " << e.name << " ";
-    for (const auto& p: e.parameters) {
-        std::visit([&](auto&& c){o << c << " ";}, *p);
+std::ostream& operator<< (std::ostream& o, const mechanism_kind& op) {
+    switch (op) {
+        case mechanism_kind::density:       return o << "denity";
+        case mechanism_kind::concentration: return o << "concentration";
+        case mechanism_kind::junction:      return o << "junction";
+        case mechanism_kind::point:         return o << "point";
+        default: return o;
     }
-    for (const auto& p: e.constants) {
-        std::visit([&](auto&& c){o << c << " ";}, *p);
+}
+
+std::ostream& operator<< (std::ostream& o, const bindable& op) {
+    switch (op) {
+        case bindable::membrane_potential:     return o << "membrane_potential";
+        case bindable::temperature:            return o << "temperature";
+        case bindable::current_density:        return o << "current_density";
+        case bindable::charge:                 return o << "charge";
+        case bindable::internal_concentration: return o << "internal_concentration";
+        case bindable::external_concentration: return o << "external_concentration";
+        case bindable::nernst_potential:       return o << "nernst_potential";
+        default: return o;
     }
-    for (const auto& p: e.functions) {
-        std::visit([&](auto&& c){o << c << " ";}, *p);
-    }
-    for (const auto& p: e.records) {
-        std::visit([&](auto&& c){o << c << " ";}, *p);
-    }
-    for (const auto& p: e.imports) {
-        std::visit([&](auto&& c){o << c << " ";}, *p);
-    }
-    return o << ")";
-}*/
+}
 
 // mechanism_expr
 bool mechanism_expr::set_kind(tok t) {
@@ -118,7 +134,7 @@ bool mechanism_expr::set_kind(tok t) {
 }
 
 std::ostream& operator<< (std::ostream& o, const mechanism_expr& e) {
-    o << "(module_expr " << e.name << " ";
+    o << "(module_expr " << e.name << " " << e.kind << " ";
     for (const auto& p: e.parameters) {
         std::visit([&](auto&& c){o << c << " ";}, *p);
     }
@@ -196,10 +212,71 @@ std::ostream& operator<< (std::ostream& o, const function_expr& e) {
     return o << ")" << e.loc << ")";
 }
 
-// import_expr
-/*std::ostream& operator<< (std::ostream& o, const import_expr& e) {
-    return o << "(import_expr " << e.module_name <<  " " << e.module_alias << " " << e.loc << ")";
-}*/
+// bind_expr
+bind_expr::bind_expr(expr iden, const token& t, const std::string& ion_name, const src_location& loc):
+    identifier(std::move(iden)), loc(loc)
+{
+    if (auto b = gen_bindable(t.type)) {
+        bind = b.value();
+        if (!ion_name.empty()) {
+            if (!t.ion_bindable()) {
+                throw std::runtime_error("Generating non-ion bindable with an ion: internal compiler error");
+            }
+            ion = ion_name;
+        } else {
+            if (t.ion_bindable()) {
+                throw std::runtime_error("Generating ion bindable without an ion: internal compiler error");
+            }
+        }
+    } else {
+        throw std::runtime_error("Expected a valid bindable: internal compiler error");
+    }
+};
+
+std::ostream& operator<< (std::ostream& o, const bind_expr& e) {
+    o << "(bind_expr (";
+    std::visit([&](auto&& c){o << c << " ";}, *e.identifier);
+    o << "(" << e.bind << " ";
+    if (e.ion) {
+        o << e.ion.value() << " ";
+    }
+    o << ") ";
+    return o << ") " << e.loc << ")";
+}
+
+// initial_expr
+std::ostream& operator<< (std::ostream& o, const initial_expr& e) {
+    o << "(initial_expr ";
+    std::visit([&](auto&& c){o << c << " ";}, *e.identifier);
+    std::visit([&](auto&& c){o << c << " ";}, *e.value);
+    return o << e.loc << ")";
+}
+
+
+// evolve_expr
+std::ostream& operator<< (std::ostream& o, const evolve_expr& e) {
+    o << "(evolve_expr ";
+    std::visit([&](auto&& c){o << c << " ";}, *e.identifier);
+    std::visit([&](auto&& c){o << c << " ";}, *e.value);
+    return o << e.loc << ")";
+}
+
+
+// effect_expr
+std::ostream& operator<< (std::ostream& o, const effect_expr& e) {
+    o << "(effect_expr ";
+    std::visit([&](auto&& c){o << c << " ";}, *e.identifier);
+    std::visit([&](auto&& c){o << c << " ";}, *e.value);
+    return o << e.loc << ")";
+}
+
+
+//
+std::ostream& operator<< (std::ostream& o, const export_expr& e) {
+    o << "(export_expr ";
+    std::visit([&](auto&& c){o << c << " ";}, *e.identifier);
+    return o << e.loc << ")";
+}
 
 // call_expr
 std::ostream& operator<< (std::ostream& o, const call_expr& e) {
@@ -207,7 +284,7 @@ std::ostream& operator<< (std::ostream& o, const call_expr& e) {
     for (const auto& f: e.call_args) {
         std::visit([&](auto&& c){o << c << " ";}, *f);
     }
-    return o << ")" << e.loc << ")";
+    return o << ") " << e.loc << ")";
 }
 
 // object_expr

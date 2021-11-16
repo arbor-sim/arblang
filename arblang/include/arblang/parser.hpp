@@ -22,9 +22,6 @@ public:
     const std::vector<expr>& mechanisms() {return mechanisms_;};
 
     expr parse_mechanism();
-//    expr parse_module();
-//    expr parse_import();
-
     expr parse_parameter();
     expr parse_constant();
     expr parse_state();
@@ -63,7 +60,9 @@ public:
     std::optional<u_expr> try_parse_unit(int prec=0);
 
 private:
-//    std::vector<expr> modules_;
+    std::string parse_quoted();
+    std::pair<expr, expr> parse_assignment();
+
     std::vector<expr> mechanisms_;
 };
 } // namespace al

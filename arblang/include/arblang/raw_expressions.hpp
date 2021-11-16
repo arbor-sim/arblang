@@ -14,14 +14,17 @@
 namespace al {
 namespace raw_ir {
 
-//struct module_expr;
 struct mechanism_expr;
 struct parameter_expr;
 struct constant_expr;
 struct state_expr;
 struct record_alias_expr;
 struct function_expr;
-//struct import_expr;
+struct bind_expr;
+struct initial_expr;
+struct evolve_expr;
+struct effect_expr;
+struct export_expr;
 struct call_expr;
 struct object_expr;
 struct let_expr;
@@ -35,13 +38,16 @@ struct binary_expr;
 
 using raw_expr = std::variant<
     mechanism_expr,
-//    module_expr,
     parameter_expr,
     constant_expr,
     state_expr,
     record_alias_expr,
     function_expr,
-//    import_expr,
+    bind_expr,
+    initial_expr,
+    evolve_expr,
+    effect_expr,
+    export_expr,
     call_expr,
     object_expr,
     let_expr,
@@ -69,32 +75,27 @@ enum class mechanism_kind {
     density, point, concentration, junction,
 };
 
-/*struct module_expr {
-    module_expr() {};
-
-    std::string name;
-    std::vector<expr> constants;  // expect constant_expr
-    std::vector<expr> parameters; // expect parameter_expr
-    std::vector<expr> functions;  // expect function_expr
-    std::vector<expr> records;    // expect record_alias_expr
-    src_location loc;
-};*/
+enum class bindable {
+    membrane_potential, temperature, current_density,
+    molar_flux, charge,
+    internal_concentration, external_concentration, nernst_potential
+};
 
 struct mechanism_expr {
     mechanism_expr() {};
 
     std::string name;
     mechanism_kind kind;
-    std::vector<expr> constants;  // expect constant_expr
-    std::vector<expr> parameters; // expect parameter_expr
-    std::vector<expr> states;     // expect state_expr
-    std::vector<expr> functions;  // expect function_expr
-    std::vector<expr> records;    // expect record_alias_expr
-    std::vector<expr> effects;
-    std::vector<expr> evolutions;
-    std::vector<expr> initilizations;
-    std::vector<expr> bindings;
-    std::vector<expr> exports;
+    std::vector<expr> constants;      // expect constant_expr
+    std::vector<expr> parameters;     // expect parameter_expr
+    std::vector<expr> states;         // expect state_expr
+    std::vector<expr> functions;      // expect function_expr
+    std::vector<expr> records;        // expect record_alias_expr
+    std::vector<expr> bindings;       // expect bind_expr
+    std::vector<expr> initilizations; // expect initial_expr
+    std::vector<expr> effects;        // expect effects_expr
+    std::vector<expr> evolutions;     // expect evolve_expr
+    std::vector<expr> exports;        // expect export_expr
     src_location loc;
 
     bool set_kind(tok t);
@@ -148,15 +149,50 @@ struct function_expr {
         name(std::move(name)), args(std::move(args)), ret(std::move(ret)), body(std::move(body)), loc(loc) {};
 };
 
-// Top level module imports
-/*struct import_expr {
-    std::string module_name;
-    std::string module_alias;
+// Top level bindables
+struct bind_expr {
+    expr identifier; // expect identifier_expr
+    bindable bind;
+    std::optional<std::string> ion;
     src_location loc;
 
-    import_expr(std::string module_name, std::string module_alias, const src_location& loc):
-        module_name(std::move(module_name)), module_alias(std::move(module_alias)), loc(loc) {};
-};*/
+    bind_expr(expr iden, const token& t, const std::string& ion, const src_location& loc);
+};
+
+// Top level initialization
+struct initial_expr {
+    expr identifier; // expect identifier_expr
+    expr value;
+    src_location loc;
+
+    initial_expr(expr iden, expr value, const src_location& loc): identifier(std::move(iden)), value(std::move(value)), loc(loc) {};
+};
+
+// Top level evolution
+struct evolve_expr {
+    expr identifier; // expect identifier_expr
+    expr value;
+    src_location loc;
+
+    evolve_expr(expr iden, expr value, const src_location& loc): identifier(std::move(iden)), value(std::move(value)), loc(loc) {};
+};
+
+// Top level effects
+struct effect_expr {
+    expr identifier; // expect identifier_expr
+    expr value;
+    src_location loc;
+
+    effect_expr(expr iden, expr value, const src_location& loc): identifier(std::move(iden)), value(std::move(value)), loc(loc) {};
+};
+
+// Top level exports
+struct export_expr {
+    expr identifier; // expect identifier_expr
+    src_location loc;
+
+    export_expr(expr iden, const src_location& loc): identifier(std::move(iden)), loc(loc) {};
+};
 
 // Function calls
 struct call_expr {
@@ -267,15 +303,20 @@ struct identifier_expr {  // Is this needed? Can it be used directly and not via
 
 std::ostream& operator<< (std::ostream&, const binary_op&);
 std::ostream& operator<< (std::ostream&, const unary_op&);
-//std::ostream& operator<< (std::ostream&, const module_expr&);
+std::ostream& operator<< (std::ostream&, const mechanism_kind&);
+std::ostream& operator<< (std::ostream&, const bindable&);
 std::ostream& operator<< (std::ostream&, const mechanism_expr&);
 std::ostream& operator<< (std::ostream&, const parameter_expr&);
 std::ostream& operator<< (std::ostream&, const constant_expr&);
 std::ostream& operator<< (std::ostream&, const state_expr&);
 std::ostream& operator<< (std::ostream&, const record_alias_expr&);
 std::ostream& operator<< (std::ostream&, const function_expr&);
-//std::ostream& operator<< (std::ostream&, const import_expr&);
+std::ostream& operator<< (std::ostream&, const initial_expr&);
+std::ostream& operator<< (std::ostream&, const evolve_expr&);
+std::ostream& operator<< (std::ostream&, const effect_expr&);
+std::ostream& operator<< (std::ostream&, const export_expr&);
 std::ostream& operator<< (std::ostream&, const call_expr&);
+std::ostream& operator<< (std::ostream&, const bind_expr&);
 std::ostream& operator<< (std::ostream&, const object_expr&);
 std::ostream& operator<< (std::ostream&, const let_expr&);
 std::ostream& operator<< (std::ostream&, const with_expr&);
