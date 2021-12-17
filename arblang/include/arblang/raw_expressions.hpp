@@ -81,6 +81,11 @@ enum class bindable {
     internal_concentration, external_concentration, nernst_potential
 };
 
+enum class affectable {
+    current_density, current, molar_flux, molar_flow_rate,
+    internal_concentration_rate, external_concentration_rate
+};
+
 struct mechanism_expr {
     mechanism_expr() {};
 
@@ -133,7 +138,7 @@ struct record_alias_expr {
     t_raw_ir::t_expr type;
     src_location loc;
 
-    record_alias_expr(std::string name,t_raw_ir::t_expr type, const src_location& loc):
+    record_alias_expr(std::string name, t_raw_ir::t_expr type, const src_location& loc):
         name(std::move(name)), type(std::move(type)), loc(loc) {};
 };
 
@@ -179,11 +184,13 @@ struct evolve_expr {
 
 // Top level effects
 struct effect_expr {
-    expr identifier; // expect identifier_expr
+    affectable effect;
+    std::optional<std::string> ion;
+    std::optional<t_raw_ir::t_expr> type;
     expr value;
     src_location loc;
 
-    effect_expr(expr iden, expr value, const src_location& loc): identifier(std::move(iden)), value(std::move(value)), loc(loc) {};
+    effect_expr(const token& t, const std::string& ion, std::optional<t_raw_ir::t_expr> type, expr value, const src_location& loc);
 };
 
 // Top level exports
@@ -305,6 +312,7 @@ std::ostream& operator<< (std::ostream&, const binary_op&);
 std::ostream& operator<< (std::ostream&, const unary_op&);
 std::ostream& operator<< (std::ostream&, const mechanism_kind&);
 std::ostream& operator<< (std::ostream&, const bindable&);
+std::ostream& operator<< (std::ostream&, const affectable&);
 std::ostream& operator<< (std::ostream&, const mechanism_expr&);
 std::ostream& operator<< (std::ostream&, const parameter_expr&);
 std::ostream& operator<< (std::ostream&, const constant_expr&);

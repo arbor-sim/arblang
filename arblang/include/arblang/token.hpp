@@ -90,6 +90,10 @@ enum class tok {
     internal_concentration, external_concentration,
     nernst_potential,
 
+    // affectable keywords
+    molar_flow_rate, internal_concentration_rate,
+    external_concentration_rate,
+
     // error
     error
 };
@@ -108,9 +112,10 @@ struct token {
     bool quantity() const;
     bool mechanism_kind() const;
     bool bindable() const;
+    bool affectable() const;
     bool ion_bindable() const;
-    int precedence() const;
     bool right_associative() const;
+    int precedence() const;
 
     friend std::ostream& operator<< (std::ostream&, const token&);
 

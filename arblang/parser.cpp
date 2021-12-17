@@ -42,7 +42,7 @@ expr parser::parse_mechanism() {
     if (!m.set_kind(t.type)) {
         throw std::runtime_error(fmt::format("Unexpected token '{}', expected mechanism kind identifier", t.spelling));
     }
-    t = next(); // consume kind
+    next(); // consume kind
 
     m.name = parse_quoted();
 
@@ -314,10 +314,48 @@ expr parser::parse_effect() {
         throw std::runtime_error("Expected `effect`, got " + t.spelling);
     }
     auto loc = t.loc;
-    next(); // consume 'effect'
+    t = next(); // consume 'effect'
 
-    auto assign = parse_assignment();
-    return make_expr<effect_expr>(std::move(assign.first), std::move(assign.second), loc);
+    if(!t.affectable()) {
+        throw std::runtime_error("Expected a valid effect, got " + current().spelling);
+    }
+    auto affectable = t;
+
+    t = next(); // consume affectable;
+
+    // Get ion if it exists
+    std::string ion_name;
+    if (t.type == tok::lparen) {
+        next(); // consume (
+        ion_name = parse_quoted();
+        t = current();
+        if (t.type != tok::rparen) {
+            throw std::runtime_error("Expected ), got " + current().spelling);
+        }
+        t = next(); // consume )
+    }
+
+    // Get type if it exists
+    std::optional<t_expr> type = {};
+    if (t.type == tok::colon) {
+        next(); // consume colon;
+        type = parse_type();
+    }
+
+    t = current();
+    if (t.type != tok::eq) {
+        throw std::runtime_error("Expected =, got " + t.spelling);
+    }
+    next(); // consume '='
+
+    auto value = parse_expr();
+
+    if (current().type != tok::semicolon) {
+        throw std::runtime_error("Expected ;, got " + current().spelling);
+    }
+    next(); // consume ';'
+
+    return make_expr<effect_expr>(affectable, ion_name, type, value, loc);
 }
 
 // An evolution of the form

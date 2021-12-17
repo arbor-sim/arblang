@@ -4,6 +4,7 @@
 #include <string>
 
 #include <arblang/raw_expressions.hpp>
+#include <utility>
 
 namespace al {
 namespace raw_ir {
@@ -66,6 +67,18 @@ std::optional<bindable> gen_bindable(tok t) {
     }
 }
 
+std::optional<affectable> gen_affectable(tok t) {
+    switch (t) {
+        case tok::current_density:             return affectable::current_density;
+        case tok::current:                     return affectable::current;
+        case tok::molar_flux:                  return affectable::molar_flux;
+        case tok::molar_flow_rate:             return affectable::molar_flow_rate;
+        case tok::internal_concentration_rate: return affectable::internal_concentration_rate;
+        case tok::external_concentration_rate: return affectable::external_concentration_rate;
+        default: return {};
+    }
+}
+
 std::ostream& operator<< (std::ostream& o, const binary_op& op) {
     switch (op) {
         case binary_op::add:  return o << "+";
@@ -116,10 +129,23 @@ std::ostream& operator<< (std::ostream& o, const bindable& op) {
         case bindable::membrane_potential:     return o << "membrane_potential";
         case bindable::temperature:            return o << "temperature";
         case bindable::current_density:        return o << "current_density";
+        case bindable::molar_flux:             return o << "molar_flux";
         case bindable::charge:                 return o << "charge";
         case bindable::internal_concentration: return o << "internal_concentration";
         case bindable::external_concentration: return o << "external_concentration";
         case bindable::nernst_potential:       return o << "nernst_potential";
+        default: return o;
+    }
+}
+
+std::ostream& operator<< (std::ostream& o, const affectable& op) {
+    switch (op) {
+        case affectable::current_density:             return o << "current_density";
+        case affectable::current:                     return o << "current";
+        case affectable::molar_flux:                  return o << "molar_flux";
+        case affectable::molar_flow_rate:             return o << "molar_flow_rate";
+        case affectable::internal_concentration_rate: return o << "internal_concentration_rate";
+        case affectable::external_concentration_rate: return o << "external_concentration_rate";
         default: return o;
     }
 }
@@ -252,7 +278,6 @@ std::ostream& operator<< (std::ostream& o, const initial_expr& e) {
     return o << e.loc << ")";
 }
 
-
 // evolve_expr
 std::ostream& operator<< (std::ostream& o, const evolve_expr& e) {
     o << "(evolve_expr ";
@@ -261,15 +286,31 @@ std::ostream& operator<< (std::ostream& o, const evolve_expr& e) {
     return o << e.loc << ")";
 }
 
-
 // effect_expr
+effect_expr::effect_expr(const token& t, const std::string& ion_name, std::optional<t_raw_ir::t_expr> type, expr value, const src_location& loc):
+        value(std::move(value)), type(std::move(type)), loc(loc)
+{
+    if (auto b = gen_affectable(t.type)) {
+        effect = b.value();
+        if (!ion_name.empty()) {
+            ion = ion_name;
+        } else {
+            if (effect != affectable::current && effect != affectable::current_density) {
+                throw std::runtime_error("Generating ion effect without an ion: internal compiler error");
+            }
+        }
+    } else {
+        throw std::runtime_error("Expected a valid effect: internal compiler error");
+    }
+};
 std::ostream& operator<< (std::ostream& o, const effect_expr& e) {
-    o << "(effect_expr ";
-    std::visit([&](auto&& c){o << c << " ";}, *e.identifier);
+    o << "(effect_expr (" << e.effect << " " ;
+    if (e.ion) { o << e.ion.value() << " ";}
+    if (e.type) { o << e.type.value() << " ";}
+    o << ") ";
     std::visit([&](auto&& c){o << c << " ";}, *e.value);
     return o << e.loc << ")";
 }
-
 
 //
 std::ostream& operator<< (std::ostream& o, const export_expr& e) {
@@ -337,7 +378,7 @@ std::ostream& operator<< (std::ostream& o, const identifier_expr& e) {
 
 // float_expr
 std::ostream& operator<< (std::ostream& o, const float_expr& e) {
-    return o << "(float_expr " << e.value << " ";
+    o << "(float_expr " << e.value << " ";
     if (e.unit) {
         std::visit([&](auto&& c) { o << c << " "; }, *(e.unit.value()));
     }

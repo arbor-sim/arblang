@@ -73,6 +73,9 @@ std::unordered_map<std::string, tok> token::keyword_to_token = {
     {"internal_concentration", tok::internal_concentration},
     {"external_concentration", tok::external_concentration},
     {"nernst_potential",       tok::nernst_potential},
+    {"molar_flow_rate",        tok::molar_flow_rate},
+    {"internal_concentration_rate", tok::internal_concentration_rate},
+    {"external_concentration_rate", tok::external_concentration_rate},
 };
 
 std::unordered_map<tok, std::string> token::token_to_string = {
@@ -165,6 +168,9 @@ std::unordered_map<tok, std::string> token::token_to_string = {
     {tok::internal_concentration, "internal_concentration"},
     {tok::external_concentration, "external_concentration"},
     {tok::nernst_potential,       "nernst_potential"},
+    {tok::molar_flow_rate,        "molar_flow_rate"},
+    {tok::internal_concentration_rate, "internal_concentration_rate"},
+    {tok::external_concentration_rate, "external_concentration_rate"},
 };
 
 std::unordered_map<tok, int> token::binop_prec = {
@@ -247,14 +253,31 @@ bool token::bindable() const {
     }
 }
 
+bool token::affectable() const {
+    switch (type) {
+        case tok::current_density:
+        case tok::current:
+        case tok::molar_flux:
+        case tok::molar_flow_rate:
+        case tok::internal_concentration_rate:
+        case tok::external_concentration_rate:
+            return true;
+        default: return false;
+    }
+}
+
 bool token::ion_bindable() const {
     switch (type) {
         case tok::molar_flux:
         case tok::current_density:
         case tok::charge:
+        case tok::current:
         case tok::internal_concentration:
         case tok::external_concentration:
         case tok::nernst_potential:
+        case tok::molar_flow_rate:
+        case tok::internal_concentration_rate:
+        case tok::external_concentration_rate:
             return true;
         default: return false;
     }

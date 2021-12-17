@@ -1930,12 +1930,253 @@ TEST(parser, record) {
 }
 
 // including "density" keyword
-TEST(parser, parameter) {}
-TEST(parser, constant) {}
-TEST(parser, state) {}
-TEST(parser, bind) {}
-TEST(parser, initial) {}
-TEST(parser, evolve) {}
-TEST(parser, effect) {}
-TEST(parser, export) {}
-TEST(parser, mechanism) {}
+TEST(parser, parameter) {
+    {
+        std::string param = "parameter a = 3 [mV];";
+        auto p = parser(param);
+        auto e = std::get<parameter_expr>(*p.parse_parameter());
+
+        auto id  = std::get<identifier_expr>(*e.identifier);
+        EXPECT_EQ("a", id.name);
+        EXPECT_FALSE(id.type);
+
+        auto val = std::get<int_expr>(*e.value);
+        EXPECT_EQ(3, val.value);
+        EXPECT_TRUE(val.unit);
+
+        auto unit = std::get<simple_unit>(*val.unit.value());
+        EXPECT_EQ(unit_pref::m, unit.val.prefix);
+        EXPECT_EQ(unit_sym::V, unit.val.symbol);
+    }
+    {
+        std::string param = "parameter iconc: concentration = get_conc(x);";
+        auto p = parser(param);
+        auto e = std::get<parameter_expr>(*p.parse_parameter());
+
+        auto id  = std::get<identifier_expr>(*e.identifier);
+        EXPECT_EQ("iconc", id.name);
+        EXPECT_TRUE(id.type);
+
+        auto type = std::get<quantity_type>(*id.type.value());
+        EXPECT_EQ(quantity::concentration, type.type);
+
+        auto val = std::get<call_expr>(*e.value);
+        EXPECT_EQ("get_conc", val.function_name);
+        EXPECT_EQ(1u, val.call_args.size());
+
+        auto arg = std::get<identifier_expr>(*val.call_args[0]);
+        EXPECT_EQ("x", arg.name);
+        EXPECT_FALSE(arg.type);
+    }
+}
+
+TEST(parser, constant) {
+    {
+        std::string param = "constant my_conc = (let a = 2; a*foo(a));";
+        auto p = parser(param);
+        auto e = std::get<constant_expr>(*p.parse_constant());
+
+        auto id  = std::get<identifier_expr>(*e.identifier);
+        EXPECT_EQ("my_conc", id.name);
+        EXPECT_FALSE(id.type);
+
+        auto val = std::get<let_expr>(*e.value);
+        auto v_id = std::get<identifier_expr>(*val.identifier);
+        EXPECT_EQ("a", v_id.name);
+        EXPECT_FALSE(v_id.type);
+
+        auto v_val = std::get<int_expr>(*val.value);
+        EXPECT_EQ(2, v_val.value);
+        EXPECT_FALSE(v_val.unit);
+
+        auto v_body = std::get<binary_expr>(*val.body);
+        EXPECT_EQ(binary_op::mul, v_body.op);
+
+        auto lhs = std::get<identifier_expr>(*v_body.lhs);
+        EXPECT_EQ("a", lhs.name);
+        EXPECT_FALSE(lhs.type);
+
+        auto rhs = std::get<call_expr>(*v_body.rhs);
+        EXPECT_EQ("foo", rhs.function_name);
+        EXPECT_EQ(1u, rhs.call_args.size());
+
+        auto arg = std::get<identifier_expr>(*rhs.call_args[0]);
+        EXPECT_EQ("a", arg.name);
+        EXPECT_FALSE(arg.type);
+    }
+}
+
+TEST(parser, state) {
+    {
+        std::string state = "state s: concentration/volume;";
+        auto p = parser(state);
+        auto e = std::get<state_expr>(*p.parse_state());
+
+        auto id  = std::get<identifier_expr>(*e.identifier);
+        EXPECT_EQ("s", id.name);
+        EXPECT_TRUE(id.type);
+
+        auto type = std::get<quantity_binary_type>(*id.type.value());
+        EXPECT_EQ(t_binary_op::div, type.op);
+
+        auto lhs = std::get<quantity_type>(*type.lhs);
+        EXPECT_EQ(quantity::concentration, lhs.type);
+
+        auto rhs = std::get<quantity_type>(*type.rhs);
+        EXPECT_EQ(quantity::volume, rhs.type);
+    }
+    {
+        std::string state = "state gbar;";
+        auto p = parser(state);
+        auto e = std::get<state_expr>(*p.parse_state());
+
+        auto id  = std::get<identifier_expr>(*e.identifier);
+        EXPECT_EQ("gbar", id.name);
+        EXPECT_FALSE(id.type);
+    }
+}
+
+TEST(parser, bind) {
+    {
+        std::string binding = "bind a: voltage = membrane_potential;";
+        auto p = parser(binding);
+        auto e = std::get<bind_expr>(*p.parse_binding());
+
+        auto id  = std::get<identifier_expr>(*e.identifier);
+        EXPECT_EQ("a", id.name);
+        EXPECT_TRUE(id.type);
+
+        auto type = std::get<quantity_type>(*id.type.value());
+        EXPECT_EQ(quantity::voltage, type.type);
+
+        EXPECT_EQ(bindable::membrane_potential, e.bind);
+        EXPECT_FALSE(e.ion);
+    }
+    {
+        std::string binding = "bind ica = internal_concentration(\"ca\");";
+        auto p = parser(binding);
+        auto e = std::get<bind_expr>(*p.parse_binding());
+
+        auto id  = std::get<identifier_expr>(*e.identifier);
+        EXPECT_EQ("ica", id.name);
+        EXPECT_FALSE(id.type);
+
+        EXPECT_EQ(bindable::internal_concentration, e.bind);
+        EXPECT_TRUE(e.ion);
+        EXPECT_EQ("ca", e.ion.value());
+    }
+}
+
+TEST(parser, initial) {
+    std::string init = "initial st = 0 [S];";
+    auto p = parser(init);
+    auto e = std::get<initial_expr>(*p.parse_initial());
+
+    auto id = std::get<identifier_expr>(*e.identifier);
+    EXPECT_EQ("st", id.name);
+    EXPECT_FALSE(id.type);
+
+    auto val = std::get<int_expr>(*e.value);
+    EXPECT_EQ(0, val.value);
+    EXPECT_TRUE(val.unit);
+
+    auto unit = std::get<simple_unit>(*val.unit.value());
+    EXPECT_EQ(unit_pref::none, unit.val.prefix);
+    EXPECT_EQ(unit_sym::S, unit.val.symbol);
+}
+
+TEST(parser, evolve) {
+    std::string evolve = "evolve st':conductance/time = solve_kin().s';";
+    auto p = parser(evolve);
+    auto e = std::get<evolve_expr>(*p.parse_evolve());
+
+    auto id = std::get<identifier_expr>(*e.identifier);
+    EXPECT_EQ("st'", id.name);
+    EXPECT_TRUE(id.type);
+
+    auto type = std::get<quantity_binary_type>(*id.type.value());
+    EXPECT_EQ(t_binary_op::div, type.op);
+
+    auto t_lhs = std::get<quantity_type>(*type.lhs);
+    EXPECT_EQ(quantity::conductance, t_lhs.type);
+
+    auto t_rhs = std::get<quantity_type>(*type.rhs);
+    EXPECT_EQ(quantity::time, t_rhs.type);
+
+    auto val = std::get<binary_expr>(*e.value);
+    EXPECT_EQ(binary_op::dot, val.op);
+
+    auto v_lhs = std::get<call_expr>(*val.lhs);
+    EXPECT_EQ("solve_kin", v_lhs.function_name);
+    EXPECT_TRUE(v_lhs.call_args.empty());
+
+    auto v_rhs = std::get<identifier_expr>(*val.rhs);
+    EXPECT_EQ("s'", v_rhs.name);
+    EXPECT_FALSE(v_rhs.type);
+}
+
+TEST(parser, effect) {
+    std::string effect = "effect current_density(\"k\") = gbar*s*(v - ek);";
+    auto p = parser(effect);
+    auto e = std::get<effect_expr>(*p.parse_effect());
+
+    EXPECT_EQ(affectable::current_density, e.effect);
+    EXPECT_EQ("k", e.ion);
+    EXPECT_FALSE(e.type);
+
+    auto val = std::get<binary_expr>(*e.value);
+    EXPECT_EQ(binary_op::mul, val.op);
+
+    auto lhs = std::get<binary_expr>(*val.lhs);
+    EXPECT_EQ(binary_op::mul, lhs.op);
+
+    auto l_lhs = std::get<identifier_expr>(*lhs.lhs);
+    EXPECT_EQ("gbar", l_lhs.name);
+    EXPECT_FALSE(l_lhs.type);
+
+    auto l_rhs = std::get<identifier_expr>(*lhs.rhs);
+    EXPECT_EQ("s", l_rhs.name);
+    EXPECT_FALSE(l_rhs.type);
+
+    auto rhs = std::get<binary_expr>(*val.rhs);
+    EXPECT_EQ(binary_op::sub, rhs.op);
+
+    auto r_lhs = std::get<identifier_expr>(*rhs.lhs);
+    EXPECT_EQ("v", r_lhs.name);
+    EXPECT_FALSE(r_lhs.type);
+
+    auto r_rhs = std::get<identifier_expr>(*rhs.rhs);
+    EXPECT_EQ("ek", r_rhs.name);
+    EXPECT_FALSE(r_rhs.type);
+}
+
+TEST(parser, export) {
+    std::string exp = "export gbar;";
+    auto p = parser(exp);
+    auto e = std::get<export_expr>(*p.parse_export());
+
+    auto id = std::get<identifier_expr>(*e.identifier);
+    EXPECT_EQ("gbar", id.name);
+    EXPECT_FALSE(id.type);
+}
+
+TEST(parser, mechanism) {
+    auto mech =
+        "# Adapted from Allen Institute Ca_dynamics.mod,\n"
+        "# in turn based on model of Destexhe et al. 1994.\n"
+        "\n"
+        "mechanism concentration \"CaDynamics\" {\n"
+        "    parameter gamma = 0.05;      # Proportion of unbuffered calcium.\n"
+        "    parameter decay = 80 [ms];   # Calcium removal time constant.\n"
+        "    parameter minCai = 1e-4 [mM];\n"
+        "    parameter depth = 0.1 [um];  # Depth of shell.\n"
+        "\n"
+        "    bind flux = molar_flux(\"ca\");\n"
+        "    bind cai = internal_concentration(\"ca\");\n"
+        "    \n"
+        "    effect molar_flow_rate(\"ca\") = -gamma*flux - (cai - minCai)/decay;\n"
+        "}";
+    auto p = parser(mech);
+    auto e = std::get<mechanism_expr>(*p.parse_mechanism());
+    std::cout << e << std::endl;
+}
