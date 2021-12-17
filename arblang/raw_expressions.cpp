@@ -160,36 +160,36 @@ bool mechanism_expr::set_kind(tok t) {
 }
 
 std::ostream& operator<< (std::ostream& o, const mechanism_expr& e) {
-    o << "(module_expr " << e.name << " " << e.kind << " ";
+    o << "(module_expr " << e.name << " " << e.kind << "\n";
     for (const auto& p: e.parameters) {
-        std::visit([&](auto&& c){o << c << " ";}, *p);
+        std::visit([&](auto&& c){o << "  " << c << "\n";}, *p);
     }
     for (const auto& p: e.constants) {
-        std::visit([&](auto&& c){o << c << " ";}, *p);
+        std::visit([&](auto&& c){o << "  " << c << "\n";}, *p);
     }
     for (const auto& p: e.states) {
-        std::visit([&](auto&& c){o << c << " ";}, *p);
+        std::visit([&](auto&& c){o << "  " << c << "\n";}, *p);
     }
     for (const auto& p: e.bindings) {
-        std::visit([&](auto&& c){o << c << " ";}, *p);
+        std::visit([&](auto&& c){o << "  " << c << "\n";}, *p);
     }
     for (const auto& p: e.functions) {
-        std::visit([&](auto&& c){o << c << " ";}, *p);
+        std::visit([&](auto&& c){o << "  " << c << "\n";}, *p);
     }
     for (const auto& p: e.records) {
-        std::visit([&](auto&& c){o << c << " ";}, *p);
+        std::visit([&](auto&& c){o << "  " << c << "\n";}, *p);
     }
     for (const auto& p: e.initilizations) {
-        std::visit([&](auto&& c){o << c << " ";}, *p);
+        std::visit([&](auto&& c){o << "  " << c << "\n";}, *p);
     }
     for (const auto& p: e.evolutions) {
-        std::visit([&](auto&& c){o << c << " ";}, *p);
+        std::visit([&](auto&& c){o << "  " << c << "\n";}, *p);
     }
     for (const auto& p: e.effects) {
-        std::visit([&](auto&& c){o << c << " ";}, *p);
+        std::visit([&](auto&& c){o << "  " << c << "\n";}, *p);
     }
     for (const auto& p: e.exports) {
-        std::visit([&](auto&& c){o << c << " ";}, *p);
+        std::visit([&](auto&& c){o << "  " << c << "\n";}, *p);
     }
     return o << e.loc << ")";
 }

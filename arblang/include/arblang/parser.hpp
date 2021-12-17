@@ -60,7 +60,6 @@ public:
     std::optional<u_expr> try_parse_unit(int prec=0);
 
 private:
-    std::string parse_quoted();
     std::pair<expr, expr> parse_assignment();
 
     std::vector<expr> mechanisms_;

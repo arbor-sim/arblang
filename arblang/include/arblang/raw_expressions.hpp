@@ -104,6 +104,7 @@ struct mechanism_expr {
     src_location loc;
 
     bool set_kind(tok t);
+    std::string to_string(int indent=0);
 };
 
 // Top level parameters
@@ -113,6 +114,7 @@ struct parameter_expr {
     src_location loc;
 
     parameter_expr(expr iden, expr value, const src_location& loc): identifier(std::move(iden)), value(std::move(value)), loc(loc) {};
+    std::string to_string(int indent=0);
 };
 
 // Top level constants
@@ -122,6 +124,7 @@ struct constant_expr {
     src_location loc;
 
     constant_expr(expr iden, expr value, const src_location& loc): identifier(std::move(iden)), value(std::move(value)), loc(loc) {};
+    std::string to_string(int indent=0);
 };
 
 // Top level states
@@ -130,6 +133,7 @@ struct state_expr {
     src_location loc;
 
     state_expr(expr iden,const src_location& loc): identifier(std::move(iden)), loc(loc) {};
+    std::string to_string(int indent=0);
 };
 
 // Top level record definitions
@@ -140,6 +144,7 @@ struct record_alias_expr {
 
     record_alias_expr(std::string name, t_raw_ir::t_expr type, const src_location& loc):
         name(std::move(name)), type(std::move(type)), loc(loc) {};
+    std::string to_string(int indent=0);
 };
 
 // Top level function definitions
@@ -152,6 +157,7 @@ struct function_expr {
 
     function_expr(std::string name, std::vector<expr> args, std::optional<t_raw_ir::t_expr> ret, expr body, const src_location& loc):
         name(std::move(name)), args(std::move(args)), ret(std::move(ret)), body(std::move(body)), loc(loc) {};
+    std::string to_string(int indent=0);
 };
 
 // Top level bindables
@@ -162,6 +168,7 @@ struct bind_expr {
     src_location loc;
 
     bind_expr(expr iden, const token& t, const std::string& ion, const src_location& loc);
+    std::string to_string(int indent=0);
 };
 
 // Top level initialization
@@ -171,6 +178,7 @@ struct initial_expr {
     src_location loc;
 
     initial_expr(expr iden, expr value, const src_location& loc): identifier(std::move(iden)), value(std::move(value)), loc(loc) {};
+    std::string to_string(int indent=0);
 };
 
 // Top level evolution
@@ -180,6 +188,7 @@ struct evolve_expr {
     src_location loc;
 
     evolve_expr(expr iden, expr value, const src_location& loc): identifier(std::move(iden)), value(std::move(value)), loc(loc) {};
+    std::string to_string(int indent=0);
 };
 
 // Top level effects
@@ -191,6 +200,7 @@ struct effect_expr {
     src_location loc;
 
     effect_expr(const token& t, const std::string& ion, std::optional<t_raw_ir::t_expr> type, expr value, const src_location& loc);
+    std::string to_string(int indent=0);
 };
 
 // Top level exports
@@ -199,6 +209,7 @@ struct export_expr {
     src_location loc;
 
     export_expr(expr iden, const src_location& loc): identifier(std::move(iden)), loc(loc) {};
+    std::string to_string(int indent=0);
 };
 
 // Function calls
@@ -209,6 +220,7 @@ struct call_expr {
 
     call_expr(std::string iden, std::vector<expr> args, const src_location& loc):
         function_name(std::move(iden)), call_args(std::move(args)), loc(loc) {};
+    std::string to_string(int indent=0);
 };
 
 // Object creation
@@ -220,6 +232,7 @@ struct object_expr {
 
     object_expr(std::optional<std::string> record_name, std::vector<expr> record_fields, std::vector<expr> records_vals, const src_location& loc):
         record_name(std::move(record_name)), record_fields(std::move(record_fields)), record_values(std::move(records_vals)), loc(loc) {};
+    std::string to_string(int indent=0);
 };
 
 // Let bindings
@@ -231,6 +244,7 @@ struct let_expr {
 
     let_expr(expr iden, expr value, expr body, const src_location& loc):
         identifier(std::move(iden)), value(std::move(value)), body(std::move(body)), loc(loc) {};
+    std::string to_string(int indent=0);
 };
 
 // with bindings
@@ -241,6 +255,7 @@ struct with_expr {
 
     with_expr(expr value, expr body, const src_location& loc):
             value(std::move(value)), body(std::move(body)), loc(loc) {};
+    std::string to_string(int indent=0);
 };
 
 // if/else statements
@@ -252,6 +267,7 @@ struct conditional_expr {
 
     conditional_expr(expr condition, expr val_true, expr val_false, const src_location& loc):
         condition(std::move(condition)), value_true(std::move(val_true)), value_false(std::move(val_false)), loc(loc) {};
+    std::string to_string(int indent=0);
 };
 
 // Number expression
@@ -262,6 +278,7 @@ struct float_expr {
 
     float_expr(double value, std::optional<u_raw_ir::u_expr> unit, const src_location& loc):
         value(value), unit(std::move(unit)), loc(loc) {};
+    std::string to_string(int indent=0);
 };
 
 
@@ -273,6 +290,7 @@ struct int_expr {
 
     int_expr(int value,  std::optional<u_raw_ir::u_expr> unit, const src_location& loc):
         value(value), unit(std::move(unit)), loc(loc) {};
+    std::string to_string(int indent=0);
 };
 
 // Both boolean and arithmetic operations
@@ -284,6 +302,7 @@ struct unary_expr {
     unary_expr(tok t, expr value, const src_location& loc);
 
     bool is_boolean () const;
+    std::string to_string(int indent=0);
 };
 
 // Both boolean and arithmetic operations
@@ -296,6 +315,7 @@ struct binary_expr {
     binary_expr(tok t, expr lhs, expr rhs, const src_location& loc);
 
     bool is_boolean () const;
+    std::string to_string(int indent=0);
 };
 
 // Identifier name and type expression
@@ -306,6 +326,7 @@ struct identifier_expr {  // Is this needed? Can it be used directly and not via
 
     identifier_expr(t_raw_ir::t_expr type, std::string name, src_location loc): type(type), name(name), loc(loc) {};
     identifier_expr(std::string name, src_location loc): type(std::nullopt), name(name), loc(loc) {};
+    std::string to_string(int indent=0);
 };
 
 std::ostream& operator<< (std::ostream&, const binary_op&);

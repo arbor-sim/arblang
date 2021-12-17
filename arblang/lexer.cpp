@@ -226,9 +226,17 @@ private:
                 case '}':
                     token_ = {loc(), tok::rbrace, {character()}};
                     return;
-                case '"':
-                    token_ = {loc(), tok::quote, {character()}};
+                case '"': {
+                    character();
+                    std::string str;
+                    while (*stream_ != '"' && *stream_ != 0) {
+                        str += character();
+                    }
+                    if (peek_char(1) == 0) continue;
+                    character();
+                    token_ = {loc(), tok::quoted, str};
                     return;
+                }
                 case '0' ... '9':
                     token_ = number();
                     return;

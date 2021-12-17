@@ -1,6 +1,7 @@
 #include <optional>
 #include <stdexcept>
 #include <string>
+#include <iostream>
 
 #define FMT_HEADER_ONLY YES
 #include <fmt/core.h>
@@ -42,11 +43,14 @@ expr parser::parse_mechanism() {
     if (!m.set_kind(t.type)) {
         throw std::runtime_error(fmt::format("Unexpected token '{}', expected mechanism kind identifier", t.spelling));
     }
-    next(); // consume kind
+    t = next(); // consume kind
 
-    m.name = parse_quoted();
+    if (t.type != tok::quoted) {
+        throw std::runtime_error(fmt::format("Unexpected token '{}', expected string between quotes", t.spelling));
+    }
+    m.name = t.spelling;
 
-    t = current();
+    t = next(); // consume quoted
     if (t.type != tok::lbrace) {
         throw std::runtime_error(fmt::format("Unexpected token '{}' at {}, expected '{'", t.spelling));
     }
@@ -71,6 +75,7 @@ expr parser::parse_mechanism() {
                 break;
             case tok::function:
                 m.functions.push_back(parse_function());
+                break;
             case tok::effect:
                 m.effects.push_back(parse_effect());
                 break;
@@ -269,17 +274,21 @@ expr parser::parse_binding() {
     }
 
     auto bindable = t;
+    t = next(); // consume bindable
+
     std::string ion_name;
-    if(t.ion_bindable()) {
-        t = next(); // consume bindable
+    if(bindable.ion_bindable()) {
         if (t.type != tok::lparen) {
             throw std::runtime_error("Expected (, got " + current().spelling);
         }
-        next(); // consume (
+        t = next(); // consume (
 
-        ion_name = parse_quoted();
+        if (t.type != tok::quoted) {
+            throw std::runtime_error(fmt::format("Unexpected token '{}', expected string between quotes", t.spelling));
+        }
+        ion_name = t.spelling;
 
-        t = current();
+        t = next();  // consume quoted
         if (t.type != tok::rparen) {
             throw std::runtime_error("Expected ), got " + current().spelling);
         }
@@ -326,9 +335,12 @@ expr parser::parse_effect() {
     // Get ion if it exists
     std::string ion_name;
     if (t.type == tok::lparen) {
-        next(); // consume (
-        ion_name = parse_quoted();
-        t = current();
+        t = next(); // consume (
+        if (t.type != tok::quoted) {
+            throw std::runtime_error(fmt::format("Unexpected token '{}', expected string between quotes", t.spelling));
+        }
+        ion_name = t.spelling;
+        t = next(); // consume quoted
         if (t.type != tok::rparen) {
             throw std::runtime_error("Expected ), got " + current().spelling);
         }
@@ -992,26 +1004,6 @@ std::optional<u_expr> parser::try_parse_unit(int prec) {
         throw std::runtime_error("Invalid unit.");
     }
     return std::move(u);
-}
-
-std::string parser::parse_quoted() {
-    auto t = current();
-    if (t.type != tok::quote) {
-        throw std::runtime_error("Expected \", got " + current().spelling);
-    }
-    t = next(); // consume "
-
-    if (t.type != tok::identifier) {
-        throw std::runtime_error("Expected identifier, got " + current().spelling);
-    }
-    auto str = t.spelling;
-    t = next(); // consume name
-
-    if (t.type != tok::quote) {
-        throw std::runtime_error("Expected \", got " + current().spelling);
-    }
-    t = next(); // consume "
-    return str;
 }
 
 std::pair<expr, expr> parser::parse_assignment()  {

@@ -2161,22 +2161,74 @@ TEST(parser, export) {
 }
 
 TEST(parser, mechanism) {
-    auto mech =
-        "# Adapted from Allen Institute Ca_dynamics.mod,\n"
-        "# in turn based on model of Destexhe et al. 1994.\n"
-        "\n"
-        "mechanism concentration \"CaDynamics\" {\n"
-        "    parameter gamma = 0.05;      # Proportion of unbuffered calcium.\n"
-        "    parameter decay = 80 [ms];   # Calcium removal time constant.\n"
-        "    parameter minCai = 1e-4 [mM];\n"
-        "    parameter depth = 0.1 [um];  # Depth of shell.\n"
-        "\n"
-        "    bind flux = molar_flux(\"ca\");\n"
-        "    bind cai = internal_concentration(\"ca\");\n"
-        "    \n"
-        "    effect molar_flow_rate(\"ca\") = -gamma*flux - (cai - minCai)/decay;\n"
-        "}";
-    auto p = parser(mech);
-    auto e = std::get<mechanism_expr>(*p.parse_mechanism());
-    std::cout << e << std::endl;
+/*    {
+        std::string mech =
+            "# Adapted from Allen Institute Ca_dynamics.mod,\n"
+            "# in turn based on model of Destexhe et al. 1994.\n"
+            "\n"
+            "mechanism concentration \"CaDynamics\" {\n"
+            "    parameter gamma = 0.05;      # Proportion of unbuffered calcium.\n"
+            "    parameter decay = 80 [ms];   # Calcium removal time constant.\n"
+            "    parameter minCai = 1e-4 [mM];\n"
+            "    parameter depth = 0.1 [um];  # Depth of shell.\n"
+            "\n"
+            "    bind flux = molar_flux(\"ca\");\n"
+            "    bind cai = internal_concentration(\"ca\");\n"
+            "    \n"
+            "    effect molar_flow_rate(\"ca\") = -gamma*flux - (cai - minCai)/decay;\n"
+            "}";
+        auto p = parser(mech);
+        EXPECT_NO_THROW(std::get<mechanism_expr>(*p.parse_mechanism()));
+    }*/
+    {
+        std::string mech =
+            "mechanism point \"expsyn_stdp\" {\n"
+            "    # A scaling factor for incoming (pre-synaptic) events is required, as the\n"
+            "    # weight of an event is dimensionelss.\n"
+            "\n"
+            "    parameter A     =  1 [uS];    # pre-synaptic event contribution factor\n"
+            "    parameter Apre  =  0.01 [uS]; # pre-synaptic event plasticity contribution\n"
+            "    parameter Apost = -0.01 [uS]; # post-synaptic event plasticity contribution\n"
+            "\n"
+            "    parameter t      = 2 [ms]; # synaptic time constant\n"
+            "    parameter tpre  = 10 [ms]; # pre-synaptic plasticity contrib time constant\n"
+            "    parameter tpost = 10 [ms]; # post-synaptic plasticity contrib time constant\n"
+            "\n"
+            "    parameter gmax  = 10 [uS]; # maximum synaptic conductance\n"
+            "    parameter e = 0 [mV];      # reversal potential\n"
+            "\n"
+            "    bind ca = internal_concentration(\"the other, other calcium\");\n"
+            "\n"
+            "    record state_rec {\n"
+            "        g:         conductance,\n"
+            "        apre:      conductance,\n"
+            "        apost:     conductance,\n"
+            "        w_plastic: conductance\n"
+            "    }\n"
+            "    state expsyn: state_rec;\n"
+            "    state other: volume^2*force;\n"
+            "\n"
+            "    bind v = membrane_potential;\n"
+            "\n"
+            "    function external_spike(s: state_rec, weight: real) : state_rec {\n"
+            "       let x = s.g + s.w_plastic + weight*A;\n"
+            "       let g = if x < 0 [S] then 0 [S]\n"
+            "               else if x > gmax then gmax\n"
+            "               else x;\n"
+            "       let apre = s.apre + Apre; \n"
+            "       let w_plastic = S.w_plastic + S.apost;\n"
+            "       state_rec {\n"
+            "           g = g;\n"
+            "           apre = apre; \n"
+            "           apost = s.apost; \n"
+            "           w_plastic = w_plastic;\n"
+            "       }\n"
+            "    }"
+            "}";
+        auto p = parser(mech);
+        mechanism_expr e;
+//        EXPECT_NO_THROW(std::get<mechanism_expr>(*p.parse_mechanism()));
+        e = std::get<mechanism_expr>(*p.parse_mechanism());
+        std::cout << e << std::endl;
+    }
 }

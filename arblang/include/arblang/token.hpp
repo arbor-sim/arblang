@@ -37,8 +37,8 @@ enum class tok {
     // <->
     arrow,
 
-    // ; : , . "
-    semicolon, colon, comma, dot, quote,
+    // ; : , .
+    semicolon, colon, comma, dot,
 
     // { }
     lbrace, rbrace,
@@ -51,6 +51,9 @@ enum class tok {
 
     // variable/function names
     identifier,
+
+    // any string between quotes
+    quoted,
 
     // unit
     unit,
