@@ -103,9 +103,9 @@ struct binary_unit {
     binary_unit(tok t, u_expr lhs, u_expr rhs, const src_location& loc);
 };
 
-std::ostream& operator<< (std::ostream&, const binary_unit&);
-std::ostream& operator<< (std::ostream&, const integer_unit&);
-std::ostream& operator<< (std::ostream&, const simple_unit&);
+std::string to_string(const binary_unit&, int indent=0);
+std::string to_string(const integer_unit&, int indent=0);
+std::string to_string(const simple_unit&, int indent=0);
 
 template <typename T, typename... Args>
 u_expr make_u_expr(Args&&... args) {

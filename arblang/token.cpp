@@ -13,6 +13,9 @@ std::string src_location::to_string() const {
 std::ostream& operator<< (std::ostream& os, const src_location& loc) {
     return os << "(location " << loc.line << " " << loc.column << ")";
 }
+std::string to_string(const src_location& loc) {
+    return "(location " + std::to_string(loc.line) + " " + std::to_string(loc.column) + ")";
+}
 bool operator==(const src_location& lhs, const src_location& rhs) {
     return (lhs.line == rhs.line) && (lhs.column == rhs.column);
 }

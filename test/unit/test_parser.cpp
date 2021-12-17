@@ -2223,12 +2223,27 @@ TEST(parser, mechanism) {
             "           apost = s.apost; \n"
             "           w_plastic = w_plastic;\n"
             "       }\n"
-            "    }"
+            "    }\n"
+            "\n"
+            "    initial expsyn = state_rec {\n"
+            "        g         = 0 [uS];\n"
+            "        apre      = 0 [uS];\n"
+            "        apost     = 0 [uS];\n"
+            "        w_plastic = 0 [uS];\n"
+            "    };\n"
+            "\n"
+            "    evolve expsyn' = state_rec' {\n"
+            "        g' = -expsyn.g/t;\n"
+            "        apre' = -expsyn.apre/tpre;\n"
+            "        apost'= -expsyn.apost/tpost;\n"
+            "    };\n"
+            "\n"
+            "    effect current = expsyn.g*(v - e);\n"
             "}";
         auto p = parser(mech);
         mechanism_expr e;
 //        EXPECT_NO_THROW(std::get<mechanism_expr>(*p.parse_mechanism()));
         e = std::get<mechanism_expr>(*p.parse_mechanism());
-        std::cout << e << std::endl;
+        std::cout << to_string(e) << std::endl;
     }
 }

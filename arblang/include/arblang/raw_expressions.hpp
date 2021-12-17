@@ -329,32 +329,32 @@ struct identifier_expr {  // Is this needed? Can it be used directly and not via
     std::string to_string(int indent=0);
 };
 
-std::ostream& operator<< (std::ostream&, const binary_op&);
-std::ostream& operator<< (std::ostream&, const unary_op&);
-std::ostream& operator<< (std::ostream&, const mechanism_kind&);
-std::ostream& operator<< (std::ostream&, const bindable&);
-std::ostream& operator<< (std::ostream&, const affectable&);
-std::ostream& operator<< (std::ostream&, const mechanism_expr&);
-std::ostream& operator<< (std::ostream&, const parameter_expr&);
-std::ostream& operator<< (std::ostream&, const constant_expr&);
-std::ostream& operator<< (std::ostream&, const state_expr&);
-std::ostream& operator<< (std::ostream&, const record_alias_expr&);
-std::ostream& operator<< (std::ostream&, const function_expr&);
-std::ostream& operator<< (std::ostream&, const initial_expr&);
-std::ostream& operator<< (std::ostream&, const evolve_expr&);
-std::ostream& operator<< (std::ostream&, const effect_expr&);
-std::ostream& operator<< (std::ostream&, const export_expr&);
-std::ostream& operator<< (std::ostream&, const call_expr&);
-std::ostream& operator<< (std::ostream&, const bind_expr&);
-std::ostream& operator<< (std::ostream&, const object_expr&);
-std::ostream& operator<< (std::ostream&, const let_expr&);
-std::ostream& operator<< (std::ostream&, const with_expr&);
-std::ostream& operator<< (std::ostream&, const conditional_expr&);
-std::ostream& operator<< (std::ostream&, const identifier_expr&);
-std::ostream& operator<< (std::ostream&, const float_expr&);
-std::ostream& operator<< (std::ostream&, const int_expr&);
-std::ostream& operator<< (std::ostream&, const unary_expr&);
-std::ostream& operator<< (std::ostream&, const binary_expr&);
+std::string to_string(const binary_op&);
+std::string to_string(const unary_op&);
+std::string to_string(const mechanism_kind&);
+std::string to_string(const bindable&);
+std::string to_string(const affectable&);
+std::string to_string(const mechanism_expr&, int indent=0);
+std::string to_string(const parameter_expr&, int indent=0);
+std::string to_string(const constant_expr&, int indent=0);
+std::string to_string(const state_expr&, int indent=0);
+std::string to_string(const record_alias_expr&, int indent=0);
+std::string to_string(const function_expr&, int indent=0);
+std::string to_string(const initial_expr&, int indent=0);
+std::string to_string(const evolve_expr&, int indent=0);
+std::string to_string(const effect_expr&, int indent=0);
+std::string to_string(const export_expr&, int indent=0);
+std::string to_string(const call_expr&, int indent=0);
+std::string to_string(const bind_expr&, int indent=0);
+std::string to_string(const object_expr&, int indent=0);
+std::string to_string(const let_expr&, int indent=0);
+std::string to_string(const with_expr&, int indent=0);
+std::string to_string(const conditional_expr&, int indent=0);
+std::string to_string(const identifier_expr&, int indent=0);
+std::string to_string(const float_expr&, int indent=0);
+std::string to_string(const int_expr&, int indent=0);
+std::string to_string(const unary_expr&, int indent=0);
+std::string to_string(const binary_expr&, int indent=0);
 
 template <typename T, typename... Args>
 expr make_expr(Args&&... args) {

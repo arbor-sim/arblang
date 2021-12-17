@@ -79,74 +79,74 @@ std::optional<affectable> gen_affectable(tok t) {
     }
 }
 
-std::ostream& operator<< (std::ostream& o, const binary_op& op) {
+std::string to_string(const binary_op& op) {
     switch (op) {
-        case binary_op::add:  return o << "+";
-        case binary_op::sub:  return o << "-";
-        case binary_op::mul:  return o << "*";
-        case binary_op::div:  return o << "/";
-        case binary_op::pow:  return o << "^";
-        case binary_op::ne:   return o << "!=";
-        case binary_op::lt:   return o << "<";
-        case binary_op::le:   return o << "<=";
-        case binary_op::gt:   return o << ">";
-        case binary_op::ge:   return o << ">=";
-        case binary_op::land: return o << "&&";
-        case binary_op::lor:  return o << "||";
-        case binary_op::eq:   return o << "==";
-        case binary_op::max:  return o << "max";
-        case binary_op::min:  return o << "min";
-        case binary_op::dot:  return o << ".";
-        default: return o;
+        case binary_op::add:  return "+";
+        case binary_op::sub:  return "-";
+        case binary_op::mul:  return "*";
+        case binary_op::div:  return "/";
+        case binary_op::pow:  return "^";
+        case binary_op::ne:   return "!=";
+        case binary_op::lt:   return "<";
+        case binary_op::le:   return "<=";
+        case binary_op::gt:   return ">";
+        case binary_op::ge:   return ">=";
+        case binary_op::land: return "&&";
+        case binary_op::lor:  return "||";
+        case binary_op::eq:   return "==";
+        case binary_op::max:  return "max";
+        case binary_op::min:  return "min";
+        case binary_op::dot:  return ".";
+        default: return {};
     }
 }
-std::ostream& operator<< (std::ostream& o, const unary_op& op) {
+std::string to_string(const unary_op& op) {
     switch (op) {
-        case unary_op::exp:     return o << "exp";
-        case unary_op::exprelr: return o << "exprelr";
-        case unary_op::log:     return o << "log";
-        case unary_op::cos:     return o << "cos";
-        case unary_op::sin:     return o << "sin";
-        case unary_op::abs:     return o << "abs";
-        case unary_op::lnot:    return o << "lnot";
-        case unary_op::neg:     return o << "-";
-        default: return o;
-    }
-}
-
-std::ostream& operator<< (std::ostream& o, const mechanism_kind& op) {
-    switch (op) {
-        case mechanism_kind::density:       return o << "denity";
-        case mechanism_kind::concentration: return o << "concentration";
-        case mechanism_kind::junction:      return o << "junction";
-        case mechanism_kind::point:         return o << "point";
-        default: return o;
+        case unary_op::exp:     return "exp";
+        case unary_op::exprelr: return "exprelr";
+        case unary_op::log:     return "log";
+        case unary_op::cos:     return "cos";
+        case unary_op::sin:     return "sin";
+        case unary_op::abs:     return "abs";
+        case unary_op::lnot:    return "lnot";
+        case unary_op::neg:     return "-";
+        default: return {};
     }
 }
 
-std::ostream& operator<< (std::ostream& o, const bindable& op) {
+std::string to_string(const mechanism_kind& op) {
     switch (op) {
-        case bindable::membrane_potential:     return o << "membrane_potential";
-        case bindable::temperature:            return o << "temperature";
-        case bindable::current_density:        return o << "current_density";
-        case bindable::molar_flux:             return o << "molar_flux";
-        case bindable::charge:                 return o << "charge";
-        case bindable::internal_concentration: return o << "internal_concentration";
-        case bindable::external_concentration: return o << "external_concentration";
-        case bindable::nernst_potential:       return o << "nernst_potential";
-        default: return o;
+        case mechanism_kind::density:       return "denity";
+        case mechanism_kind::concentration: return "concentration";
+        case mechanism_kind::junction:      return "junction";
+        case mechanism_kind::point:         return "point";
+        default: return {};
     }
 }
 
-std::ostream& operator<< (std::ostream& o, const affectable& op) {
+std::string to_string(const bindable& op) {
     switch (op) {
-        case affectable::current_density:             return o << "current_density";
-        case affectable::current:                     return o << "current";
-        case affectable::molar_flux:                  return o << "molar_flux";
-        case affectable::molar_flow_rate:             return o << "molar_flow_rate";
-        case affectable::internal_concentration_rate: return o << "internal_concentration_rate";
-        case affectable::external_concentration_rate: return o << "external_concentration_rate";
-        default: return o;
+        case bindable::membrane_potential:     return "membrane_potential";
+        case bindable::temperature:            return "temperature";
+        case bindable::current_density:        return "current_density";
+        case bindable::molar_flux:             return "molar_flux";
+        case bindable::charge:                 return "charge";
+        case bindable::internal_concentration: return "internal_concentration";
+        case bindable::external_concentration: return "external_concentration";
+        case bindable::nernst_potential:       return "nernst_potential";
+        default: return {};
+    }
+}
+
+std::string to_string(const affectable& op) {
+    switch (op) {
+        case affectable::current_density:             return "current_density";
+        case affectable::current:                     return "current";
+        case affectable::molar_flux:                  return "molar_flux";
+        case affectable::molar_flow_rate:             return "molar_flow_rate";
+        case affectable::internal_concentration_rate: return "internal_concentration_rate";
+        case affectable::external_concentration_rate: return "external_concentration_rate";
+        default: return {};
     }
 }
 
@@ -159,83 +159,103 @@ bool mechanism_expr::set_kind(tok t) {
     return false;
 }
 
-std::ostream& operator<< (std::ostream& o, const mechanism_expr& e) {
-    o << "(module_expr " << e.name << " " << e.kind << "\n";
+std::string to_string(const mechanism_expr& e, int indent) {
+    auto indent_str = std::string(indent*2, ' ');
+    std::string str = indent_str + "(module_expr " + e.name + " " + to_string(e.kind) + "\n";
     for (const auto& p: e.parameters) {
-        std::visit([&](auto&& c){o << "  " << c << "\n";}, *p);
+        std::visit([&](auto&& c){str += (to_string(c, indent+1) + "\n");}, *p);
     }
     for (const auto& p: e.constants) {
-        std::visit([&](auto&& c){o << "  " << c << "\n";}, *p);
+        std::visit([&](auto&& c){str += (to_string(c, indent+1) + "\n");}, *p);
     }
     for (const auto& p: e.states) {
-        std::visit([&](auto&& c){o << "  " << c << "\n";}, *p);
+        std::visit([&](auto&& c){str += (to_string(c, indent+1) + "\n");}, *p);
     }
     for (const auto& p: e.bindings) {
-        std::visit([&](auto&& c){o << "  " << c << "\n";}, *p);
+        std::visit([&](auto&& c){str += (to_string(c, indent+1) + "\n");}, *p);
     }
     for (const auto& p: e.functions) {
-        std::visit([&](auto&& c){o << "  " << c << "\n";}, *p);
+        std::visit([&](auto&& c){str += (to_string(c, indent+1) + "\n");}, *p);
     }
     for (const auto& p: e.records) {
-        std::visit([&](auto&& c){o << "  " << c << "\n";}, *p);
+        std::visit([&](auto&& c){str += (to_string(c, indent+1) + "\n");}, *p);
     }
     for (const auto& p: e.initilizations) {
-        std::visit([&](auto&& c){o << "  " << c << "\n";}, *p);
+        std::visit([&](auto&& c){str += (to_string(c, indent+1) + "\n");}, *p);
     }
     for (const auto& p: e.evolutions) {
-        std::visit([&](auto&& c){o << "  " << c << "\n";}, *p);
+        std::visit([&](auto&& c){str += (to_string(c, indent+1) + "\n");}, *p);
     }
     for (const auto& p: e.effects) {
-        std::visit([&](auto&& c){o << "  " << c << "\n";}, *p);
+        std::visit([&](auto&& c){str += (to_string(c, indent+1) + "\n");}, *p);
     }
     for (const auto& p: e.exports) {
-        std::visit([&](auto&& c){o << "  " << c << "\n";}, *p);
+        std::visit([&](auto&& c){str += (to_string(c, indent+1) + "\n");}, *p);
     }
-    return o << e.loc << ")";
+    return str + to_string(e.loc) + ")";
 }
 
 // parameter_expr
-std::ostream& operator<< (std::ostream& o, const parameter_expr& e) {
-    o << "(parameter_expr ";
-    std::visit([&](auto&& c){o << c << " ";}, *e.identifier);
-    std::visit([&](auto&& c){o << c << " ";}, *e.value);
-    return o << e.loc << ")";
+std::string to_string(const parameter_expr& e, int indent) {
+    auto single_indent = std::string(indent*2, ' ');
+    auto double_indent = single_indent + "  ";
+
+    std::string str = single_indent + "(parameter_expr\n";
+    std::visit([&](auto&& c){str += (to_string(c, indent+1) + "\n");}, *e.identifier);
+    std::visit([&](auto&& c){str += (to_string(c, indent+1) + "\n");}, *e.value);
+    return str + double_indent + to_string(e.loc) + ")";
 }
 
 // constant_expr
-std::ostream& operator<< (std::ostream& o, const constant_expr& e) {
-    o << "(constant_expr ";
-    std::visit([&](auto&& c){o << c << " ";}, *e.identifier);
-    std::visit([&](auto&& c){o << c << " ";}, *e.value);
-    return o << e.loc << ")";
+std::string to_string(const constant_expr& e, int indent) {
+    auto single_indent = std::string(indent*2, ' ');
+    auto double_indent = single_indent + "  ";
+
+    std::string str = single_indent + "(constant_expr\n";
+    std::visit([&](auto&& c){str += (to_string(c, indent+1) + "\n");}, *e.identifier);
+    std::visit([&](auto&& c){str += (to_string(c, indent+1) + "\n");}, *e.value);
+    return str + double_indent + to_string(e.loc) + ")";
 }
 
 // state_expr
-std::ostream& operator<< (std::ostream& o, const state_expr& e) {
-    o << "(state_expr ";
-    std::visit([&](auto&& c){o << c << " ";}, *e.identifier);
-    return o << e.loc << ")";
+std::string to_string(const state_expr& e, int indent) {
+    auto single_indent = std::string(indent*2, ' ');
+    auto double_indent = single_indent + "  ";
+
+    std::string str = single_indent + "(state_expr\n";
+    std::visit([&](auto&& c){str += (to_string(c, indent+1) + "\n");}, *e.identifier);
+    return str + double_indent + to_string(e.loc) + ")";
 }
 
 // record_alias_expr
-std::ostream& operator<< (std::ostream& o, const record_alias_expr& e) {
-    o << "(record_alias_expr " << e.name <<  " (";
-    std::visit([&](auto&& c) { o << c << " "; }, *(e.type));
-    return o << ")" << e.loc << ")";
+std::string to_string(const record_alias_expr& e, int indent) {
+    auto single_indent = std::string(indent*2, ' ');
+    auto double_indent = single_indent + "  ";
+
+    std::string str = single_indent + "(record_alias_expr\n";
+    str += (double_indent + e.name + "\n");
+    std::visit([&](auto&& c) {str += (to_string(c, indent+1) + "\n");}, *(e.type));
+    return str + double_indent + to_string(e.loc) + ")";
 }
 
 // function_expr
-std::ostream& operator<< (std::ostream& o, const function_expr& e) {
-    o << "(function_expr " << e.name <<  " (";
-    for (const auto& f: e.args) {
-        std::visit([&](auto&& c){o << c << " ";}, *f);
-    }
-    o << ") (";
+std::string to_string(const function_expr& e, int indent) {
+    auto single_indent = std::string(indent*2, ' ');
+    auto double_indent = single_indent + "  ";
+
+    std::string str = single_indent + "(function_expr\n";
+    str += (double_indent + e.name +  "\n");
     if (e.ret) {
-        std::visit([&](auto&& c){o << c << " ";}, *(e.ret.value()));
+        std::visit([&](auto&& c){str += (to_string(c, indent+1) + "\n");}, *(e.ret.value()));
     }
-    std::visit([&](auto&& c){o << c << " ";}, *e.body);
-    return o << ")" << e.loc << ")";
+
+    str += (double_indent + "(\n");
+    for (const auto& f: e.args) {
+        std::visit([&](auto&& c){str += (to_string(c, indent+2) + "\n");}, *f);
+    }
+    str += (double_indent + ")\n");
+    std::visit([&](auto&& c){str += (to_string(c, indent+1) + "\n");}, *e.body);
+    return str + double_indent + to_string(e.loc) + ")";
 }
 
 // bind_expr
@@ -259,31 +279,40 @@ bind_expr::bind_expr(expr iden, const token& t, const std::string& ion_name, con
     }
 };
 
-std::ostream& operator<< (std::ostream& o, const bind_expr& e) {
-    o << "(bind_expr (";
-    std::visit([&](auto&& c){o << c << " ";}, *e.identifier);
-    o << "(" << e.bind << " ";
+std::string to_string(const bind_expr& e, int indent) {
+    auto single_indent = std::string(indent*2, ' ');
+    auto double_indent = single_indent + "  ";
+
+    std::string str = single_indent + "(bind_expr\n";
+    str += (double_indent + to_string(e.bind));
     if (e.ion) {
-        o << e.ion.value() << " ";
+        str += ("[" + e.ion.value() + "]");
     }
-    o << ") ";
-    return o << ") " << e.loc << ")";
+    str += "\n";
+    std::visit([&](auto&& c){str += (to_string(c, indent+1) + "\n");}, *e.identifier);
+    return str + double_indent + to_string(e.loc) + ")";
 }
 
 // initial_expr
-std::ostream& operator<< (std::ostream& o, const initial_expr& e) {
-    o << "(initial_expr ";
-    std::visit([&](auto&& c){o << c << " ";}, *e.identifier);
-    std::visit([&](auto&& c){o << c << " ";}, *e.value);
-    return o << e.loc << ")";
+std::string to_string(const initial_expr& e, int indent) {
+    auto single_indent = std::string(indent*2, ' ');
+    auto double_indent = single_indent + "  ";
+
+    std::string str = single_indent + "(initial_expr\n";
+    std::visit([&](auto&& c){str += (to_string(c, indent+1) + "\n");}, *e.identifier);
+    std::visit([&](auto&& c){str += (to_string(c, indent+1) + "\n");}, *e.value);
+    return str + double_indent + to_string(e.loc) + ")";
 }
 
 // evolve_expr
-std::ostream& operator<< (std::ostream& o, const evolve_expr& e) {
-    o << "(evolve_expr ";
-    std::visit([&](auto&& c){o << c << " ";}, *e.identifier);
-    std::visit([&](auto&& c){o << c << " ";}, *e.value);
-    return o << e.loc << ")";
+std::string to_string(const evolve_expr& e, int indent) {
+    auto single_indent = std::string(indent*2, ' ');
+    auto double_indent = single_indent + "  ";
+
+    std::string str = single_indent + "(evolve_expr\n";
+    std::visit([&](auto&& c){str += (to_string(c, indent+1) + "\n");}, *e.identifier);
+    std::visit([&](auto&& c){str += (to_string(c, indent+1) + "\n");}, *e.value);
+    return str + double_indent + to_string(e.loc) + ")";
 }
 
 // effect_expr
@@ -303,95 +332,135 @@ effect_expr::effect_expr(const token& t, const std::string& ion_name, std::optio
         throw std::runtime_error("Expected a valid effect: internal compiler error");
     }
 };
-std::ostream& operator<< (std::ostream& o, const effect_expr& e) {
-    o << "(effect_expr (" << e.effect << " " ;
-    if (e.ion) { o << e.ion.value() << " ";}
-    if (e.type) { o << e.type.value() << " ";}
-    o << ") ";
-    std::visit([&](auto&& c){o << c << " ";}, *e.value);
-    return o << e.loc << ")";
+std::string to_string(const effect_expr& e, int indent) {
+    auto single_indent = std::string(indent*2, ' ');
+    auto double_indent = single_indent + "  ";
+
+    std::string str = single_indent + "(effect_expr\n";
+    str += (double_indent + to_string(e.effect));
+    if (e.ion) {
+        str += ("[" + e.ion.value() + "]");
+    }
+    str += "\n";
+    if (e.type) {
+        std::visit([&](auto&& c){str += (to_string(c, indent+1) + "\n");}, *e.type.value());
+    }
+    std::visit([&](auto&& c){str += (to_string(c, indent+1) + "\n");}, *e.value);
+    return str + double_indent + to_string(e.loc) + ")";
 }
 
-//
-std::ostream& operator<< (std::ostream& o, const export_expr& e) {
-    o << "(export_expr ";
-    std::visit([&](auto&& c){o << c << " ";}, *e.identifier);
-    return o << e.loc << ")";
+// export_expr
+std::string to_string(const export_expr& e, int indent) {
+    auto single_indent = std::string(indent*2, ' ');
+    auto double_indent = single_indent + "  ";
+
+    std::string str = single_indent + "(export_expr\n";
+    std::visit([&](auto&& c){str += (to_string(c, indent+1) + "\n");}, *e.identifier);
+    return str + double_indent + to_string(e.loc) + ")";
 }
 
 // call_expr
-std::ostream& operator<< (std::ostream& o, const call_expr& e) {
-    o << "(call_expr " << e.function_name <<  " (";
+std::string to_string(const call_expr& e, int indent) {
+    auto single_indent = std::string(indent*2, ' ');
+    auto double_indent = single_indent + "  ";
+
+    std::string str = single_indent + "(call_expr\n";
+    str += (double_indent + e.function_name + "\n");
     for (const auto& f: e.call_args) {
-        std::visit([&](auto&& c){o << c << " ";}, *f);
+        std::visit([&](auto&& c){str += (to_string(c, indent+1) + "\n");}, *f);
     }
-    return o << ") " << e.loc << ")";
+    return str + double_indent + to_string(e.loc) + ")";
 }
 
 // object_expr
-std::ostream& operator<< (std::ostream& o, const object_expr& e) {
+std::string to_string(const object_expr& e, int indent) {
     assert(e.record_fields.size() == e.record_values.size());
-    o << "(object_expr ";
-    if (e.record_name) o << e.record_name.value() <<  " ";
-    o << "( ";
+
+    auto single_indent = std::string(indent*2, ' ');
+    auto double_indent = single_indent + "  ";
+
+    std::string str = single_indent + "(object_expr\n";
+    if (e.record_name) str += (double_indent + e.record_name.value() +  "\n");
     for (unsigned i = 0; i < e.record_fields.size(); ++i) {
-        std::visit([&](auto&& c){o << "(" << c << " ";}, *(e.record_fields[i]));
-        std::visit([&](auto&& c){o << c << ") ";}, *(e.record_values[i]));
+        str += (double_indent + "(\n");
+        std::visit([&](auto&& c){str += (to_string(c, indent+2) + "\n");}, *(e.record_fields[i]));
+        std::visit([&](auto&& c){str += (to_string(c, indent+2) + "\n");}, *(e.record_values[i]));
+        str += (double_indent + ")\n");
     }
-    return o << ")" << e.loc << ")";
+    return str + double_indent + to_string(e.loc) + ")";
 }
 
 // let_expr
-std::ostream& operator<< (std::ostream& o, const let_expr& e) {
-    o << "(let_expr ";
-    std::visit([&](auto&& c){o << c << " ";}, *e.identifier);
-    std::visit([&](auto&& c){o << c << " ";}, *e.value);
-    std::visit([&](auto&& c){o << c << " ";}, *e.body);
-    return o << e.loc << ")";
+std::string to_string(const let_expr& e, int indent) {
+    auto single_indent = std::string(indent*2, ' ');
+    auto double_indent = single_indent + "  ";
+
+    std::string str = single_indent + "(let_expr\n";
+    std::visit([&](auto&& c){str += (to_string(c, indent+1) + "\n");}, *e.identifier);
+    std::visit([&](auto&& c){str += (to_string(c, indent+1) + "\n");}, *e.value);
+    std::visit([&](auto&& c){str += (to_string(c, indent+1) + "\n");}, *e.body);
+    return str + double_indent + to_string(e.loc) + ")";
 }
 
 // with_expr
-std::ostream& operator<< (std::ostream& o, const with_expr& e) {
-    o << "(with_expr ";
-    std::visit([&](auto&& c){o << c << " ";}, *e.value);
-    std::visit([&](auto&& c){o << c << " ";}, *e.body);
-    return o << e.loc << ")";
+std::string to_string(const with_expr& e, int indent) {
+    auto single_indent = std::string(indent*2, ' ');
+    auto double_indent = single_indent + "  ";
+    std::string str = single_indent + "(with_expr\n";
+    std::visit([&](auto&& c){str += (to_string(c, indent+1) + "\n");}, *e.value);
+    std::visit([&](auto&& c){str += (to_string(c, indent+1) + "\n");}, *e.body);
+    return str + double_indent + to_string(e.loc) + ")";
 }
 
 // conditional_expr
-std::ostream& operator<< (std::ostream& o, const conditional_expr& e) {
-    o << "(conditional_expr ";
-    std::visit([&](auto&& c){o << c << " ";}, *e.condition);
-    std::visit([&](auto&& c){o << c << " ";}, *e.value_true);
-    std::visit([&](auto&& c){o << c << " ";}, *e.value_false);
-    return o << e.loc << ")";
+std::string to_string(const conditional_expr& e, int indent) {
+    auto single_indent = std::string(indent*2, ' ');
+    auto double_indent = single_indent + "  ";
+
+    std::string str = single_indent + "(conditional_expr\n";
+    std::visit([&](auto&& c){str += (to_string(c, indent+1) + "\n");}, *e.condition);
+    std::visit([&](auto&& c){str += (to_string(c, indent+1) + "\n");}, *e.value_true);
+    std::visit([&](auto&& c){str += (to_string(c, indent+1) + "\n");}, *e.value_false);
+    return str + double_indent + to_string(e.loc) + ")";
 }
 
 // identifier_expr
-std::ostream& operator<< (std::ostream& o, const identifier_expr& e) {
-    o << "(identifier_expr " << e.name << " ";
+std::string to_string(const identifier_expr& e, int indent) {
+    auto single_indent = std::string(indent*2, ' ');
+    auto double_indent = single_indent + "  ";
+
+    std::string str = single_indent + "(identifier_expr \n";
+    str += (double_indent + e.name + "\n");
     if (e.type) {
-        std::visit([&](auto&& c) { o << c << " "; }, *(e.type.value()));
+        std::visit([&](auto&& c) {str += (to_string(c, indent+1) + "\n");}, *(e.type.value()));
     }
-    return o << e.loc << ")";
+    return str + double_indent + to_string(e.loc) + ")";
 }
 
 // float_expr
-std::ostream& operator<< (std::ostream& o, const float_expr& e) {
-    o << "(float_expr " << e.value << " ";
+std::string to_string(const float_expr& e, int indent) {
+    auto single_indent = std::string(indent*2, ' ');
+    auto double_indent = single_indent + "  ";
+
+    std::string str = single_indent + "(float_expr\n";
+    str += (double_indent + std::to_string(e.value) + "\n");
     if (e.unit) {
-        std::visit([&](auto&& c) { o << c << " "; }, *(e.unit.value()));
+        std::visit([&](auto&& c) {str += (to_string(c, indent+1) + "\n");}, *(e.unit.value()));
     }
-    return o << e.loc << ")";
+    return str + double_indent + to_string(e.loc) + ")";
 }
 
 // int_expr
-std::ostream& operator<< (std::ostream& o, const int_expr& e) {
-    o << "(int_expr " << e.value << " ";
+std::string to_string(const int_expr& e, int indent) {
+    auto single_indent = std::string(indent*2, ' ');
+    auto double_indent = single_indent + "  ";
+
+    std::string str = single_indent + "(int_expr\n";
+    str += (double_indent + std::to_string(e.value) + "\n");
     if (e.unit) {
-        std::visit([&](auto&& c) { o << c << " "; }, *(e.unit.value()));
+        std::visit([&](auto&& c) {str += (to_string(c, indent+1) + "\n");}, *(e.unit.value()));
     }
-    return o << e.loc << ")";
+    return str + double_indent + to_string(e.loc) + ")";
 }
 
 // unary_expr
@@ -408,10 +477,13 @@ bool unary_expr::is_boolean () const {
     return op == unary_op::lnot;
 }
 
-std::ostream& operator<< (std::ostream& o, const unary_expr& e) {
-    o << "(unary_expr " << e.op << " ";
-    std::visit([&](auto&& c){o << c << " ";}, *e.value);
-    return o << e.loc << ")";
+std::string to_string(const unary_expr& e, int indent) {
+    auto single_indent = std::string(indent*2, ' ');
+    auto double_indent = single_indent + "  ";
+
+    std::string str = single_indent + "(unary_expr " + to_string(e.op) + "\n";
+    std::visit([&](auto&& c){str += (to_string(c, indent+1) + "\n");}, *e.value);
+    return str + double_indent + to_string(e.loc) + ")";
 }
 
 // binary_expr
@@ -430,11 +502,14 @@ bool binary_expr::is_boolean () const {
            (op == binary_op::eq)   || (op == binary_op::ne);
 }
 
-std::ostream& operator<< (std::ostream& o, const binary_expr& e) {
-    o << "(binary_expr " << e.op << " ";
-    std::visit([&](auto&& c){o << c << " ";}, *e.lhs);
-    std::visit([&](auto&& c){o << c << " ";}, *e.rhs);
-    return o << e.loc << ")";
+std::string to_string(const binary_expr& e, int indent) {
+    auto single_indent = std::string(indent*2, ' ');
+    auto double_indent = single_indent + "  ";
+
+    std::string str = single_indent + "(binary_expr " + to_string(e.op) + "\n";
+    std::visit([&](auto&& c){str += (to_string(c, indent+1) + "\n");}, *e.lhs);
+    std::visit([&](auto&& c){str += (to_string(c, indent+1) + "\n");}, *e.rhs);
+    return str + double_indent + to_string(e.loc) + ")";
 }
 
 } // namespace al

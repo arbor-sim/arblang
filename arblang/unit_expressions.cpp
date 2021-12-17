@@ -85,12 +85,12 @@ std::optional<u_binary_op> gen_binary_op(tok t) {
     }
 }
 
-std::ostream& operator<< (std::ostream& o, const u_binary_op& op) {
+std::string to_string(const u_binary_op& op) {
     switch(op) {
-        case u_binary_op::mul: return o << "*";
-        case u_binary_op::div: return o << "/";
-        case u_binary_op::pow: return o << "^";
-        default: return o;
+        case u_binary_op::mul: return "*";
+        case u_binary_op::div: return "/";
+        case u_binary_op::pow: return "^";
+        default: return {};
     }
 }
 
@@ -103,19 +103,27 @@ binary_unit::binary_unit(tok t, u_expr l, u_expr r, const src_location& location
     }
 }
 
-std::ostream& operator<< (std::ostream& o, const binary_unit& u) {
-    o << "(binary_unit " << u.op << " ";
-    std::visit([&](auto&& c){o << c;}, *u.lhs);
-    o << " ";
-    std::visit([&](auto&& c){o << c;}, *u.rhs);
-    return o << " " << u.loc << ")";
+std::string to_string(const binary_unit& u, int indent) {
+    auto single_indent = std::string(indent*2, ' ');
+    auto double_indent = single_indent + "  ";
+
+    std::string str = single_indent + "(binary_unit " + to_string(u.op) + "\n";
+    std::visit([&](auto&& c){str += (to_string(c, indent+1) + "\n");}, *u.lhs);
+    std::visit([&](auto&& c){str += (to_string(c, indent+1) + "\n");}, *u.rhs);
+    return str + double_indent + to_string(u.loc) + ")";
 }
 
-std::ostream& operator<< (std::ostream& o, const integer_unit& u) {
-    return o << "(integer_unit " << u.val << " " << u.loc << ")";
+std::string to_string(const integer_unit& u, int indent) {
+    auto single_indent = std::string(indent*2, ' ');
+    auto double_indent = single_indent + "  ";
+
+    std::string str = single_indent + "(integer_unit\n";
+    str += (double_indent + std::to_string(u.val) + "\n");
+    return str + double_indent + to_string(u.loc) + ")";
 }
-std::ostream& operator<< (std::ostream& o, const simple_unit& u) {
-    return o << "(simple_unit " << u.spelling << " " << u.loc << ")";
+std::string to_string(const simple_unit& u, int indent) {
+    auto single_indent = std::string(indent*2, ' ');
+    return single_indent + "(simple_unit " + u.spelling + " " + to_string(u.loc) + ")";
 }
 
 bool verify_sub_units(const u_expr& u) {

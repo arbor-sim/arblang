@@ -16,6 +16,8 @@ struct src_location {
 };
 
 std::ostream& operator<< (std::ostream& os, const src_location& loc);
+std::string to_string(const src_location& loc);
+
 bool operator==(const src_location& lhs, const src_location& rhs);
 
 enum class tok {

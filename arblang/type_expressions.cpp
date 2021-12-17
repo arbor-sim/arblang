@@ -46,43 +46,50 @@ std::optional<t_binary_op> gen_binary_op(tok t) {
     }
 }
 
-std::ostream& operator<< (std::ostream& o, const t_binary_op& op) {
+std::string to_string(const t_binary_op& op) {
     switch(op) {
-        case t_binary_op::mul: return o << "*";
-        case t_binary_op::div: return o << "/";
-        case t_binary_op::pow: return o << "^";
-        default: return o;
+        case t_binary_op::mul: return "*";
+        case t_binary_op::div: return "/";
+        case t_binary_op::pow: return "^";
+        default: return {};
     }
+
 }
 
-std::ostream& operator<< (std::ostream& o, const quantity& q) {
+std::string to_string(const quantity& q, int indent) {
+    auto single_indent = std::string(indent*2, ' ');
     switch(q) {
-        case quantity::real: return o << "real";
-        case quantity::length: return o << "length";
-        case quantity::mass: return o << "mass";
-        case quantity::time: return o << "time";
-        case quantity::current: return o << "current";
-        case quantity::amount: return o << "amount";
-        case quantity::temperature: return o << "temperature";
-        case quantity::charge: return o << "charge";
-        case quantity::frequency: return o << "frequency";
-        case quantity::voltage: return o << "voltage";
-        case quantity::resistance: return o << "resistance";
-        case quantity::conductance: return o << "conductance";
-        case quantity::capacitance: return o << "capacitance";
-        case quantity::force: return o << "force";
-        case quantity::energy: return o << "energy";
-        case quantity::power: return o << "power";
-        case quantity::area: return o << "area";
-        case quantity::volume: return o << "volume";
-        case quantity::concentration: return o << "concentration";
-        default: return o;
+        case quantity::real:          return single_indent + "real";
+        case quantity::length:        return single_indent + "length";
+        case quantity::mass:          return single_indent + "mass";
+        case quantity::time:          return single_indent + "time";
+        case quantity::current:       return single_indent + "current";
+        case quantity::amount:        return single_indent + "amount";
+        case quantity::temperature:   return single_indent + "temperature";
+        case quantity::charge:        return single_indent + "charge";
+        case quantity::frequency:     return single_indent + "frequency";
+        case quantity::voltage:       return single_indent + "voltage";
+        case quantity::resistance:    return single_indent + "resistance";
+        case quantity::conductance:   return single_indent + "conductance";
+        case quantity::capacitance:   return single_indent + "capacitance";
+        case quantity::force:         return single_indent + "force";
+        case quantity::energy:        return single_indent + "energy";
+        case quantity::power:         return single_indent + "power";
+        case quantity::area:          return single_indent + "area";
+        case quantity::volume:        return single_indent + "volume";
+        case quantity::concentration: return single_indent + "concentration";
+        default: return single_indent;
     }
 }
 
 //integer_type;
-std::ostream& operator<< (std::ostream& o, const integer_type& q) {
-    return o << "(integer_type " << q.val << " " << q.loc << ")";
+std::string to_string(const integer_type& q, int indent) {
+    auto single_indent = std::string(indent*2, ' ');
+    auto double_indent = single_indent + "  ";
+
+    std::string str = single_indent +  "(integer_type\n";
+    str += (double_indent + std::to_string(q.val) + "\n");
+    return str + double_indent + to_string(q.loc) + ")";
 }
 
 //quantity_type;
@@ -93,8 +100,13 @@ quantity_type::quantity_type(tok t, src_location loc): loc(loc) {
         throw std::runtime_error("Unexpected unary operator token");
     };
 };
-std::ostream& operator<< (std::ostream& o, const quantity_type& q) {
-    return o << "(quantity_type " << q.type << " " << q.loc << ")";
+std::string to_string(const quantity_type& q, int indent) {
+    auto single_indent = std::string(indent*2, ' ');
+    auto double_indent = single_indent + "  ";
+
+    std::string str = single_indent + "(quantity_type\n";
+    str += (double_indent + to_string(q.type) + "\n");
+    return str + double_indent + to_string(q.loc) + ")";
 }
 
 //quantity_binary_type;
@@ -119,32 +131,42 @@ quantity_binary_type::quantity_binary_type(tok t, t_expr l, t_expr r, const src_
         throw std::runtime_error("Unexpected binary operator token");
     };
 }
-std::ostream& operator<< (std::ostream& o, const quantity_binary_type& q) {
-    o << "(quantity_binary_type " << q.op << " ";
-    std::visit([&](auto&& c){o << c;}, *q.lhs);
-    o << " ";
-    std::visit([&](auto&& c){o << c;}, *q.rhs);
-    return o << " " << q.loc << ")";
+std::string to_string(const quantity_binary_type& q, int indent) {
+    auto single_indent = std::string(indent*2, ' ');
+    auto double_indent = single_indent + "  ";
+
+    std::string str = single_indent + "(quantity_binary_type " + to_string(q.op) + "\n";
+    std::visit([&](auto&& c){str += (to_string(c, indent+1) + "\n");}, *q.lhs);
+    std::visit([&](auto&& c){str += (to_string(c, indent+1) + "\n");}, *q.rhs);
+    return str + double_indent + to_string(q.loc) + ")";
 }
 
 //boolean_type;
-std::ostream& operator<< (std::ostream& o, const boolean_type& q) {
-    return o << "(boolean_type " << q.loc << ")";
+std::string to_string(const boolean_type& q, int indent) {
+    auto single_indent = std::string(indent*2, ' ');
+    return single_indent + "(boolean_type " + to_string(q.loc) + ")";
 }
 
 //record_type;
-std::ostream& operator<< (std::ostream& o, const record_type& q) {
-    o << "(record_type ";
+std::string to_string(const record_type& q, int indent) {
+    auto single_indent = std::string(indent*2, ' ');
+    auto double_indent = single_indent + "  ";
+
+    std::string str = single_indent +  "(record_type\n";
     for (const auto& f: q.fields) {
-        o << f.first << ":";
-        std::visit([&](auto&& c) { o << c << " "; }, *(f.second));
+        std::visit([&](auto&& c) {str += (to_string(c, indent+1) + "\n");}, *(f.second));
     }
-    return o << q.loc << ")";
+    return str + double_indent + to_string(q.loc) + ")";
 }
 
 //record_alias;
-std::ostream& operator<< (std::ostream& o, const record_alias_type& q) {
-    return o << "(record_alias_type " << q.name << " " << q.loc << ")";
+std::string to_string(const record_alias_type& q, int indent) {
+    auto single_indent = std::string(indent*2, ' ');
+    auto double_indent = single_indent + "  ";
+
+    std::string str = single_indent + "(record_alias_type\n";
+    str += (double_indent + q.name + "\n");
+    return str + double_indent + to_string(q.loc) + ")";
 }
 
 bool verify_sub_types(const t_expr& u) {

@@ -100,14 +100,14 @@ struct record_alias_type {
     record_alias_type(std::string name, src_location loc): name(std::move(name)), loc(loc) {};
 };
 
-std::ostream& operator<< (std::ostream&, const t_binary_op&);
-std::ostream& operator<< (std::ostream&, const quantity&);
-std::ostream& operator<< (std::ostream&, const integer_type&);
-std::ostream& operator<< (std::ostream&, const quantity_type&);
-std::ostream& operator<< (std::ostream&, const quantity_binary_type&);
-std::ostream& operator<< (std::ostream&, const boolean_type&);
-std::ostream& operator<< (std::ostream&, const record_type&);
-std::ostream& operator<< (std::ostream&, const record_alias_type&);
+std::string to_string(const t_binary_op&);
+std::string to_string(const quantity&, int indent=0);
+std::string to_string(const integer_type&, int indent=0);
+std::string to_string(const quantity_type&, int indent=0);
+std::string to_string(const quantity_binary_type&, int indent=0);
+std::string to_string(const boolean_type&, int indent=0);
+std::string to_string(const record_type&, int indent=0);
+std::string to_string(const record_alias_type&, int indent=0);
 
 template <typename T, typename... Args>
 t_expr make_t_expr(Args&&... args) {
