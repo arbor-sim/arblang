@@ -2161,7 +2161,7 @@ TEST(parser, export) {
 }
 
 TEST(parser, mechanism) {
-/*    {
+    {
         std::string mech =
             "# Adapted from Allen Institute Ca_dynamics.mod,\n"
             "# in turn based on model of Destexhe et al. 1994.\n"
@@ -2179,7 +2179,7 @@ TEST(parser, mechanism) {
             "}";
         auto p = parser(mech);
         EXPECT_NO_THROW(std::get<mechanism_expr>(*p.parse_mechanism()));
-    }*/
+    }
     {
         std::string mech =
             "mechanism point \"expsyn_stdp\" {\n"
@@ -2241,9 +2241,54 @@ TEST(parser, mechanism) {
             "    effect current = expsyn.g*(v - e);\n"
             "}";
         auto p = parser(mech);
-        mechanism_expr e;
-//        EXPECT_NO_THROW(std::get<mechanism_expr>(*p.parse_mechanism()));
-        e = std::get<mechanism_expr>(*p.parse_mechanism());
-        std::cout << to_string(e) << std::endl;
+        EXPECT_NO_THROW(std::get<mechanism_expr>(*p.parse_mechanism()));
+    }
+    {
+        std::string mech =
+            "mechanism density \"Kd\" {\n"
+            "    parameter gbar = 10^-5 [S/cm^2];\n"
+            "    parameter ek = -77 [mV];\n"
+            "    bind v = membrane_potential;\n"
+            "\n"
+            "    record state_rec {\n"
+            "        m: real,\n"
+            "        h: real,\n"
+            "    };\n"
+            "    state s: state_rec;\n"
+            "\n"
+            "    function mInf(v: voltage): real {\n"
+            "        1 - 1/(1 + exp((v + 43 [mV])/8 [mV]))\n"
+            "    };\n"
+            "\n"
+            "    function hInf(v: voltage): real {\n"
+            "        1/(1 + exp((v + 67 [mV])/7.3 [mV]));\n"
+            "    }\n"
+            "\n"
+            "    function state0(v: voltage): state_rec {\n"
+            "        state_rec {\n"
+            "            m = mInf(v);\n"
+            "            h = hInf(v);\n"
+            "        };\n"
+            "    };\n"
+            "\n"
+            "    function rate(s: state_rec, v: voltage): state_rec' {\n"
+            "        state_rec'{\n"
+            "            m' = (s.m - mInf(v))/1 [ms];\n"
+            "            h' = (s.h - hInf(v))/1500 [ms];\n"
+            "        };\n"
+            "    }\n"
+            "\n"
+            "    function curr(s: state_rec, v_minus_ek: voltage): current/area {\n"
+            "        gbar*s.m*s.h*v_minus_ek;\n"
+            "    }\n"
+            "\n"
+            "    initial s = state0(v);\n"
+            "    evolve s' = rate(s, v);\n"
+            "    effect current_density(\"k\") = curr(s, v - ek);\n"
+            "    \n"
+            "    export gbar; \n"
+            "}";
+        auto p = parser(mech);
+        EXPECT_NO_THROW(std::get<mechanism_expr>(*p.parse_mechanism()));
     }
 }

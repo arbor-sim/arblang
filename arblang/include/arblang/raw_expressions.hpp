@@ -319,7 +319,7 @@ struct binary_expr {
 };
 
 // Identifier name and type expression
-struct identifier_expr {  // Is this needed? Can it be used directly and not via a shared pointer and a shared pointer to the variant?
+struct identifier_expr {
     std::optional<t_raw_ir::t_expr> type;
     std::string name;
     src_location loc;

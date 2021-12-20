@@ -890,7 +890,10 @@ t_expr parser::parse_record_type() {
     if (t.type != tok::rbrace) {
         throw std::runtime_error(fmt::format("Expected '}', got {} at {}", t.spelling, to_string(t.loc)));
     }
-    next(); // consume '}'
+    t = next(); // consume '}'
+    if (t.type == tok::semicolon) {
+        next(); // consume ';'
+    }
     return make_t_expr<record_type>(field_types, loc);
 }
 
