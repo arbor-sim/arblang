@@ -83,7 +83,7 @@ expr parser::parse_mechanism() {
                 m.evolutions.push_back(parse_evolve());
                 break;
             case tok::initial:
-                m.initilizations.push_back(parse_initial());
+                m.initializations.push_back(parse_initial());
                 break;
             case tok::param_export:
                 m.exports.push_back(parse_export());

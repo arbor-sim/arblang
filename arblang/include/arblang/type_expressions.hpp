@@ -68,6 +68,7 @@ struct quantity_type {
     quantity type;
     src_location loc;
 
+    quantity_type(quantity q, src_location loc): type(q), loc(std::move(loc)) {};
     quantity_type(tok t, src_location loc);
 };
 
@@ -77,6 +78,8 @@ struct quantity_binary_type {
     t_expr rhs;
     src_location loc;
 
+    quantity_binary_type(t_binary_op op, t_expr lhs, t_expr rhs, const src_location& loc):
+        op(op), lhs(std::move(lhs)), rhs(std::move(rhs)), loc(loc) {};
     quantity_binary_type(tok t, t_expr lhs, t_expr rhs, const src_location& loc);
 };
 
@@ -115,6 +118,8 @@ t_expr make_t_expr(Args&&... args) {
 }
 
 bool verify_type(const t_expr& u);
+t_expr type_of(const bindable& b, const src_location& loc);
+t_expr type_of(const affectable& a, const src_location& loc);
 
 } // namespace t_raw_ir
 } // namespace al

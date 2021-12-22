@@ -4,6 +4,7 @@
 #include <variant>
 #include <vector>
 
+#include <arblang/common.hpp>
 #include <arblang/token.hpp>
 #include <arblang/type_expressions.hpp>
 
@@ -195,6 +196,62 @@ bool verify_type(const t_expr& u) {
         [&](const integer_type& t)      {return false;},
         [&](const quantity_binary_type& t) {return verify_sub_types(u);}
     }, *u);
+}
+
+t_expr type_of(const bindable& b, const src_location& loc) {
+    switch (b) {
+        case bindable::molar_flux: {
+            auto lhs = make_t_expr<quantity_type>(quantity::amount, loc);
+            auto rhs = make_t_expr<quantity_type>(quantity::area, loc);
+            lhs = make_t_expr<quantity_binary_type>(t_binary_op::div, lhs, rhs, loc);
+            rhs = make_t_expr<quantity_type>(quantity::time, loc);
+            return make_t_expr<quantity_binary_type>(t_binary_op::div, lhs, rhs, loc);
+        };
+        case bindable::current_density: {
+            auto lhs = make_t_expr<quantity_type>(quantity::current, loc);
+            auto rhs = make_t_expr<quantity_type>(quantity::area, loc);
+            return make_t_expr<quantity_binary_type>(t_binary_op::div, lhs, rhs, loc);
+        }
+        case bindable::charge:                 return make_t_expr<quantity_type>(quantity::real, loc);
+        case bindable::external_concentration:
+        case bindable::internal_concentration: return make_t_expr<quantity_type>(quantity::concentration, loc);
+        case bindable::membrane_potential:
+        case bindable::nernst_potential:       return make_t_expr<quantity_type>(quantity::voltage, loc);
+        case bindable::temperature:            return make_t_expr<quantity_type>(quantity::temperature, loc);
+        default: return {};
+    }
+}
+
+t_expr type_of(const affectable& a, const src_location& loc) {
+    switch (a) {
+        case affectable::molar_flux: {
+            auto lhs = make_t_expr<quantity_type>(quantity::amount, loc);
+            auto rhs = make_t_expr<quantity_type>(quantity::area, loc);
+            lhs = make_t_expr<quantity_binary_type>(t_binary_op::div, lhs, rhs, loc);
+            rhs = make_t_expr<quantity_type>(quantity::time, loc);
+            return make_t_expr<quantity_binary_type>(t_binary_op::div, lhs, rhs, loc);
+        };
+        case affectable::molar_flow_rate: {
+            auto lhs = make_t_expr<quantity_type>(quantity::amount, loc);
+            auto rhs = make_t_expr<quantity_type>(quantity::time, loc);
+            return make_t_expr<quantity_binary_type>(t_binary_op::div, lhs, rhs, loc);
+        }
+        case affectable::current_density: {
+            auto lhs = make_t_expr<quantity_type>(quantity::current, loc);
+            auto rhs = make_t_expr<quantity_type>(quantity::area, loc);
+            return make_t_expr<quantity_binary_type>(t_binary_op::div, lhs, rhs, loc);
+        }
+        case affectable::current: {
+            return make_t_expr<quantity_type>(quantity::current, loc);
+        }
+        case affectable::external_concentration_rate:
+        case affectable::internal_concentration_rate: {
+            auto lhs = make_t_expr<quantity_type>(quantity::concentration, loc);
+            auto rhs = make_t_expr<quantity_type>(quantity::time, loc);
+            return make_t_expr<quantity_binary_type>(t_binary_op::div, lhs, rhs, loc);
+        }
+        default: return {};
+    }
 }
 
 } // namespace t_raw_ir
