@@ -167,6 +167,8 @@ struct effect_expr {
     src_location loc;
 
     effect_expr(const token& t, const std::string& ion, std::optional<t_raw_ir::t_expr> type, expr value, const src_location& loc);
+    effect_expr(affectable effect, std::optional<std::string> ion, std::optional<t_raw_ir::t_expr> type, expr value, const src_location& loc):
+        effect(std::move(effect)), ion(std::move(ion)), type(std::move(type)), value(std::move(value)), loc(loc) {};
 };
 
 // Top level exports
@@ -234,21 +236,21 @@ struct conditional_expr {
 // Number expression
 struct float_expr {
     double value;
-    std::optional<u_raw_ir::u_expr> unit;
+    u_raw_ir::u_expr unit;
     src_location loc;
 
-    float_expr(double value, std::optional<u_raw_ir::u_expr> unit, const src_location& loc):
+    float_expr(double value, u_raw_ir::u_expr unit, const src_location& loc):
         value(value), unit(std::move(unit)), loc(loc) {};
 };
 
 
 // Number expression
 struct int_expr {
-    int value;
-    std::optional<u_raw_ir::u_expr> unit;
+    long int value;
+    u_raw_ir::u_expr unit;
     src_location loc;
 
-    int_expr(int value,  std::optional<u_raw_ir::u_expr> unit, const src_location& loc):
+    int_expr(int value,  u_raw_ir::u_expr unit, const src_location& loc):
         value(value), unit(std::move(unit)), loc(loc) {};
 };
 
@@ -259,7 +261,8 @@ struct unary_expr {
     src_location loc;
 
     unary_expr(tok t, expr value, const src_location& loc);
-
+    unary_expr(unary_op op, expr value, const src_location& loc):
+        op(op), value(std::move(value)), loc(loc) {};
     bool is_boolean () const;
 };
 
@@ -271,7 +274,8 @@ struct binary_expr {
     src_location loc;
 
     binary_expr(tok t, expr lhs, expr rhs, const src_location& loc);
-
+    binary_expr(binary_op op, expr lhs, expr rhs, const src_location& loc):
+        op(op), lhs(std::move(lhs)), rhs(std::move(rhs)), loc(loc) {};
     bool is_boolean () const;
 };
 
@@ -285,6 +289,7 @@ struct identifier_expr {
     identifier_expr(std::string name, src_location loc): type(std::nullopt), name(name), loc(loc) {};
 };
 
+// Transform to printer class?
 std::string to_string(const mechanism_expr&, int indent=0);
 std::string to_string(const parameter_expr&, int indent=0);
 std::string to_string(const constant_expr&, int indent=0);

@@ -7,6 +7,7 @@
 #include <vector>
 
 #include <arblang/token.hpp>
+#include <arblang/common.hpp>
 #include <arblang/visitor.hpp>
 
 namespace al {
@@ -31,24 +32,32 @@ using t_expr = std::shared_ptr<type_expr>;
 
 enum class quantity {
     real,
-    length,
-    mass,
-    time,
-    current,
-    amount,
-    temperature,
-    charge,
-    frequency,
-    voltage,
-    resistance,
-    conductance,
-    capacitance,
-    force,
-    energy,
-    power,
-    area,
-    volume,
-    concentration
+    length,       // default unit um
+    mass,         // default unit g
+    time,         // default unit ms
+    current,      // default unit nA
+    amount,       // default unit mol
+    temperature,  // default unit K
+    charge,       // default unit C
+    frequency,    // default unit Hz
+    voltage,      // default unit mV
+    resistance,   // default unit Ohm
+    conductance,  // default unit uS
+    capacitance,  // default unit F
+    inductance,   // default unit H
+    force,        // default unit N
+    pressure,     // default unit Pa
+    energy,       // default unit J
+    power,        // default unit W
+    area,         // default unit um^2
+    volume,       // default unit m^3
+    concentration // default unit mmol/L
+    // current_density (arbor) = A/m²
+    // Point mechanism contributions are in [nA]; CV area in [µm²].
+    // nA/µm² = 1000 A/m².
+    // F = 1/area * [nA/µm²] / [A/m²] = 1000/area.
+    // Density contributions are in mA/cm² = 10^-3/10^-4 A/m² = 10 A/m².
+    // F = 10 [A/m²]/ [A/m²] = 10.
 };
 
 enum class t_binary_op {

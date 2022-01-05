@@ -25,7 +25,9 @@ std::optional<quantity> gen_quantity(tok t) {
         case tok::resistance:    return quantity::resistance;
         case tok::conductance:   return quantity::conductance;
         case tok::capacitance:   return quantity::capacitance;
+        case tok::inductance:    return quantity::inductance;
         case tok::force:         return quantity::force;
+        case tok::pressure:      return quantity::pressure;
         case tok::energy:        return quantity::energy;
         case tok::power:         return quantity::power;
         case tok::area:          return quantity::area;
@@ -73,7 +75,9 @@ std::string to_string(const quantity& q, int indent) {
         case quantity::resistance:    return single_indent + "resistance";
         case quantity::conductance:   return single_indent + "conductance";
         case quantity::capacitance:   return single_indent + "capacitance";
+        case quantity::inductance:    return single_indent + "inductance";
         case quantity::force:         return single_indent + "force";
+        case quantity::pressure:      return single_indent + "pressure";
         case quantity::energy:        return single_indent + "energy";
         case quantity::power:         return single_indent + "power";
         case quantity::area:          return single_indent + "area";

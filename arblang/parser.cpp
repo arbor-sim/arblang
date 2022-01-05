@@ -976,7 +976,7 @@ u_expr parser::parse_unit_element() {
         case tok::identifier: {
             if (auto u = check_simple_unit(t.spelling)) {
                 next(); // consume identifier
-                return make_u_expr<simple_unit>(u.value(), t.spelling, t.loc);
+                return make_u_expr<simple_unit>(u.value(), t.loc);
             }
         }
         default: throw std::runtime_error("Uexpected token in unit expression: " + t.spelling);
@@ -1001,10 +1001,10 @@ u_expr parser::parse_unit_expr(int prec) {
     }
 }
 
-std::optional<u_expr> parser::try_parse_unit(int prec) {
+u_expr parser::try_parse_unit(int prec) {
     auto t = current();
     if (t.type != tok::lbracket) {
-        return std::nullopt;
+        return make_u_expr<no_unit>();
     }
     next(); // consume [
     auto u = parse_unit_expr(prec);

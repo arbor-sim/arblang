@@ -1,6 +1,7 @@
 # Build mechanisms used solely in unit tests.
 set(unit_sources
     test_lexer.cpp
+    test_normalizer.cpp
     test_parser.cpp
 
     # unit test driver

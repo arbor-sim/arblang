@@ -85,8 +85,8 @@ enum class tok {
 
     // quantity keywords
     real, length, mass, time, current,
-    amount, temperature, charge, frequency, voltage,
-    resistance, conductance, capacitance, force,
+    amount, temperature, charge, frequency, voltage, pressure,
+    resistance, conductance, capacitance, inductance, force,
     energy, power, area, volume, concentration,
 
     // bindable keywords

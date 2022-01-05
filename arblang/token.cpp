@@ -64,7 +64,9 @@ std::unordered_map<std::string, tok> token::keyword_to_token = {
     {"resistance",    tok::resistance},
     {"conductance",   tok::conductance},
     {"capacitance",   tok::capacitance},
+    {"inductance",    tok::inductance},
     {"force",         tok::force},
+    {"pressure",      tok::pressure},
     {"energy",        tok::energy},
     {"power",         tok::power},
     {"area",          tok::area},
@@ -158,7 +160,9 @@ std::unordered_map<tok, std::string> token::token_to_string = {
     {tok::resistance,    "resistance"},
     {tok::conductance,   "conductance"},
     {tok::capacitance,   "capacitance"},
+    {tok::inductance,    "inductance"},
     {tok::force,         "force"},
+    {tok::pressure,      "pressure"},
     {tok::energy,        "energy"},
     {tok::power,         "power"},
     {tok::area,          "area"},
@@ -217,7 +221,9 @@ bool token::quantity() const {
         case tok::resistance:
         case tok::conductance:
         case tok::capacitance:
+        case tok::inductance:
         case tok::force:
+        case tok::pressure:
         case tok::energy:
         case tok::power:
         case tok::area:

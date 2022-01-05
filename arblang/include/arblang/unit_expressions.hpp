@@ -7,6 +7,7 @@
 #include <variant>
 
 #include <arblang/token.hpp>
+#include <arblang/type_expressions.hpp>
 #include <arblang/visitor.hpp>
 
 namespace al {
@@ -15,11 +16,13 @@ namespace u_raw_ir {
 struct integer_unit;
 struct simple_unit;
 struct binary_unit;
+struct no_unit;
 
 using unit_expr = std::variant<
         integer_unit,
         simple_unit,
-        binary_unit>;
+        binary_unit,
+        no_unit>;
 
 using u_expr = std::shared_ptr<unit_expr>;
 
@@ -89,9 +92,8 @@ struct integer_unit {
 
 struct simple_unit {
     unit val;
-    std::string spelling;
     src_location loc;
-    simple_unit(unit val, std::string s, const src_location& loc): val(std::move(val)), spelling(std::move(s)), loc(loc) {};
+    simple_unit(unit val, const src_location& loc): val(std::move(val)), loc(loc) {};
 };
 
 struct binary_unit {
@@ -101,11 +103,26 @@ struct binary_unit {
     src_location loc;
 
     binary_unit(tok t, u_expr lhs, u_expr rhs, const src_location& loc);
+    binary_unit(u_binary_op op, u_expr lhs, u_expr rhs, const src_location& loc):
+        op(op), lhs(std::move(lhs)), rhs(std::move(rhs)), loc(loc) {};
 };
+
+struct no_unit{};
 
 std::string to_string(const binary_unit&, int indent=0);
 std::string to_string(const integer_unit&, int indent=0);
 std::string to_string(const simple_unit&, int indent=0);
+std::string to_string(const no_unit&, int indent=0);
+
+t_raw_ir::t_expr to_type(const binary_unit&);
+t_raw_ir::t_expr to_type(const integer_unit&);
+t_raw_ir::t_expr to_type(const simple_unit&);
+t_raw_ir::t_expr to_type(const no_unit&);
+
+std::pair<u_expr, int> normalize_unit(const binary_unit&);
+std::pair<u_expr, int> normalize_unit(const integer_unit&);
+std::pair<u_expr, int> normalize_unit(const simple_unit&);
+std::pair<u_expr, int> normalize_unit(const no_unit&);
 
 template <typename T, typename... Args>
 u_expr make_u_expr(Args&&... args) {
@@ -113,6 +130,5 @@ u_expr make_u_expr(Args&&... args) {
 }
 
 bool verify_unit(const u_expr& u);
-
 } // namespace u_raw_ir
 } // namespace al

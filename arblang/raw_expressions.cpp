@@ -374,9 +374,7 @@ std::string to_string(const float_expr& e, int indent) {
 
     std::string str = single_indent + "(float_expr\n";
     str += (double_indent + std::to_string(e.value) + "\n");
-    if (e.unit) {
-        std::visit([&](auto&& c) {str += (to_string(c, indent+1) + "\n");}, *(e.unit.value()));
-    }
+    std::visit([&](auto&& c) {str += (to_string(c, indent+1) + "\n");}, *e.unit);
     return str + double_indent + to_string(e.loc) + ")";
 }
 
@@ -387,9 +385,7 @@ std::string to_string(const int_expr& e, int indent) {
 
     std::string str = single_indent + "(int_expr\n";
     str += (double_indent + std::to_string(e.value) + "\n");
-    if (e.unit) {
-        std::visit([&](auto&& c) {str += (to_string(c, indent+1) + "\n");}, *(e.unit.value()));
-    }
+    std::visit([&](auto&& c) {str += (to_string(c, indent+1) + "\n");}, *e.unit);
     return str + double_indent + to_string(e.loc) + ")";
 }
 

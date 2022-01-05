@@ -1,12 +1,12 @@
 set(arblang-sources
     lexer.cpp
     parser.cpp
-    name_resolver.cpp
     raw_expressions.cpp
-    resolved_expressions.cpp
+#    resolved_expressions.cpp
     type_expressions.cpp
     token.cpp
-    unit_expressions.cpp)
+    unit_expressions.cpp
+    unit_normalizer.cpp)
 
 add_library(arblang ${arblang-sources})
 
