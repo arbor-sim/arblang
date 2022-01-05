@@ -11,12 +11,12 @@
 #include <arblang/token.hpp>
 #include <arblang/raw_expressions.hpp>
 #include <arblang/type_expressions.hpp>
-#include <arblang/unit_expressions.hpp>
 
 namespace al {
 namespace resolved_ir {
 
 using namespace t_raw_ir;
+using namespace u_raw_ir;
 
 struct resolved_mechanism;
 struct resolved_parameter;
@@ -264,24 +264,22 @@ struct resolved_conditional {
 // Number expression
 struct resolved_float {
     double value;
-    std::optional<u_raw_ir::u_expr> unit;
     t_expr type;
     src_location loc;
 
-    resolved_float(double value, std::optional<u_raw_ir::u_expr> unit, t_expr type, const src_location& loc):
-        value(value), unit(std::move(unit)), type(std::move(type)), loc(loc) {};
+    resolved_float(double value, t_expr type, const src_location& loc):
+        value(value), type(std::move(type)), loc(loc) {};
 };
 
 
 // Number expression
 struct resolved_int {
     int value;
-    std::optional<u_raw_ir::u_expr> unit;
     t_expr type;
     src_location loc;
 
-    resolved_int(int value,  std::optional<u_raw_ir::u_expr> unit, t_expr type,const src_location& loc):
-        value(value), unit(std::move(unit)), type(std::move(type)), loc(loc) {};
+    resolved_int(int value, t_expr type, const src_location& loc):
+        value(value), type(std::move(type)), loc(loc) {};
 };
 
 // Both boolean and arithmetic operations
