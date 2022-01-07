@@ -1,5 +1,6 @@
 #pragma once
 
+#include <algorithm>
 #include <memory>
 #include <string>
 #include <utility>
@@ -121,14 +122,11 @@ std::string to_string(const boolean_type&, int indent=0);
 std::string to_string(const record_type&, int indent=0);
 std::string to_string(const record_alias_type&, int indent=0);
 
+bool verify_type(const t_expr& u);
+
 template <typename T, typename... Args>
 t_expr make_t_expr(Args&&... args) {
     return t_expr(new type_expr(T(std::forward<Args>(args)...)));
 }
-
-bool verify_type(const t_expr& u);
-t_expr type_of(const bindable& b, const src_location& loc);
-t_expr type_of(const affectable& a, const src_location& loc);
-
 } // namespace t_raw_ir
 } // namespace al

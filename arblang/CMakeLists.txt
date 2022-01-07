@@ -3,6 +3,7 @@ set(arblang-sources
     parser.cpp
     raw_expressions.cpp
     resolved_expressions.cpp
+    resolved_types.cpp
     type_expressions.cpp
     token.cpp
     unit_expressions.cpp
