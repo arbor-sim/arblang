@@ -176,7 +176,7 @@ std::string to_string(const record_alias_type& q, int indent) {
 
 bool verify_sub_types(const t_expr& u) {
     auto is_int  = [](const t_expr& t) {return std::get_if<integer_type>(t.get());};
-    return std::visit(overloaded {
+    return std::visit(al::util::overloaded {
             [&](const boolean_type& t)      {return false;},
             [&](const record_type& t)       {return false;},
             [&](const record_alias_type& t) {return false;},
@@ -192,7 +192,7 @@ bool verify_sub_types(const t_expr& u) {
 }
 
 bool verify_type(const t_expr& u) {
-    return std::visit(overloaded {
+    return std::visit(al::util::overloaded {
         [&](const boolean_type& t)      {return true;},
         [&](const record_type& t)       {return true;},
         [&](const record_alias_type& t) {return true;},

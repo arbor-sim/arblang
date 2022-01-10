@@ -287,25 +287,195 @@ r_expr resolve(const int_expr& expr, const in_scope_map& map) {
 }
 
 r_expr resolve(const unary_expr& expr, const in_scope_map& map) {
-    /*auto val = std::visit([&](auto&& c){return resolve(c, map);}, *expr.value);
+    auto val = std::visit([&](auto&& c){return resolve(c, map);}, *expr.value);
+    auto type = std::visit([&](auto&& c){return c.type;}, *val);
     switch (expr.op) {
         case unary_op::exp:
         case unary_op::log:
         case unary_op::cos:
         case unary_op::sin:
-        case unary_op::exprelr:
-        case unary_op::lnot: {
-            auto u_val = std::visit([&](auto&& c){return resolve(c, map);}, *expr.value);
+        case unary_op::exprelr: {
+            if (!std::get_if<resolved_quantity>(type.get())) {
+                throw std::runtime_error(fmt::format("Cannot apply op {} to non-real type, at {}",
+                                                     to_string(expr.op), to_string(expr.loc)));
+            }
+            auto q = std::get<resolved_quantity>(*type);
+            if (!q.type.is_real()) {
+                throw std::runtime_error(fmt::format("Cannot apply op {} to non-real type, at {}",
+                                                     to_string(expr.op), to_string(expr.loc)));
+            }
+            break;
         }
-        default:
-    }*/
+        case unary_op::lnot: {
+            if (!std::get_if<resolved_boolean>(type.get())) {
+                throw std::runtime_error(fmt::format("Cannot apply op {} to non-boolean type, at {}",
+                                                     to_string(expr.op), to_string(expr.loc)));
+            }
+            break;
+        }
+        case unary_op::neg: {
+            if (std::get_if<resolved_record>(type.get()) || std::get_if<resolved_alias>(type.get())) {
+                throw std::runtime_error(fmt::format("Cannot apply op {} to record type, at {}",
+                                                     to_string(expr.op), to_string(expr.loc)));
+            }
+            break;
+        }
+        default: break;
+    }
+    return make_rexpr<resolved_unary>(expr.op, val, type, expr.loc);
 }
 
-r_expr resolve(const binary_expr& expr, const in_scope_map& map) {}
+r_expr resolve(const binary_expr& expr, const in_scope_map& map) {
+    auto lhs_v = std::visit([&](auto&& c){return resolve(c, map);}, *expr.lhs);
+    auto rhs_v = std::visit([&](auto&& c){return resolve(c, map);}, *expr.rhs);
+    auto lhs_t = std::visit([&](auto&& c){return c.type;}, *lhs_v);
+    auto rhs_t = std::visit([&](auto&& c){return c.type;}, *rhs_v);
 
-r_expr resolve(const identifier_expr& expr, const in_scope_map& map) {}
+    auto lhs_loc = std::visit([&](auto&& c){return c.loc;}, *lhs_v);
+    auto rhs_loc = std::visit([&](auto&& c){return c.loc;}, *rhs_v);
 
-r_expr resolve(const mechanism_expr&, const in_scope_map&) {return {};}
+    if (expr.op == binary_op::dot) {
+        auto* r_rhs = std::get_if<resolved_argument>(rhs_v.get());
+        if (!r_rhs) {
+            throw std::runtime_error(fmt::format("incompatible argument type to dot operator, at {}", to_string(expr.loc)));
+        }
+        auto rhs_id = (*r_rhs).name;
+
+        auto make_or_throw = [&](const resolved_record& r) {
+            for (auto [f_id, f_type]: r.fields) {
+                if (rhs_id == f_id) {
+                    return make_rexpr<resolved_binary>(expr.op, lhs_v, rhs_v, f_type, expr.loc);
+                }
+            }
+            throw std::runtime_error(fmt::format("argument {} doesn't match any of the record fields, at {}",
+                                                 to_string(*r_rhs), to_string(lhs_loc)));
+        };
+
+        if (auto* lhs_rec = std::get_if<resolved_record>(lhs_t.get())) {
+            return make_or_throw(*lhs_rec);
+        }
+        if (auto* lhs_alias = std::get_if<resolved_alias>(lhs_t.get())) {
+            auto alias = (*lhs_alias).name;
+            if (!map.rec_map.count(alias)) {
+                auto loc = std::visit([&](auto&& c){return c.loc;}, *lhs_v);
+                throw std::runtime_error(fmt::format("record alias {} doesn't match any defined record, at {}",
+                                                     alias, to_string(lhs_loc)));
+            }
+            if (auto* lhs_rec = std::get_if<resolved_record>(map.rec_map.at(alias).type.get())) {
+                return make_or_throw(*lhs_rec);
+            }
+            else {
+                throw std::runtime_error(fmt::format("internal compiler error, expected resolved record type, at {}",
+                                                     alias, to_string(expr.loc)));
+            }
+        }
+    }
+    if (std::get_if<resolved_record>(rhs_t.get()) || std::get_if<resolved_alias>(rhs_t.get())) {
+        throw std::runtime_error(fmt::format("Cannot apply op {} to record type, at {}",
+                                             to_string(expr.op), to_string(rhs_loc)));
+    }
+    if (std::get_if<resolved_record>(lhs_t.get()) || std::get_if<resolved_alias>(lhs_t.get())) {
+        throw std::runtime_error(fmt::format("Cannot apply op {} to record type, at {}",
+                                             to_string(expr.op), to_string(lhs_loc)));
+    }
+    if ((std::get_if<resolved_boolean>(lhs_t.get()) && !std::get_if<resolved_boolean>(rhs_t.get())) ||
+        (!std::get_if<resolved_boolean>(lhs_t.get()) && std::get_if<resolved_boolean>(rhs_t.get()))) {
+        throw std::runtime_error(fmt::format("incompatible arguments types to op {}, at {}",
+                                             to_string(expr.op), to_string(expr.loc)));
+    }
+
+    auto lhs_q = std::get_if<resolved_quantity>(lhs_t.get());
+    auto rhs_q = std::get_if<resolved_quantity>(rhs_t.get());
+    switch (expr.op) {
+        case binary_op::min:
+        case binary_op::max:
+        case binary_op::add:
+        case binary_op::sub: {
+            if (lhs_q && rhs_q) {
+                if (lhs_q->type != rhs_q->type) {
+                    throw std::runtime_error(fmt::format("incompatible arguments types to op {}, at {}",
+                                                         to_string(expr.op), to_string(expr.loc)));
+                }
+                return make_rexpr<resolved_binary>(expr.op, lhs_v, rhs_v, lhs_t, expr.loc);
+            }
+            throw std::runtime_error(fmt::format("incompatible arguments types to op {}, at {}",
+                                                   to_string(expr.op), to_string(expr.loc)));
+        }
+        case binary_op::mul: {
+            if (lhs_q && rhs_q) {
+                auto comb_type = make_rtype<resolved_quantity>(lhs_q->type*rhs_q->type, expr.loc);
+                return make_rexpr<resolved_binary>(expr.op, lhs_v, rhs_v, lhs_t, expr.loc);
+            }
+            throw std::runtime_error(fmt::format("incompatible arguments types to op {}, at {}",
+                                                 to_string(expr.op), to_string(expr.loc)));
+        }
+        case binary_op::div: {
+            if (lhs_q && rhs_q) {
+                auto comb_type = make_rtype<resolved_quantity>(lhs_q->type/rhs_q->type, expr.loc);
+                return make_rexpr<resolved_binary>(expr.op, lhs_v, rhs_v, lhs_t, expr.loc);
+            }
+            throw std::runtime_error(fmt::format("incompatible arguments types to op {}, at {}",
+                                                 to_string(expr.op), to_string(expr.loc)));
+        }
+        case binary_op::pow: {
+            auto rhs_int = std::get_if<resolved_int>(rhs_v.get());
+            if (!rhs_int) {
+                throw std::runtime_error(fmt::format("incompatible arguments types to op {}, at {}",
+                                                     to_string(expr.op), to_string(expr.loc)));
+            }
+            if (lhs_q && rhs_q) {
+                auto comb_type = make_rtype<resolved_quantity>(lhs_q->type^rhs_int->value, expr.loc);
+                return make_rexpr<resolved_binary>(expr.op, lhs_v, rhs_v, lhs_t, expr.loc);
+            }
+            throw std::runtime_error(fmt::format("incompatible arguments types to op {}, at {}",
+                                                 to_string(expr.op), to_string(expr.loc)));
+        }
+        case binary_op::lt:
+        case binary_op::le:
+        case binary_op::gt:
+        case binary_op::ge:
+        case binary_op::eq:
+        case binary_op::ne: {
+            if (lhs_q && rhs_q) {
+                if (lhs_q->type != rhs_q->type) {
+                    throw std::runtime_error(fmt::format("incompatible arguments types to op {}, at {}",
+                                                         to_string(expr.op), to_string(expr.loc)));
+                }
+            }
+            return make_rexpr<resolved_binary>(expr.op, lhs_v, rhs_v, make_rtype<resolved_boolean>(expr.loc), expr.loc);
+        }
+        case binary_op::land:
+        case binary_op::lor: {
+            return make_rexpr<resolved_binary>(expr.op, lhs_v, rhs_v, make_rtype<resolved_boolean>(expr.loc), expr.loc);
+        }
+        default: break;
+    }
+    return make_rexpr<resolved_binary>(expr.op, lhs_v, rhs_v, lhs_t, expr.loc);
+}
+
+r_expr resolve(const identifier_expr& expr, const in_scope_map& map) {
+    if (map.param_map.count(expr.name)) {
+        return make_rexpr<resolved_parameter>(map.param_map.at(expr.name));
+    }
+    if (map.const_map.count(expr.name)) {
+        return make_rexpr<resolved_constant>(map.const_map.at(expr.name));
+    }
+    if (map.bind_map.count(expr.name)) {
+        return make_rexpr<resolved_bind>(map.bind_map.at(expr.name));
+    }
+    if (map.state_map.count(expr.name)) {
+        return make_rexpr<resolved_state>(map.state_map.at(expr.name));
+    }
+    if (map.local_map.count(expr.name)) {
+        return make_rexpr<resolved_argument>(map.local_map.at(expr.name));
+    }
+    throw std::runtime_error(fmt::format("undefined identifier {}, at {}",
+                                         expr.name, to_string(expr.loc)));
+}
+
+r_expr resolve(const mechanism_expr&, const in_scope_map&) {
+
+}
 
 // resolved_mechanism
 std::string to_string(const resolved_mechanism& e, int indent) {

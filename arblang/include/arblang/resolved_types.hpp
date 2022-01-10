@@ -31,6 +31,8 @@ struct normalized_type {
     normalized_type& set(quantity, int);
 };
 bool operator==(normalized_type& lhs, normalized_type& rhs);
+bool operator!=(normalized_type& lhs, normalized_type& rhs);
+
 normalized_type operator*(normalized_type& lhs, normalized_type& rhs);
 normalized_type operator/(normalized_type& lhs, normalized_type& rhs);
 normalized_type operator^(normalized_type& lhs, int rhs);

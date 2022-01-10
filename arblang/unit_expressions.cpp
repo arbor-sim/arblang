@@ -275,7 +275,7 @@ t_raw_ir::t_expr to_type(const no_unit& u) {
 
 bool verify_sub_units(const u_expr& u) {
     auto is_int  = [](const u_expr& t) {return std::get_if<integer_unit>(t.get());};
-    return std::visit(overloaded {
+    return std::visit(al::util::overloaded {
         [&](const simple_unit& t) {return true;},
         [&](const integer_unit& t) {return true;},
         [&](const no_unit& t) {return true;},
@@ -289,7 +289,7 @@ bool verify_sub_units(const u_expr& u) {
 }
 
 bool verify_unit(const u_expr& u) {
-    return std::visit(overloaded {
+    return std::visit(al::util::overloaded {
         [&](const simple_unit& t) {return true;},
         [&](const no_unit& t) {return true;},
         [&](const binary_unit& t) {return verify_sub_units(u);},

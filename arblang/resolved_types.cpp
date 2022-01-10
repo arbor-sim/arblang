@@ -58,6 +58,9 @@ normalized_type& normalized_type::set(quantity q, int val) {
 bool operator==(normalized_type& lhs, normalized_type& rhs) {
     return lhs.q_pow == rhs.q_pow;
 }
+bool operator!=(normalized_type& lhs, normalized_type& rhs) {
+    return !(lhs.q_pow == rhs.q_pow);
+}
 normalized_type operator*(normalized_type& lhs, normalized_type& rhs) {
     normalized_type t = lhs;
     for (unsigned i = 0; i < 6; ++i) {
