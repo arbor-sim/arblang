@@ -314,7 +314,7 @@ struct in_scope_map {
     std::unordered_map<std::string, resolved_argument> local_map;
 };
 
-r_expr resolve(const raw_ir::mechanism_expr&, const in_scope_map&);
+resolved_mechanism resolve(const raw_ir::mechanism_expr&, const in_scope_map&);
 r_expr resolve(const raw_ir::parameter_expr&, const in_scope_map&);
 r_expr resolve(const raw_ir::constant_expr&, const in_scope_map&);
 r_expr resolve(const raw_ir::state_expr&, const in_scope_map&);

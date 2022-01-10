@@ -19,9 +19,9 @@ public:
     parser(std::string const&);
     void parse();
 
-    const std::vector<expr>& mechanisms() {return mechanisms_;};
+    const std::vector<mechanism_expr>& mechanisms() {return mechanisms_;};
+    mechanism_expr parse_mechanism();
 
-    expr parse_mechanism();
     expr parse_parameter();
     expr parse_constant();
     expr parse_state();
@@ -62,6 +62,6 @@ public:
 private:
     std::pair<expr, expr> parse_assignment();
 
-    std::vector<expr> mechanisms_;
+    std::vector<mechanism_expr> mechanisms_;
 };
 } // namespace al

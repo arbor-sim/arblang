@@ -14,7 +14,7 @@ public:
     unit_normalizer(expr e);
     expr normalize();
 private:
-    static expr normalize(const mechanism_expr& e);
+    static mechanism_expr normalize(const mechanism_expr& e);
     static expr normalize(const parameter_expr& e);
     static expr normalize(const constant_expr& e);
     static expr normalize(const state_expr& e);

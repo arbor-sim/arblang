@@ -31,7 +31,7 @@ void parser::parse() {
     }
 }
 
-expr parser::parse_mechanism() {
+mechanism_expr parser::parse_mechanism() {
     mechanism_expr m;
     auto t = current();
     m.loc = t.loc;
@@ -98,7 +98,7 @@ expr parser::parse_mechanism() {
     }
     next(); // consume '}'
 
-    return make_expr<mechanism_expr>(std::move(m));
+    return m;
 }
 
 // A parameter declaration of the form:

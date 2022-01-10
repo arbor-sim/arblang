@@ -2140,7 +2140,7 @@ TEST(parser, mechanism) {
             "    effect molar_flow_rate(\"ca\") = -gamma*flux - (cai - minCai)/decay;\n"
             "}";
         auto p = parser(mech);
-        EXPECT_NO_THROW(std::get<mechanism_expr>(*p.parse_mechanism()));
+        EXPECT_NO_THROW(p.parse_mechanism());
     }
     {
         std::string mech =
@@ -2203,7 +2203,7 @@ TEST(parser, mechanism) {
             "    effect current = expsyn.g*(v - e);\n"
             "}";
         auto p = parser(mech);
-        EXPECT_NO_THROW(std::get<mechanism_expr>(*p.parse_mechanism()));
+        EXPECT_NO_THROW(p.parse_mechanism());
     }
     {
         std::string mech =
@@ -2251,6 +2251,6 @@ TEST(parser, mechanism) {
             "    export gbar; \n"
             "}";
         auto p = parser(mech);
-        EXPECT_NO_THROW(std::get<mechanism_expr>(*p.parse_mechanism()));
+        EXPECT_NO_THROW(p.parse_mechanism());
     }
 }

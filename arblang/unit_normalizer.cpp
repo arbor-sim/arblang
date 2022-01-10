@@ -18,7 +18,7 @@ expr unit_normalizer::normalize() {
     return std::visit([&](auto&& c){return normalize(c);}, *expression);
 }
 
-expr unit_normalizer::normalize(const mechanism_expr& e) {
+mechanism_expr unit_normalizer::normalize(const mechanism_expr& e) {
     mechanism_expr mech;
     mech.name = e.name;
     mech.loc  = e.loc;
@@ -53,7 +53,7 @@ expr unit_normalizer::normalize(const mechanism_expr& e) {
     for (const auto& c: e.exports) {
         mech.exports.push_back(std::visit([&](auto&& c){return normalize(c);}, *c));
     }
-    return make_expr<mechanism_expr>(mech);
+    return mech;
 }
 expr unit_normalizer::normalize(const parameter_expr& e) {
     auto val = std::visit([&](auto&& c){return normalize(c);}, *e.value);

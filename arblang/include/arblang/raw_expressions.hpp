@@ -38,7 +38,6 @@ struct unary_expr;
 struct binary_expr;
 
 using raw_expr = std::variant<
-    mechanism_expr,
     parameter_expr,
     constant_expr,
     state_expr,

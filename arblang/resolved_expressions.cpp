@@ -473,8 +473,89 @@ r_expr resolve(const identifier_expr& expr, const in_scope_map& map) {
                                          expr.name, to_string(expr.loc)));
 }
 
-r_expr resolve(const mechanism_expr&, const in_scope_map&) {
-
+resolved_mechanism resolve(const mechanism_expr& expr, const in_scope_map& map) {
+    resolved_mechanism mech;
+    auto available_map = map;
+    for (const auto& c: expr.constants) {
+        auto val = std::visit([&](auto&& c){return resolve(c, available_map);}, *c);
+        mech.constants.push_back(val);
+        auto const_val = std::get_if<resolved_constant>(val.get());
+        if (!const_val) {
+            auto loc = std::visit([&](auto&& c){return c.loc;}, *val);
+            throw std::runtime_error(fmt::format("internal compiler error, expected constant expression at {}", to_string(loc)));
+        }
+        available_map.const_map.insert({const_val->name, *const_val});
+    }
+    for (const auto& c: expr.parameters) {
+        auto val = std::visit([&](auto&& c){return resolve(c, available_map);}, *c);
+        mech.parameters.push_back(val);
+        auto param_val = std::get_if<resolved_parameter>(val.get());
+        if (!param_val) {
+            auto loc = std::visit([&](auto&& c){return c.loc;}, *val);
+            throw std::runtime_error(fmt::format("internal compiler error, expected parameter expression at {}", to_string(loc)));
+        }
+        available_map.param_map.insert({param_val->name, *param_val});
+    }
+    for (const auto& c: expr.states) {
+        auto val = std::visit([&](auto&& c){return resolve(c, available_map);}, *c);
+        mech.states.push_back(val);
+        auto state_val = std::get_if<resolved_state>(val.get());
+        if (!state_val) {
+            auto loc = std::visit([&](auto&& c){return c.loc;}, *val);
+            throw std::runtime_error(fmt::format("internal compiler error, expected state expression at {}", to_string(loc)));
+        }
+        available_map.state_map.insert({state_val->name, *state_val});
+    }
+    for (const auto& c: expr.bindings) {
+        auto val = std::visit([&](auto&& c){return resolve(c, available_map);}, *c);
+        mech.bindings.push_back(val);
+        auto bind_val = std::get_if<resolved_bind>(val.get());
+        if (!bind_val) {
+            auto loc = std::visit([&](auto&& c){return c.loc;}, *val);
+            throw std::runtime_error(fmt::format("internal compiler error, expected bind expression at {}", to_string(loc)));
+        }
+        available_map.bind_map.insert({bind_val->name, *bind_val});
+    }
+    for (const auto& c: expr.records) {
+        auto val = std::visit([&](auto&& c){return resolve(c, available_map);}, *c);
+        mech.records.push_back(val);
+        auto record_val = std::get_if<resolved_record_alias>(val.get());
+        if (!record_val) {
+            auto loc = std::visit([&](auto&& c){return c.loc;}, *val);
+            throw std::runtime_error(fmt::format("internal compiler error, expected bind expression at {}", to_string(loc)));
+        }
+        available_map.rec_map.insert({record_val->name, *record_val});
+    }
+    for (const auto& c: expr.functions) {
+        auto val = std::visit([&](auto&& c){return resolve(c, available_map);}, *c);
+        mech.functions.push_back(val);
+        auto func_val = std::get_if<resolved_function>(val.get());
+        if (!func_val) {
+            auto loc = std::visit([&](auto&& c){return c.loc;}, *val);
+            throw std::runtime_error(fmt::format("internal compiler error, expected funcyion expression at {}", to_string(loc)));
+        }
+        available_map.func_map.insert({func_val->name, *func_val});
+    }
+    for (const auto& c: expr.initializations) {
+        auto val = std::visit([&](auto&& c){return resolve(c, available_map);}, *c);
+        mech.initializations.push_back(val);
+    }
+    for (const auto& c: expr.evolutions) {
+        auto val = std::visit([&](auto&& c){return resolve(c, available_map);}, *c);
+        mech.evolutions.push_back(val);
+    }
+    for (const auto& c: expr.effects) {
+        auto val = std::visit([&](auto&& c){return resolve(c, available_map);}, *c);
+        mech.effects.push_back(val);
+    }
+    for (const auto& c: expr.exports) {
+        auto val = std::visit([&](auto&& c){return resolve(c, available_map);}, *c);
+        mech.exports.push_back(val);
+    }
+    mech.name = expr.name;
+    mech.loc = expr.loc;
+    mech.kind = expr.kind;
+    return mech;
 }
 
 // resolved_mechanism
