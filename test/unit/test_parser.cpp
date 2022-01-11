@@ -5,6 +5,8 @@
 
 #include <arblang/token.hpp>
 #include <arblang/parser.hpp>
+#include <arblang/unit_normalizer.hpp>
+#include <arblang/resolved_expressions.hpp>
 
 #include "../gtest.h"
 
@@ -2208,7 +2210,7 @@ TEST(parser, mechanism) {
     {
         std::string mech =
             "mechanism density \"Kd\" {\n"
-            "    parameter gbar = 10^-5 [S/cm^2];\n"
+            "    parameter gbar = 1e-5 [S/cm^2];\n"
             "    parameter ek = -77 [mV];\n"
             "    bind v = membrane_potential;\n"
             "\n"
@@ -2251,6 +2253,13 @@ TEST(parser, mechanism) {
             "    export gbar; \n"
             "}";
         auto p = parser(mech);
-        EXPECT_NO_THROW(p.parse_mechanism());
+//        EXPECT_NO_THROW(p.parse_mechanism());
+        auto m = p.parse_mechanism();
+        auto m_normal = normalize(m);
+        auto m_resolved = resolved_ir::resolve(m_normal, {});
+
+        std::cout << to_string(m) << std::endl;
+        std::cout << to_string(m_normal) << std::endl;
+        std::cout << to_string(m_resolved) << std::endl;
     }
 }

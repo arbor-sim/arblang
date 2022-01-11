@@ -265,12 +265,12 @@ std::pair<u_expr, int> normalize_unit(const simple_unit& u) {
     return {make_u_expr<simple_unit>(base_unit, u.loc), factor};
 }
 std::pair<u_expr, int> normalize_unit(const no_unit& u) {
-    return {make_u_expr<no_unit>(), 1};
+    return {make_u_expr<no_unit>(), 0};
 }
 
 t_raw_ir::t_expr to_type(const no_unit& u) {
     using namespace t_raw_ir;
-    return make_t_expr<quantity_type>(quantity::resistance, src_location{});
+    return make_t_expr<quantity_type>(quantity::real, src_location{});
 }
 
 bool verify_sub_units(const u_expr& u) {

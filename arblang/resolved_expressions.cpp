@@ -267,7 +267,6 @@ r_expr resolve(const with_expr& expr, const in_scope_map& map) {
 }
 
 r_expr resolve(const conditional_expr& expr, const in_scope_map& map) {
-    return {};
 }
 
 r_expr resolve(const float_expr& expr, const in_scope_map& map) {
@@ -327,21 +326,29 @@ r_expr resolve(const unary_expr& expr, const in_scope_map& map) {
 
 r_expr resolve(const binary_expr& expr, const in_scope_map& map) {
     auto lhs_v = std::visit([&](auto&& c){return resolve(c, map);}, *expr.lhs);
-    auto rhs_v = std::visit([&](auto&& c){return resolve(c, map);}, *expr.rhs);
     auto lhs_t = std::visit([&](auto&& c){return c.type;}, *lhs_v);
-    auto rhs_t = std::visit([&](auto&& c){return c.type;}, *rhs_v);
-
     auto lhs_loc = std::visit([&](auto&& c){return c.loc;}, *lhs_v);
-    auto rhs_loc = std::visit([&](auto&& c){return c.loc;}, *rhs_v);
 
     if (expr.op == binary_op::dot) {
-        auto* r_rhs = std::get_if<resolved_argument>(rhs_v.get());
-        if (!r_rhs) {
-            throw std::runtime_error(fmt::format("incompatible argument type to dot operator, at {}", to_string(expr.loc)));
-        }
-        auto rhs_id = (*r_rhs).name;
-
         auto make_or_throw = [&](const resolved_record& r) {
+            // Add fields to the local map
+            auto available_map = map;
+            for (auto [f_id, f_type]: r.fields) {
+                available_map.local_map.insert({f_id, resolved_argument(f_id, f_type, r.loc)});
+            }
+            auto rhs_v = std::visit([&](auto&& c){return resolve(c, available_map);}, *expr.rhs);
+
+            // Resolved rhs is expected to be one of the just added fields
+            // But we need to check
+
+            // Check that it is a resolved_argument
+            auto* r_rhs = std::get_if<resolved_argument>(rhs_v.get());
+            if (!r_rhs) {
+                throw std::runtime_error(fmt::format("incompatible argument type to dot operator, at {}", to_string(expr.loc)));
+            }
+            auto rhs_id = (*r_rhs).name;
+
+            // Check that it is an argument of the record
             for (auto [f_id, f_type]: r.fields) {
                 if (rhs_id == f_id) {
                     return make_rexpr<resolved_binary>(expr.op, lhs_v, rhs_v, f_type, expr.loc);
@@ -370,6 +377,13 @@ r_expr resolve(const binary_expr& expr, const in_scope_map& map) {
             }
         }
     }
+
+    // If it's not a field access, we can use the input map to resolve rhs
+    auto rhs_v = std::visit([&](auto&& c){return resolve(c, map);}, *expr.rhs);
+    auto rhs_t = std::visit([&](auto&& c){return c.type;}, *rhs_v);
+    auto rhs_loc = std::visit([&](auto&& c){return c.loc;}, *rhs_v);
+
+    // In this case, neither lhs nor rhs can have record types.
     if (std::get_if<resolved_record>(rhs_t.get()) || std::get_if<resolved_alias>(rhs_t.get())) {
         throw std::runtime_error(fmt::format("Cannot apply op {} to record type, at {}",
                                              to_string(expr.op), to_string(rhs_loc)));
@@ -378,6 +392,8 @@ r_expr resolve(const binary_expr& expr, const in_scope_map& map) {
         throw std::runtime_error(fmt::format("Cannot apply op {} to record type, at {}",
                                              to_string(expr.op), to_string(lhs_loc)));
     }
+
+    // And, they both have to have the same type.
     if ((std::get_if<resolved_boolean>(lhs_t.get()) && !std::get_if<resolved_boolean>(rhs_t.get())) ||
         (!std::get_if<resolved_boolean>(lhs_t.get()) && std::get_if<resolved_boolean>(rhs_t.get()))) {
         throw std::runtime_error(fmt::format("incompatible arguments types to op {}, at {}",
@@ -391,6 +407,7 @@ r_expr resolve(const binary_expr& expr, const in_scope_map& map) {
         case binary_op::max:
         case binary_op::add:
         case binary_op::sub: {
+            // Only applicable if neither lhs or rhs is a boolean type
             if (lhs_q && rhs_q) {
                 if (lhs_q->type != rhs_q->type) {
                     throw std::runtime_error(fmt::format("incompatible arguments types to op {}, at {}",
@@ -402,30 +419,38 @@ r_expr resolve(const binary_expr& expr, const in_scope_map& map) {
                                                    to_string(expr.op), to_string(expr.loc)));
         }
         case binary_op::mul: {
+            // Only applicable if neither lhs or rhs is a boolean type
             if (lhs_q && rhs_q) {
                 auto comb_type = make_rtype<resolved_quantity>(lhs_q->type*rhs_q->type, expr.loc);
-                return make_rexpr<resolved_binary>(expr.op, lhs_v, rhs_v, lhs_t, expr.loc);
+                return make_rexpr<resolved_binary>(expr.op, lhs_v, rhs_v, comb_type, expr.loc);
             }
             throw std::runtime_error(fmt::format("incompatible arguments types to op {}, at {}",
                                                  to_string(expr.op), to_string(expr.loc)));
         }
         case binary_op::div: {
+            // Only applicable if neither lhs or rhs is a boolean type
             if (lhs_q && rhs_q) {
                 auto comb_type = make_rtype<resolved_quantity>(lhs_q->type/rhs_q->type, expr.loc);
-                return make_rexpr<resolved_binary>(expr.op, lhs_v, rhs_v, lhs_t, expr.loc);
+                return make_rexpr<resolved_binary>(expr.op, lhs_v, rhs_v, comb_type, expr.loc);
             }
             throw std::runtime_error(fmt::format("incompatible arguments types to op {}, at {}",
                                                  to_string(expr.op), to_string(expr.loc)));
         }
         case binary_op::pow: {
+            // Only applicable if neither lhs or rhs is a boolean type and rhs is a real int type
             auto rhs_int = std::get_if<resolved_int>(rhs_v.get());
             if (!rhs_int) {
                 throw std::runtime_error(fmt::format("incompatible arguments types to op {}, at {}",
                                                      to_string(expr.op), to_string(expr.loc)));
             }
+            auto rhs_int_q = std::get_if<resolved_quantity>(rhs_int->type.get());
+            if (!rhs_int_q || !rhs_int_q->type.is_real()) {
+                throw std::runtime_error(fmt::format("incompatible arguments types to op {}, at {}",
+                                                     to_string(expr.op), to_string(expr.loc)));
+            }
             if (lhs_q && rhs_q) {
                 auto comb_type = make_rtype<resolved_quantity>(lhs_q->type^rhs_int->value, expr.loc);
-                return make_rexpr<resolved_binary>(expr.op, lhs_v, rhs_v, lhs_t, expr.loc);
+                return make_rexpr<resolved_binary>(expr.op, lhs_v, rhs_v, comb_type, expr.loc);
             }
             throw std::runtime_error(fmt::format("incompatible arguments types to op {}, at {}",
                                                  to_string(expr.op), to_string(expr.loc)));
@@ -436,6 +461,7 @@ r_expr resolve(const binary_expr& expr, const in_scope_map& map) {
         case binary_op::ge:
         case binary_op::eq:
         case binary_op::ne: {
+            // Only applicable if neither lhs or rhs is a boolean type
             if (lhs_q && rhs_q) {
                 if (lhs_q->type != rhs_q->type) {
                     throw std::runtime_error(fmt::format("incompatible arguments types to op {}, at {}",
@@ -516,15 +542,34 @@ resolved_mechanism resolve(const mechanism_expr& expr, const in_scope_map& map) 
         }
         available_map.bind_map.insert({bind_val->name, *bind_val});
     }
+    // For records, create 2 records: regular and prime
     for (const auto& c: expr.records) {
+        auto loc = std::visit([&](auto&& c){return c.loc;}, *c);
+
+        // Regular
         auto val = std::visit([&](auto&& c){return resolve(c, available_map);}, *c);
         mech.records.push_back(val);
         auto record_val = std::get_if<resolved_record_alias>(val.get());
         if (!record_val) {
-            auto loc = std::visit([&](auto&& c){return c.loc;}, *val);
             throw std::runtime_error(fmt::format("internal compiler error, expected bind expression at {}", to_string(loc)));
         }
         available_map.rec_map.insert({record_val->name, *record_val});
+
+        auto regular_rec = std::get_if<record_alias_expr>(c.get());
+        if (!regular_rec) {
+            throw std::runtime_error(fmt::format("internal compiler error, expected record expression at {}", to_string(loc)));
+        }
+        auto prime_rec_type = std::visit([](auto&& c){return derive(c);}, *regular_rec->type);
+        if (prime_rec_type) {
+            auto p = make_expr<record_alias_expr>(regular_rec->name+"'", prime_rec_type.value(), loc);
+            auto p_val = std::visit([&](auto&& c){return resolve(c, available_map);}, *p);
+            mech.records.push_back(p_val);
+            auto p_record_val = std::get_if<resolved_record_alias>(p_val.get());
+            if (!p_record_val) {
+                throw std::runtime_error(fmt::format("internal compiler error, expected bind expression at {}", to_string(loc)));
+            }
+            available_map.rec_map.insert({p_record_val->name, *p_record_val});
+        }
     }
     for (const auto& c: expr.functions) {
         auto val = std::visit([&](auto&& c){return resolve(c, available_map);}, *c);
@@ -828,5 +873,13 @@ std::string to_string(const resolved_binary& e, int indent) {
     return str + double_indent + to_string(e.loc) + ")";
 }
 
+std::string to_string(const resolved_argument& e, int indent) {
+    auto single_indent = std::string(indent*2, ' ');
+    auto double_indent = single_indent + "  ";
+
+    std::string str = single_indent + "(resolved_argument \n";
+    str += (double_indent + e.name + "\n");
+    return str + double_indent + to_string(e.loc) + ")";
+}
 } // namespace al
 } // namespace raw_ir

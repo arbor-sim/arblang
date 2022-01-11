@@ -169,8 +169,7 @@ TEST(normalizer, number_expr) {
     {
         std::string fpt = "2.22 [mV]";
         auto p = parser(fpt);
-        auto n = unit_normalizer(p.parse_float());
-        auto normalized = n.normalize();
+        auto normalized = normalize(p.parse_float());
         auto v = std::get<float_expr>(*normalized);
         EXPECT_EQ(2.22e-3, v.value);
 
@@ -181,8 +180,7 @@ TEST(normalizer, number_expr) {
     {
         std::string fpt = "2e-4 [kA/s]";
         auto p = parser(fpt);
-        auto n = unit_normalizer(p.parse_float());
-        auto normalized = n.normalize();
+        auto normalized = normalize(p.parse_float());
         auto v = std::get<float_expr>(*normalized);
         EXPECT_EQ(2e-1, v.value);
 
@@ -200,8 +198,7 @@ TEST(normalizer, number_expr) {
     {
         std::string fpt = "2000 [dOhm^3]";
         auto p = parser(fpt);
-        auto n = unit_normalizer(p.parse_int());
-        auto normalized = n.normalize();
+        auto normalized = normalize(p.parse_int());
         auto v = std::get<int_expr>(*normalized);
         EXPECT_EQ(2, v.value);
 
@@ -218,8 +215,7 @@ TEST(normalizer, number_expr) {
     {
         std::string fpt = "1.09 [nA/um^2]";
         auto p = parser(fpt);
-        auto n = unit_normalizer(p.parse_float());
-        auto normalized = n.normalize();
+        auto normalized = normalize(p.parse_float());
         auto v = std::get<int_expr>(*normalized);
         EXPECT_EQ(1090, v.value);
 
@@ -243,8 +239,7 @@ TEST(normalizer, number_expr) {
     {
         std::string fpt = "10 [nA/um]";
         auto p = parser(fpt);
-        auto n = unit_normalizer(p.parse_int());
-        auto normalized = n.normalize();
+        auto normalized = normalize(p.parse_int());
         auto v = std::get<float_expr>(*normalized);
         EXPECT_EQ(0.01, v.value);
 
@@ -258,5 +253,12 @@ TEST(normalizer, number_expr) {
         auto u_rhs = std::get<simple_unit>(*u.rhs);
         EXPECT_EQ(unit_pref::none, u_rhs.val.prefix);
         EXPECT_EQ(unit_sym::m, u_rhs.val.symbol);
+    }
+    {
+        std::string fpt = "1";
+        auto p = parser(fpt);
+        auto normalized = normalize(p.parse_int());
+        auto v = std::get<int_expr>(*normalized);
+        EXPECT_EQ(1, v.value);
     }
 }
