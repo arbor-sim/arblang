@@ -648,6 +648,7 @@ std::string to_string(const resolved_parameter& e, int indent) {
     std::string str = single_indent + "(resolved_parameter\n";
     str += (double_indent + e.name + "\n");
     std::visit([&](auto&& c){str += (to_string(c, indent+1) + "\n");}, *e.value);
+    std::visit([&](auto&& c){str += (to_string(c, indent+1) + "\n");}, *e.type);
     return str + double_indent + to_string(e.loc) + ")";
 }
 
@@ -659,6 +660,7 @@ std::string to_string(const resolved_constant& e, int indent) {
     std::string str = single_indent + "(resolved_constant\n";
     str += (double_indent + e.name + "\n");
     std::visit([&](auto&& c){str += (to_string(c, indent+1) + "\n");}, *e.value);
+    std::visit([&](auto&& c){str += (to_string(c, indent+1) + "\n");}, *e.type);
     return str + double_indent + to_string(e.loc) + ")";
 }
 
@@ -669,6 +671,7 @@ std::string to_string(const resolved_state& e, int indent) {
 
     std::string str = single_indent + "(resolved_state\n";
     str += (double_indent + e.name + "\n");
+    std::visit([&](auto&& c){str += (to_string(c, indent+1) + "\n");}, *e.type);
     return str + double_indent + to_string(e.loc) + ")";
 }
 
@@ -679,7 +682,7 @@ std::string to_string(const resolved_record_alias& e, int indent) {
 
     std::string str = single_indent + "(resolved_record_alias\n";
     str += (double_indent + e.name + "\n");
-//    std::visit([&](auto&& c) {str += (to_string(c, indent+1) + "\n");}, *(e.type));
+    std::visit([&](auto&& c) {str += (to_string(c, indent+1) + "\n");}, *e.type);
     return str + double_indent + to_string(e.loc) + ")";
 }
 
@@ -690,7 +693,7 @@ std::string to_string(const resolved_function& e, int indent) {
 
     std::string str = single_indent + "(resolved_function\n";
     str += (double_indent + e.name +  "\n");
-//    std::visit([&](auto&& c){str += (to_string(c, indent+1) + "\n");}, *e.type);
+    std::visit([&](auto&& c){str += (to_string(c, indent+1) + "\n");}, *e.type);
 
     str += (double_indent + "(\n");
     for (const auto& f: e.args) {
@@ -713,6 +716,7 @@ std::string to_string(const resolved_bind& e, int indent) {
     }
     str += "\n";
     str += (double_indent + e.name + "\n");
+    std::visit([&](auto&& c){str += (to_string(c, indent+1) + "\n");}, *e.type);
     str += (double_indent + to_string(e.loc) + ")");
     return str;
 }
@@ -725,6 +729,7 @@ std::string to_string(const resolved_initial& e, int indent) {
     std::string str = single_indent + "(resolved_initial\n";
     std::visit([&](auto&& c){str += (to_string(c, indent+1) + "\n");}, *e.identifier);
     std::visit([&](auto&& c){str += (to_string(c, indent+1) + "\n");}, *e.value);
+    std::visit([&](auto&& c){str += (to_string(c, indent+1) + "\n");}, *e.type);
     return str + double_indent + to_string(e.loc) + ")";
 }
 
@@ -736,6 +741,7 @@ std::string to_string(const resolved_evolve& e, int indent) {
     std::string str = single_indent + "(resolved_evolve\n";
     std::visit([&](auto&& c){str += (to_string(c, indent+1) + "\n");}, *e.identifier);
     std::visit([&](auto&& c){str += (to_string(c, indent+1) + "\n");}, *e.value);
+    std::visit([&](auto&& c){str += (to_string(c, indent+1) + "\n");}, *e.type);
     return str + double_indent + to_string(e.loc) + ")";
 }
 
@@ -750,8 +756,8 @@ std::string to_string(const resolved_effect& e, int indent) {
         str += ("[" + e.ion.value() + "]");
     }
     str += "\n";
-//    std::visit([&](auto&& c){str += (to_string(c, indent+1) + "\n");}, *e.type);
     std::visit([&](auto&& c){str += (to_string(c, indent+1) + "\n");}, *e.value);
+    std::visit([&](auto&& c){str += (to_string(c, indent+1) + "\n");}, *e.type);
     return str + double_indent + to_string(e.loc) + ")";
 }
 
@@ -762,6 +768,7 @@ std::string to_string(const resolved_export& e, int indent) {
 
     std::string str = single_indent + "(resolved_export\n";
     std::visit([&](auto&& c){str += (to_string(c, indent+1) + "\n");}, *e.identifier);
+    std::visit([&](auto&& c){str += (to_string(c, indent+1) + "\n");}, *e.type);
     return str + double_indent + to_string(e.loc) + ")";
 }
 
@@ -775,6 +782,7 @@ std::string to_string(const resolved_call& e, int indent) {
     for (const auto& f: e.call_args) {
         std::visit([&](auto&& c){str += (to_string(c, indent+1) + "\n");}, *f);
     }
+    std::visit([&](auto&& c){str += (to_string(c, indent+1) + "\n");}, *e.type);
     return str + double_indent + to_string(e.loc) + ")";
 }
 
@@ -793,6 +801,7 @@ std::string to_string(const resolved_object& e, int indent) {
         std::visit([&](auto&& c){str += (to_string(c, indent+2) + "\n");}, *(e.record_values[i]));
         str += (double_indent + ")\n");
     }
+    std::visit([&](auto&& c){str += (to_string(c, indent+1) + "\n");}, *e.type);
     return str + double_indent + to_string(e.loc) + ")";
 }
 
@@ -805,6 +814,7 @@ std::string to_string(const resolved_let& e, int indent) {
     std::visit([&](auto&& c){str += (to_string(c, indent+1) + "\n");}, *e.identifier);
     std::visit([&](auto&& c){str += (to_string(c, indent+1) + "\n");}, *e.value);
     std::visit([&](auto&& c){str += (to_string(c, indent+1) + "\n");}, *e.body);
+    std::visit([&](auto&& c){str += (to_string(c, indent+1) + "\n");}, *e.type);
     return str + double_indent + to_string(e.loc) + ")";
 }
 
@@ -815,6 +825,7 @@ std::string to_string(const resolved_with& e, int indent) {
     std::string str = single_indent + "(resolved_with\n";
     std::visit([&](auto&& c){str += (to_string(c, indent+1) + "\n");}, *e.value);
     std::visit([&](auto&& c){str += (to_string(c, indent+1) + "\n");}, *e.body);
+    std::visit([&](auto&& c){str += (to_string(c, indent+1) + "\n");}, *e.type);
     return str + double_indent + to_string(e.loc) + ")";
 }
 
@@ -827,6 +838,7 @@ std::string to_string(const resolved_conditional& e, int indent) {
     std::visit([&](auto&& c){str += (to_string(c, indent+1) + "\n");}, *e.condition);
     std::visit([&](auto&& c){str += (to_string(c, indent+1) + "\n");}, *e.value_true);
     std::visit([&](auto&& c){str += (to_string(c, indent+1) + "\n");}, *e.value_false);
+    std::visit([&](auto&& c){str += (to_string(c, indent+1) + "\n");}, *e.type);
     return str + double_indent + to_string(e.loc) + ")";
 }
 
@@ -837,7 +849,7 @@ std::string to_string(const resolved_float& e, int indent) {
 
     std::string str = single_indent + "(resolved_float\n";
     str += (double_indent + std::to_string(e.value) + "\n");
-//    std::visit([&](auto&& c) {str += (to_string(c, indent+1) + "\n");}, *e.type);
+    std::visit([&](auto&& c) {str += (to_string(c, indent+1) + "\n");}, *e.type);
     return str + double_indent + to_string(e.loc) + ")";
 }
 
@@ -848,7 +860,7 @@ std::string to_string(const resolved_int& e, int indent) {
 
     std::string str = single_indent + "(resolved_int\n";
     str += (double_indent + std::to_string(e.value) + "\n");
-//    std::visit([&](auto&& c) {str += (to_string(c, indent+1) + "\n");}, *e.type);
+    std::visit([&](auto&& c) {str += (to_string(c, indent+1) + "\n");}, *e.type);
     return str + double_indent + to_string(e.loc) + ")";
 }
 
@@ -859,6 +871,7 @@ std::string to_string(const resolved_unary& e, int indent) {
 
     std::string str = single_indent + "(resolved_unary " + to_string(e.op) + "\n";
     std::visit([&](auto&& c){str += (to_string(c, indent+1) + "\n");}, *e.arg);
+    std::visit([&](auto&& c){str += (to_string(c, indent+1) + "\n");}, *e.type);
     return str + double_indent + to_string(e.loc) + ")";
 }
 
@@ -870,6 +883,7 @@ std::string to_string(const resolved_binary& e, int indent) {
     std::string str = single_indent + "(resolved_binary " + to_string(e.op) + "\n";
     std::visit([&](auto&& c){str += (to_string(c, indent+1) + "\n");}, *e.lhs);
     std::visit([&](auto&& c){str += (to_string(c, indent+1) + "\n");}, *e.rhs);
+    std::visit([&](auto&& c){str += (to_string(c, indent+1) + "\n");}, *e.type);
     return str + double_indent + to_string(e.loc) + ")";
 }
 
@@ -880,6 +894,7 @@ std::string to_string(const resolved_argument& e, int indent) {
     std::string str = single_indent + "(resolved_argument \n";
     str += (double_indent + e.name + "\n");
     return str + double_indent + to_string(e.loc) + ")";
+    std::visit([&](auto&& c){str += (to_string(c, indent+1) + "\n");}, *e.type);
 }
 } // namespace al
 } // namespace raw_ir

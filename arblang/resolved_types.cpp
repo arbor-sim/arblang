@@ -139,7 +139,7 @@ r_type resolve_type_of(const quantity_binary_type& t) {
         auto nrhs_q = std::get<integer_type>(*t.rhs);
         type = nlhs_q.type^nrhs_q.val;
     } else {
-        auto nrhs = std::visit([](auto &&c) { return resolve_type_of(c); }, *t.lhs);
+        auto nrhs = std::visit([](auto &&c) { return resolve_type_of(c); }, *t.rhs);
         if (!std::get_if<resolved_quantity>(nrhs.get())) {
             throw std::runtime_error(fmt::format("Internal compiler error: expected resolved quantity type at rhs of {}",
                                                  to_string(t.loc)));
@@ -169,6 +169,49 @@ r_type resolve_type_of(const record_type& t) {
 }
 r_type resolve_type_of(const record_alias_type& t) {
     return make_rtype<resolved_alias>(t.name, t.loc);
+}
+
+std::string to_string(const normalized_type& t, int indent) {
+    std::string str;
+    for (auto [q, idx]: normalized_type::q_map) {
+        if (auto pow = t.q_pow[idx]) {
+            str += (to_string(q) + "^" + std::to_string(pow) + " ");
+        }
+    }
+    if (str.empty()) str = "real";
+    return std::string(indent*2, ' ') + str;
+}
+std::string to_string(const resolved_quantity& q, int indent) {
+    auto single_indent = std::string(indent*2, ' ');
+    auto double_indent = single_indent + "  ";
+
+    std::string str = single_indent + "(resolved_quantity_type\n";
+    str += (to_string(q.type, indent+1) + "\n");
+    return str + double_indent + to_string(q.loc) + ")";
+}
+std::string to_string(const resolved_boolean& q, int indent) {
+    auto single_indent = std::string(indent*2, ' ');
+    auto double_indent = single_indent + "  ";
+
+    return single_indent + "(resolved_boolean_type " + to_string(q.loc) + ")";
+}
+std::string to_string(const resolved_record& q, int indent) {
+    auto single_indent = std::string(indent*2, ' ');
+    auto double_indent = single_indent + "  ";
+
+    std::string str = single_indent +  "(resolved_record_type\n";
+    for (const auto& f: q.fields) {
+        std::visit([&](auto&& c) {str += (to_string(c, indent+1) + "\n");}, *(f.second));
+    }
+    return str + double_indent + to_string(q.loc) + ")";
+}
+std::string to_string(const resolved_alias& q, int indent) {
+    auto single_indent = std::string(indent*2, ' ');
+    auto double_indent = single_indent + "  ";
+
+    std::string str = single_indent + "(resolved_record_alias_type\n";
+    str += (double_indent + q.name + "\n");
+    return str + double_indent + to_string(q.loc) + ")";
 }
 
 } // namespace t_resolved_ir

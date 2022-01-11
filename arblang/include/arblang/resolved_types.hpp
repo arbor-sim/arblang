@@ -79,5 +79,11 @@ r_type resolve_type_of(const boolean_type&);
 r_type resolve_type_of(const record_type&);
 r_type resolve_type_of(const record_alias_type&);
 
+std::string to_string(const normalized_type&, int indent=0);
+std::string to_string(const resolved_quantity&, int indent=0);
+std::string to_string(const resolved_boolean&, int indent=0);
+std::string to_string(const resolved_record&, int indent=0);
+std::string to_string(const resolved_alias&, int indent=0);
+
 } // namespace t_resolved_ir
 } // namespace al
