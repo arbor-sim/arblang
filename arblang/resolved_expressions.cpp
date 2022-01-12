@@ -50,7 +50,7 @@ r_expr resolve(const parameter_expr& expr, const in_scope_map& map) {
     available_map.state_map.clear();
 
     auto p_val = std::visit([&](auto&& c){return resolve(c, available_map);}, *(expr.value));
-    auto p_type = id.type? std::visit([](auto&& c){return resolve_type_of(c);}, *id.type.value()):
+    auto p_type = id.type? std::visit([&](auto&& c){return resolve_type_of(c, map.type_map);}, *id.type.value()):
                            std::visit([](auto&& c){return c.type;}, *p_val);
     return make_rexpr<resolved_parameter>(p_name, p_val, p_type, expr.loc);
 }
@@ -66,7 +66,7 @@ r_expr resolve(const constant_expr& expr, const in_scope_map& map) {
     available_map.state_map.clear();
 
     auto c_val  = std::visit([&](auto&& c){return resolve(c, available_map);}, *(expr.value));
-    auto c_type = id.type? std::visit([](auto&& c){return resolve_type_of(c);}, *id.type.value()):
+    auto c_type = id.type? std::visit([&](auto&& c){return resolve_type_of(c, map.type_map);}, *id.type.value()):
                            std::visit([](auto&& c){return c.type;}, *c_val);
     return make_rexpr<resolved_constant>(c_name, c_val, c_type, expr.loc);
 }
@@ -80,7 +80,7 @@ r_expr resolve(const state_expr& expr, const in_scope_map& map) {
         throw std::runtime_error(fmt::format("state identifier {} at {} missing quantity type.",
                                              s_name, to_string(id.loc)));
     }
-    auto s_type =std::visit([](auto&& c){return resolve_type_of(c);}, *id.type.value());
+    auto s_type =std::visit([&](auto&& c){return resolve_type_of(c, map.type_map);}, *id.type.value());
     return make_rexpr<resolved_state>(s_name, s_type, expr.loc);
 }
 
@@ -89,7 +89,7 @@ r_expr resolve(const bind_expr& expr, const in_scope_map& map) {
     auto b_name = id.name;
     check_duplicate(b_name, map);
 
-    auto b_type = id.type? std::visit([](auto&& c){return resolve_type_of(c);}, *id.type.value()):
+    auto b_type = id.type? std::visit([&](auto&& c){return resolve_type_of(c, map.type_map);}, *id.type.value()):
                            resolve_type_of(expr.bind, expr.loc);
     return make_rexpr<resolved_bind>(b_name, expr.bind, expr.ion, b_type, expr.loc);
 }
@@ -99,7 +99,7 @@ r_expr resolve(const record_alias_expr& expr, const in_scope_map& map) {
         throw std::runtime_error(fmt::format("duplicate record alias name, also found at {}",
                                              to_string(map.param_map.at(expr.name).loc)));
     }
-    auto a_type = std::visit([](auto&& c){return resolve_type_of(c);}, *expr.type);
+    auto a_type = std::visit([&](auto&& c){return resolve_type_of(c, map.type_map);}, *expr.type);
     return make_rexpr<resolved_record_alias>(expr.name, a_type, expr.loc);
 }
 
@@ -117,14 +117,14 @@ r_expr resolve(const function_expr& expr, const in_scope_map& map) {
             throw std::runtime_error(fmt::format("function argument {} at {} missing quantity type.",
                                                  a_id.name, to_string(a_id.loc)));
         }
-        auto a_type = std::visit([](auto&& c){return resolve_type_of(c);}, *a_id.type.value());
+        auto a_type = std::visit([&](auto&& c){return resolve_type_of(c, map.type_map);}, *a_id.type.value());
         auto f_a = resolved_argument(a_id.name, a_type, a_id.loc);
         f_args.push_back(make_rexpr<resolved_argument>(f_a));
         available_map.local_map.insert({a_id.name, f_a});
     }
     auto f_body = std::visit([&](auto&& c){return resolve(c, available_map);}, *expr.body);
 
-    auto f_type = expr.ret? std::visit([](auto&& c){return resolve_type_of(c);}, *expr.ret.value()):
+    auto f_type = expr.ret? std::visit([&](auto&& c){return resolve_type_of(c, map.type_map);}, *expr.ret.value()):
                             std::visit([](auto&& c){return c.type;}, *f_body);
     return make_rexpr<resolved_function>(f_name, f_args, f_body, f_type, expr.loc);
 }
@@ -139,7 +139,7 @@ r_expr resolve(const initial_expr& expr, const in_scope_map& map) {
     auto i_expr = make_rexpr<resolved_state>(map.state_map.at(i_name));
     auto i_val = std::visit([&](auto&& c){return resolve(c, map);}, *(expr.value));
 
-    auto i_type = id.type? std::visit([](auto&& c){return resolve_type_of(c);}, *id.type.value()):
+    auto i_type = id.type? std::visit([&](auto&& c){return resolve_type_of(c, map.type_map);}, *id.type.value()):
                            std::visit([](auto&& c){return c.type;}, *i_val);
     return make_rexpr<resolved_initial>(i_expr, i_val, i_type, expr.loc);
 }
@@ -158,7 +158,7 @@ r_expr resolve(const evolve_expr& expr, const in_scope_map& map) {
     auto e_expr = make_rexpr<resolved_state>(s_expr);
     auto e_val = std::visit([&](auto&& c){return resolve(c, map);}, *(expr.value));
 
-    auto e_type = id.type? std::visit([](auto&& c){return resolve_type_of(c);}, *id.type.value()):
+    auto e_type = id.type? std::visit([&](auto&& c){return resolve_type_of(c, map.type_map);}, *id.type.value()):
                            std::visit([](auto&& c){return c.type;}, *e_val);
     return make_rexpr<resolved_evolve>(e_expr, e_val, e_type, expr.loc);
 }
@@ -220,17 +220,16 @@ r_expr resolve(const object_expr& expr, const in_scope_map& map) {
     }
 
     auto r_name = expr.record_name.value();
-    if (!map.rec_map.count(r_name)) {
+    if (!map.type_map.count(r_name)) {
         throw std::runtime_error(fmt::format("record {} referenced at {} is not defined.", r_name, to_string(expr.loc)));
     }
-    auto rec_expr = map.rec_map.at(r_name);
-    return make_rexpr<resolved_object>(make_rexpr<resolved_record_alias>(rec_expr), o_fields, o_values, rec_expr.type, expr.loc);
+    return make_rexpr<resolved_object>(std::nullopt, o_fields, o_values, map.type_map.at(r_name), expr.loc);
 }
 
 r_expr resolve(const let_expr& expr, const in_scope_map& map) {
     auto v_expr = std::visit([&](auto&& c){return resolve(c, map);}, *expr.value);
     auto id = std::get<identifier_expr>(*expr.identifier);
-    auto i_type = id.type? std::visit([](auto&& c){return resolve_type_of(c);}, *id.type.value()):
+    auto i_type = id.type? std::visit([&](auto&& c){return resolve_type_of(c, map.type_map);}, *id.type.value()):
                            std::visit([&](auto&& c){return c.type;}, *v_expr);
     auto i_expr = resolved_argument(id.name, i_type, id.loc);
 
@@ -248,7 +247,7 @@ r_expr resolve(const with_expr& expr, const in_scope_map& map) {
     auto v_type = std::visit([&](auto&& c){return c.type;}, *v_expr);
 
     auto available_map = map;
-    if (std::get_if<resolved_record>(v_type.get()) || std::get_if<resolved_alias>(v_type.get())) {
+    if (std::get_if<resolved_record>(v_type.get())) {
         auto v_rec = std::get<resolved_object>(*v_expr);
         for (const auto& v_field: v_rec.record_fields) {
             auto v_arg = std::get<resolved_argument>(*v_field);
@@ -267,13 +266,18 @@ r_expr resolve(const with_expr& expr, const in_scope_map& map) {
 }
 
 r_expr resolve(const conditional_expr& expr, const in_scope_map& map) {
+    auto cond    = std::visit([&](auto&& c){return resolve(c, map);}, *expr.condition);
+    auto true_v  = std::visit([&](auto&& c){return resolve(c, map);}, *expr.value_true);
+    auto false_v = std::visit([&](auto&& c){return resolve(c, map);}, *expr.value_false);
+    auto true_t  = std::visit([&](auto&& c){return c.type;}, *true_v);
+    return make_rexpr<resolved_conditional>(cond, true_v, false_v, true_t, expr.loc);
 }
 
 r_expr resolve(const float_expr& expr, const in_scope_map& map) {
     using namespace u_raw_ir;
     auto f_val = expr.value;
     auto f_type = std::visit([&](auto&& c){return to_type(c);}, *expr.unit);
-    auto r_type = std::visit([&](auto&& c){return resolve_type_of(c);}, *f_type);
+    auto r_type = std::visit([&](auto&& c){return resolve_type_of(c, map.type_map);}, *f_type);
     return make_rexpr<resolved_float>(f_val, r_type, expr.loc);
 }
 
@@ -281,7 +285,7 @@ r_expr resolve(const int_expr& expr, const in_scope_map& map) {
     using namespace u_raw_ir;
     auto i_val = expr.value;
     auto i_type = std::visit([&](auto&& c){return to_type(c);}, *expr.unit);
-    auto r_type = std::visit([&](auto&& c){return resolve_type_of(c);}, *i_type);
+    auto r_type = std::visit([&](auto&& c){return resolve_type_of(c, map.type_map);}, *i_type);
     return make_rexpr<resolved_int>(i_val, r_type, expr.loc);
 }
 
@@ -313,7 +317,7 @@ r_expr resolve(const unary_expr& expr, const in_scope_map& map) {
             break;
         }
         case unary_op::neg: {
-            if (std::get_if<resolved_record>(type.get()) || std::get_if<resolved_alias>(type.get())) {
+            if (std::get_if<resolved_record>(type.get())) {
                 throw std::runtime_error(fmt::format("Cannot apply op {} to record type, at {}",
                                                      to_string(expr.op), to_string(expr.loc)));
             }
@@ -361,21 +365,6 @@ r_expr resolve(const binary_expr& expr, const in_scope_map& map) {
         if (auto* lhs_rec = std::get_if<resolved_record>(lhs_t.get())) {
             return make_or_throw(*lhs_rec);
         }
-        if (auto* lhs_alias = std::get_if<resolved_alias>(lhs_t.get())) {
-            auto alias = (*lhs_alias).name;
-            if (!map.rec_map.count(alias)) {
-                auto loc = std::visit([&](auto&& c){return c.loc;}, *lhs_v);
-                throw std::runtime_error(fmt::format("record alias {} doesn't match any defined record, at {}",
-                                                     alias, to_string(lhs_loc)));
-            }
-            if (auto* lhs_rec = std::get_if<resolved_record>(map.rec_map.at(alias).type.get())) {
-                return make_or_throw(*lhs_rec);
-            }
-            else {
-                throw std::runtime_error(fmt::format("internal compiler error, expected resolved record type, at {}",
-                                                     alias, to_string(expr.loc)));
-            }
-        }
     }
 
     // If it's not a field access, we can use the input map to resolve rhs
@@ -384,11 +373,11 @@ r_expr resolve(const binary_expr& expr, const in_scope_map& map) {
     auto rhs_loc = std::visit([&](auto&& c){return c.loc;}, *rhs_v);
 
     // In this case, neither lhs nor rhs can have record types.
-    if (std::get_if<resolved_record>(rhs_t.get()) || std::get_if<resolved_alias>(rhs_t.get())) {
+    if (std::get_if<resolved_record>(rhs_t.get())) {
         throw std::runtime_error(fmt::format("Cannot apply op {} to record type, at {}",
                                              to_string(expr.op), to_string(rhs_loc)));
     }
-    if (std::get_if<resolved_record>(lhs_t.get()) || std::get_if<resolved_alias>(lhs_t.get())) {
+    if (std::get_if<resolved_record>(lhs_t.get())) {
         throw std::runtime_error(fmt::format("Cannot apply op {} to record type, at {}",
                                              to_string(expr.op), to_string(lhs_loc)));
     }
@@ -522,16 +511,6 @@ resolved_mechanism resolve(const mechanism_expr& expr, const in_scope_map& map) 
         }
         available_map.param_map.insert({param_val->name, *param_val});
     }
-    for (const auto& c: expr.states) {
-        auto val = std::visit([&](auto&& c){return resolve(c, available_map);}, *c);
-        mech.states.push_back(val);
-        auto state_val = std::get_if<resolved_state>(val.get());
-        if (!state_val) {
-            auto loc = std::visit([&](auto&& c){return c.loc;}, *val);
-            throw std::runtime_error(fmt::format("internal compiler error, expected state expression at {}", to_string(loc)));
-        }
-        available_map.state_map.insert({state_val->name, *state_val});
-    }
     for (const auto& c: expr.bindings) {
         auto val = std::visit([&](auto&& c){return resolve(c, available_map);}, *c);
         mech.bindings.push_back(val);
@@ -543,33 +522,36 @@ resolved_mechanism resolve(const mechanism_expr& expr, const in_scope_map& map) 
         available_map.bind_map.insert({bind_val->name, *bind_val});
     }
     // For records, create 2 records: regular and prime
-    for (const auto& c: expr.records) {
-        auto loc = std::visit([&](auto&& c){return c.loc;}, *c);
-
-        // Regular
-        auto val = std::visit([&](auto&& c){return resolve(c, available_map);}, *c);
-        mech.records.push_back(val);
-        auto record_val = std::get_if<resolved_record_alias>(val.get());
-        if (!record_val) {
-            throw std::runtime_error(fmt::format("internal compiler error, expected bind expression at {}", to_string(loc)));
-        }
-        available_map.rec_map.insert({record_val->name, *record_val});
-
-        auto regular_rec = std::get_if<record_alias_expr>(c.get());
-        if (!regular_rec) {
+    for (const auto& r: expr.records) {
+        auto loc = std::visit([&](auto&& c){return c.loc;}, *r);
+        auto rec = std::get_if<record_alias_expr>(r.get());
+        if (!rec) {
             throw std::runtime_error(fmt::format("internal compiler error, expected record expression at {}", to_string(loc)));
         }
-        auto prime_rec_type = std::visit([](auto&& c){return derive(c);}, *regular_rec->type);
-        if (prime_rec_type) {
-            auto p = make_expr<record_alias_expr>(regular_rec->name+"'", prime_rec_type.value(), loc);
-            auto p_val = std::visit([&](auto&& c){return resolve(c, available_map);}, *p);
-            mech.records.push_back(p_val);
-            auto p_record_val = std::get_if<resolved_record_alias>(p_val.get());
-            if (!p_record_val) {
-                throw std::runtime_error(fmt::format("internal compiler error, expected bind expression at {}", to_string(loc)));
-            }
-            available_map.rec_map.insert({p_record_val->name, *p_record_val});
+
+        // regular
+        auto resolved_record = std::visit([&](auto&& c){return resolve(c, available_map);}, *r);
+        auto resolved_record_val = std::get_if<resolved_record_alias>(resolved_record.get());
+        if (!resolved_record_val) {
+            throw std::runtime_error(fmt::format("internal compiler error, expected record expression at {}", to_string(loc)));
         }
+        available_map.type_map.insert({resolved_record_val->name, resolved_record_val->type});
+
+        // prime
+        auto derived_record_type = std::visit([](auto&& c){return derive(c);}, *resolved_record_val->type);
+        if (derived_record_type) {
+            available_map.type_map.insert({resolved_record_val->name+"'", derived_record_type.value()});
+        }
+    }
+    for (const auto& c: expr.states) {
+        auto val = std::visit([&](auto&& c){return resolve(c, available_map);}, *c);
+        mech.states.push_back(val);
+        auto state_val = std::get_if<resolved_state>(val.get());
+        if (!state_val) {
+            auto loc = std::visit([&](auto&& c){return c.loc;}, *val);
+            throw std::runtime_error(fmt::format("internal compiler error, expected state expression at {}", to_string(loc)));
+        }
+        available_map.state_map.insert({state_val->name, *state_val});
     }
     for (const auto& c: expr.functions) {
         auto val = std::visit([&](auto&& c){return resolve(c, available_map);}, *c);
@@ -620,9 +602,6 @@ std::string to_string(const resolved_mechanism& e, int indent) {
         std::visit([&](auto&& c){str += (to_string(c, indent+1) + "\n");}, *p);
     }
     for (const auto& p: e.functions) {
-        std::visit([&](auto&& c){str += (to_string(c, indent+1) + "\n");}, *p);
-    }
-    for (const auto& p: e.records) {
         std::visit([&](auto&& c){str += (to_string(c, indent+1) + "\n");}, *p);
     }
     for (const auto& p: e.initializations) {
@@ -893,8 +872,8 @@ std::string to_string(const resolved_argument& e, int indent) {
 
     std::string str = single_indent + "(resolved_argument \n";
     str += (double_indent + e.name + "\n");
-    return str + double_indent + to_string(e.loc) + ")";
     std::visit([&](auto&& c){str += (to_string(c, indent+1) + "\n");}, *e.type);
+    return str + double_indent + to_string(e.loc) + ")";
 }
 } // namespace al
 } // namespace raw_ir

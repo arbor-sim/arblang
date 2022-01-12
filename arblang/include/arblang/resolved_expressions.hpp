@@ -72,7 +72,6 @@ struct resolved_mechanism {
     std::vector<r_expr> parameters;     // expect resolved_parameter
     std::vector<r_expr> states;         // expect resolved_state
     std::vector<r_expr> functions;      // expect resolved_function
-    std::vector<r_expr> records;        // expect resolved_record_alias
     std::vector<r_expr> bindings;       // expect resolved_bind
     std::vector<r_expr> initializations; // expect resolved_initial
     std::vector<r_expr> effects;        // expect effects_expr
@@ -312,6 +311,7 @@ struct in_scope_map {
     std::unordered_map<std::string, resolved_function> func_map;
     std::unordered_map<std::string, resolved_record_alias> rec_map;
     std::unordered_map<std::string, resolved_argument> local_map;
+    std::unordered_map<std::string, r_type> type_map;
 };
 
 resolved_mechanism resolve(const raw_ir::mechanism_expr&, const in_scope_map&);

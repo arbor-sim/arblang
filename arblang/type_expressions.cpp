@@ -174,37 +174,6 @@ std::string to_string(const record_alias_type& q, int indent) {
     return str + double_indent + to_string(q.loc) + ")";
 }
 
-// derive
-std::optional<t_expr> derive(const integer_type&) {
-    return {};
-}
-std::optional<t_expr> derive(const quantity_type& q) {
-    auto lhs = make_t_expr<quantity_type>(q);
-    auto rhs = make_t_expr<quantity_type>(quantity::time, q.loc);
-    return make_t_expr<quantity_binary_type>(t_binary_op::div, lhs, rhs, q.loc);
-}
-std::optional<t_expr> derive(const quantity_binary_type& q) {
-    auto lhs = make_t_expr<quantity_binary_type>(q);
-    auto rhs = make_t_expr<quantity_type>(quantity::time, q.loc);
-    return make_t_expr<quantity_binary_type>(t_binary_op::div, lhs, rhs, q.loc);
-}
-std::optional<t_expr> derive(const boolean_type&) {
-    return {};
-}
-std::optional<t_expr> derive(const record_type& q) {
-    std::vector<std::pair<std::string, t_expr>> fields;
-    for (auto [f_id, f_type]: q.fields) {
-        auto f_prime_type = std::visit([](auto&& c){return derive(c);}, *f_type);
-        if (!f_prime_type) return {};
-        fields.emplace_back(f_id+"'", f_prime_type.value());
-    }
-    return make_t_expr<record_type>(fields, q.loc);
-}
-std::optional<t_expr> derive(const record_alias_type& q) {
-    return make_t_expr<record_alias_type>(q.name+"'", q.loc);
-}
-
-
 bool verify_sub_types(const t_expr& u) {
     auto is_int  = [](const t_expr& t) {return std::get_if<integer_type>(t.get());};
     return std::visit(al::util::overloaded {

@@ -122,13 +122,6 @@ std::string to_string(const boolean_type&, int indent=0);
 std::string to_string(const record_type&, int indent=0);
 std::string to_string(const record_alias_type&, int indent=0);
 
-std::optional<t_expr> derive(const integer_type&);
-std::optional<t_expr> derive(const quantity_type&);
-std::optional<t_expr> derive(const quantity_binary_type&);
-std::optional<t_expr> derive(const boolean_type&);
-std::optional<t_expr> derive(const record_type&);
-std::optional<t_expr> derive(const record_alias_type&);
-
 bool verify_type(const t_expr& u);
 
 template <typename T, typename... Args>

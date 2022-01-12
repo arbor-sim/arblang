@@ -55,10 +55,10 @@ normalized_type& normalized_type::set(quantity q, int val) {
     return *this;
 }
 
-bool operator==(normalized_type& lhs, normalized_type& rhs) {
+bool operator==(const normalized_type& lhs, const normalized_type& rhs) {
     return lhs.q_pow == rhs.q_pow;
 }
-bool operator!=(normalized_type& lhs, normalized_type& rhs) {
+bool operator!=(const normalized_type& lhs, const normalized_type& rhs) {
     return !(lhs.q_pow == rhs.q_pow);
 }
 normalized_type operator*(normalized_type& lhs, normalized_type& rhs) {
@@ -83,6 +83,7 @@ normalized_type operator^(normalized_type& lhs, int rhs) {
     return t;
 }
 
+// Resolve types
 r_type resolve_type_of(const bindable& b, const src_location& loc) {
     normalized_type t;
     switch (b) {
@@ -119,11 +120,11 @@ r_type resolve_type_of(const affectable& a, const src_location& loc) {
     return make_rtype<resolved_quantity>(t, loc);
 }
 
-r_type resolve_type_of(const quantity_type& t) {
+r_type resolve_type_of(const quantity_type& t, const std::unordered_map<std::string, r_type>&) {
     return make_rtype<resolved_quantity>(normal_quantities[t.type], t.loc);
 }
-r_type resolve_type_of(const quantity_binary_type& t) {
-    auto nlhs = std::visit([](auto&& c){return resolve_type_of(c);}, *t.lhs);
+r_type resolve_type_of(const quantity_binary_type& t, const std::unordered_map<std::string, r_type>& rec_alias) {
+    auto nlhs = std::visit([&](auto&& c){return resolve_type_of(c, rec_alias);}, *t.lhs);
     if (!std::get_if<resolved_quantity>(nlhs.get())) {
         throw std::runtime_error(fmt::format("Internal compiler error: expected resolved quantity type at lhs of {}",
                                              to_string(t.loc)));
@@ -139,7 +140,7 @@ r_type resolve_type_of(const quantity_binary_type& t) {
         auto nrhs_q = std::get<integer_type>(*t.rhs);
         type = nlhs_q.type^nrhs_q.val;
     } else {
-        auto nrhs = std::visit([](auto &&c) { return resolve_type_of(c); }, *t.rhs);
+        auto nrhs = std::visit([&](auto &&c) { return resolve_type_of(c, rec_alias); }, *t.rhs);
         if (!std::get_if<resolved_quantity>(nrhs.get())) {
             throw std::runtime_error(fmt::format("Internal compiler error: expected resolved quantity type at rhs of {}",
                                                  to_string(t.loc)));
@@ -153,24 +154,76 @@ r_type resolve_type_of(const quantity_binary_type& t) {
     }
     return make_rtype<resolved_quantity>(type, t.loc);
 }
-r_type resolve_type_of(const integer_type& t) {
+r_type resolve_type_of(const integer_type& t, const std::unordered_map<std::string, r_type>&) {
     throw std::runtime_error(fmt::format("Internal compiler error: unexpected integer type at {}", to_string(t.loc)));
-    return {};
 }
-r_type resolve_type_of(const boolean_type& t) {
+r_type resolve_type_of(const boolean_type& t, const std::unordered_map<std::string, r_type>&) {
     return make_rtype<resolved_boolean>(t.loc);
 }
-r_type resolve_type_of(const record_type& t) {
+r_type resolve_type_of(const record_type& t, const std::unordered_map<std::string, r_type>& rec_alias) {
     std::vector<std::pair<std::string, r_type>> fields;
     for (const auto& f: t.fields) {
-        fields.emplace_back(f.first, std::visit([](auto&& c){return resolve_type_of(c);}, *f.second));
+        fields.emplace_back(f.first, std::visit([&](auto&& c){return resolve_type_of(c, rec_alias);}, *f.second));
     }
     return make_rtype<resolved_record>(fields, t.loc);
 }
-r_type resolve_type_of(const record_alias_type& t) {
-    return make_rtype<resolved_alias>(t.name, t.loc);
+r_type resolve_type_of(const record_alias_type& t, const std::unordered_map<std::string, r_type>& rec_alias) {
+    if (!rec_alias.count(t.name)) {
+        throw std::runtime_error(fmt::format("Undefined record {} at {}", t.name, to_string(t.loc)));
+    }
+    return rec_alias.at(t.name);
 }
 
+// Derive types
+std::optional<r_type> derive(const resolved_quantity& q) {
+    auto type = q.type;
+    type.q_pow[normalized_type::q_map[quantity::time]]-=1;
+    return make_rtype<resolved_quantity>(type, q.loc);
+}
+std::optional<r_type> derive(const resolved_boolean&) {
+    return {};
+}
+std::optional<r_type> derive(const resolved_record& q) {
+    std::vector<std::pair<std::string, r_type>> fields;
+    for (auto [f_id, f_type]: q.fields) {
+        auto f_prime_type = std::visit([](auto&& c){return derive(c);}, *f_type);
+        if (!f_prime_type) return {};
+        fields.emplace_back(f_id+"'", f_prime_type.value());
+    }
+    return make_rtype<resolved_record>(fields, q.loc);
+}
+
+// compare resolved_types
+bool operator==(const resolved_quantity& lhs, const resolved_quantity& rhs) {
+    return (lhs.type == rhs.type);
+}
+bool operator==(const resolved_record& lhs, const resolved_record& rhs) {
+    if (lhs.fields.size() != rhs.fields.size()) return false;
+    for (unsigned i = 0; i < lhs.fields.size(); ++i) {
+        if (*(lhs.fields[i].second) != *(rhs.fields[i].second)) return false;
+    }
+    return true;
+}
+bool operator==(const resolved_type& lhs, const resolved_type& rhs) {
+    auto bool_lhs = std::get_if<resolved_boolean>(&lhs);
+    auto bool_rhs = std::get_if<resolved_boolean>(&rhs);
+    if (bool_lhs && bool_rhs) return true;
+
+    auto qty_lhs = std::get_if<resolved_quantity>(&lhs);
+    auto qty_rhs = std::get_if<resolved_quantity>(&rhs);
+    if (qty_lhs && qty_rhs) return *qty_lhs == *qty_rhs;
+
+    auto rec_lhs = std::get_if<resolved_record>(&lhs);
+    auto rec_rhs = std::get_if<resolved_record>(&rhs);
+    if (rec_lhs && rec_rhs) return *rec_lhs == *rec_rhs;
+
+    return false;
+}
+bool operator!=(const resolved_type& lhs, const resolved_type& rhs) {
+    return !(lhs == rhs);
+}
+
+// to_string
 std::string to_string(const normalized_type& t, int indent) {
     std::string str;
     for (auto [q, idx]: normalized_type::q_map) {
@@ -205,14 +258,5 @@ std::string to_string(const resolved_record& q, int indent) {
     }
     return str + double_indent + to_string(q.loc) + ")";
 }
-std::string to_string(const resolved_alias& q, int indent) {
-    auto single_indent = std::string(indent*2, ' ');
-    auto double_indent = single_indent + "  ";
-
-    std::string str = single_indent + "(resolved_record_alias_type\n";
-    str += (double_indent + q.name + "\n");
-    return str + double_indent + to_string(q.loc) + ")";
-}
-
 } // namespace t_resolved_ir
 } // namespace al
