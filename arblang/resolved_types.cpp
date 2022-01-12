@@ -258,5 +258,8 @@ std::string to_string(const resolved_record& q, int indent) {
     }
     return str + double_indent + to_string(q.loc) + ")";
 }
+std::string to_string(const resolved_type& q, int indent) {
+    return std::visit([](auto&& c){return to_string(c);}, q);
+}
 } // namespace t_resolved_ir
 } // namespace al

@@ -77,6 +77,7 @@ std::optional<r_type> derive(const resolved_boolean&);
 std::optional<r_type> derive(const resolved_record&);
 
 std::string to_string(const normalized_type&, int indent=0);
+std::string to_string(const resolved_type& q, int indent=0);
 std::string to_string(const resolved_quantity&, int indent=0);
 std::string to_string(const resolved_boolean&, int indent=0);
 std::string to_string(const resolved_record&, int indent=0);
