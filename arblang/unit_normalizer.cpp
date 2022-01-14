@@ -132,7 +132,7 @@ expr normalize(const binary_expr& e) {
     return make_expr<binary_expr>(e.op, lhs, rhs, e.loc);
 }
 expr normalize(const float_expr& e) {
-    auto unit = std::visit([&](auto&& c){return u_raw_ir::normalize_unit(c);}, *e.unit);
+    auto unit = u_raw_ir::normalize_unit(e.unit);
     double val = e.value*std::pow(10,unit.second);
     if (val == (int)val) {
         return make_expr<int_expr>(val, unit.first, e.loc);
@@ -140,7 +140,7 @@ expr normalize(const float_expr& e) {
     return make_expr<float_expr>(val, unit.first, e.loc);
 }
 expr normalize(const int_expr& e) {
-    auto unit = std::visit([&](auto&& c){return u_raw_ir::normalize_unit(c);}, *e.unit);
+    auto unit = u_raw_ir::normalize_unit(e.unit);
     double val = (double)e.value*std::pow(10,unit.second);
     if (val == (int)val) {
         return make_expr<int_expr>(val, unit.first, e.loc);

@@ -89,105 +89,6 @@ bool mechanism_expr::set_kind(tok t) {
     return false;
 }
 
-std::string to_string(const mechanism_expr& e, int indent) {
-    auto indent_str = std::string(indent*2, ' ');
-    std::string str = indent_str + "(module_expr " + e.name + " " + to_string(e.kind) + "\n";
-    for (const auto& p: e.parameters) {
-        std::visit([&](auto&& c){str += (to_string(c, indent+1) + "\n");}, *p);
-    }
-    for (const auto& p: e.constants) {
-        std::visit([&](auto&& c){str += (to_string(c, indent+1) + "\n");}, *p);
-    }
-    for (const auto& p: e.states) {
-        std::visit([&](auto&& c){str += (to_string(c, indent+1) + "\n");}, *p);
-    }
-    for (const auto& p: e.bindings) {
-        std::visit([&](auto&& c){str += (to_string(c, indent+1) + "\n");}, *p);
-    }
-    for (const auto& p: e.functions) {
-        std::visit([&](auto&& c){str += (to_string(c, indent+1) + "\n");}, *p);
-    }
-    for (const auto& p: e.records) {
-        std::visit([&](auto&& c){str += (to_string(c, indent+1) + "\n");}, *p);
-    }
-    for (const auto& p: e.initializations) {
-        std::visit([&](auto&& c){str += (to_string(c, indent+1) + "\n");}, *p);
-    }
-    for (const auto& p: e.evolutions) {
-        std::visit([&](auto&& c){str += (to_string(c, indent+1) + "\n");}, *p);
-    }
-    for (const auto& p: e.effects) {
-        std::visit([&](auto&& c){str += (to_string(c, indent+1) + "\n");}, *p);
-    }
-    for (const auto& p: e.exports) {
-        std::visit([&](auto&& c){str += (to_string(c, indent+1) + "\n");}, *p);
-    }
-    return str + to_string(e.loc) + ")";
-}
-
-// parameter_expr
-std::string to_string(const parameter_expr& e, int indent) {
-    auto single_indent = std::string(indent*2, ' ');
-    auto double_indent = single_indent + "  ";
-
-    std::string str = single_indent + "(parameter_expr\n";
-    std::visit([&](auto&& c){str += (to_string(c, indent+1) + "\n");}, *e.identifier);
-    std::visit([&](auto&& c){str += (to_string(c, indent+1) + "\n");}, *e.value);
-    return str + double_indent + to_string(e.loc) + ")";
-}
-
-// constant_expr
-std::string to_string(const constant_expr& e, int indent) {
-    auto single_indent = std::string(indent*2, ' ');
-    auto double_indent = single_indent + "  ";
-
-    std::string str = single_indent + "(constant_expr\n";
-    std::visit([&](auto&& c){str += (to_string(c, indent+1) + "\n");}, *e.identifier);
-    std::visit([&](auto&& c){str += (to_string(c, indent+1) + "\n");}, *e.value);
-    return str + double_indent + to_string(e.loc) + ")";
-}
-
-// state_expr
-std::string to_string(const state_expr& e, int indent) {
-    auto single_indent = std::string(indent*2, ' ');
-    auto double_indent = single_indent + "  ";
-
-    std::string str = single_indent + "(state_expr\n";
-    std::visit([&](auto&& c){str += (to_string(c, indent+1) + "\n");}, *e.identifier);
-    return str + double_indent + to_string(e.loc) + ")";
-}
-
-// record_alias_expr
-std::string to_string(const record_alias_expr& e, int indent) {
-    auto single_indent = std::string(indent*2, ' ');
-    auto double_indent = single_indent + "  ";
-
-    std::string str = single_indent + "(record_alias_expr\n";
-    str += (double_indent + e.name + "\n");
-    std::visit([&](auto&& c) {str += (to_string(c, indent+1) + "\n");}, *(e.type));
-    return str + double_indent + to_string(e.loc) + ")";
-}
-
-// function_expr
-std::string to_string(const function_expr& e, int indent) {
-    auto single_indent = std::string(indent*2, ' ');
-    auto double_indent = single_indent + "  ";
-
-    std::string str = single_indent + "(function_expr\n";
-    str += (double_indent + e.name +  "\n");
-    if (e.ret) {
-        std::visit([&](auto&& c){str += (to_string(c, indent+1) + "\n");}, *(e.ret.value()));
-    }
-
-    str += (double_indent + "(\n");
-    for (const auto& f: e.args) {
-        std::visit([&](auto&& c){str += (to_string(c, indent+2) + "\n");}, *f);
-    }
-    str += (double_indent + ")\n");
-    std::visit([&](auto&& c){str += (to_string(c, indent+1) + "\n");}, *e.body);
-    return str + double_indent + to_string(e.loc) + ")";
-}
-
 // bind_expr
 bind_expr::bind_expr(expr iden, const token& t, const std::string& ion_name, const src_location& loc):
     identifier(std::move(iden)), loc(loc)
@@ -209,42 +110,6 @@ bind_expr::bind_expr(expr iden, const token& t, const std::string& ion_name, con
     }
 };
 
-std::string to_string(const bind_expr& e, int indent) {
-    auto single_indent = std::string(indent*2, ' ');
-    auto double_indent = single_indent + "  ";
-
-    std::string str = single_indent + "(bind_expr\n";
-    str += (double_indent + to_string(e.bind));
-    if (e.ion) {
-        str += ("[" + e.ion.value() + "]");
-    }
-    str += "\n";
-    std::visit([&](auto&& c){str += (to_string(c, indent+1) + "\n");}, *e.identifier);
-    return str + double_indent + to_string(e.loc) + ")";
-}
-
-// initial_expr
-std::string to_string(const initial_expr& e, int indent) {
-    auto single_indent = std::string(indent*2, ' ');
-    auto double_indent = single_indent + "  ";
-
-    std::string str = single_indent + "(initial_expr\n";
-    std::visit([&](auto&& c){str += (to_string(c, indent+1) + "\n");}, *e.identifier);
-    std::visit([&](auto&& c){str += (to_string(c, indent+1) + "\n");}, *e.value);
-    return str + double_indent + to_string(e.loc) + ")";
-}
-
-// evolve_expr
-std::string to_string(const evolve_expr& e, int indent) {
-    auto single_indent = std::string(indent*2, ' ');
-    auto double_indent = single_indent + "  ";
-
-    std::string str = single_indent + "(evolve_expr\n";
-    std::visit([&](auto&& c){str += (to_string(c, indent+1) + "\n");}, *e.identifier);
-    std::visit([&](auto&& c){str += (to_string(c, indent+1) + "\n");}, *e.value);
-    return str + double_indent + to_string(e.loc) + ")";
-}
-
 // effect_expr
 effect_expr::effect_expr(const token& t, const std::string& ion_name, std::optional<t_raw_ir::t_expr> type, expr value, const src_location& loc):
         value(std::move(value)), type(std::move(type)), loc(loc)
@@ -262,132 +127,6 @@ effect_expr::effect_expr(const token& t, const std::string& ion_name, std::optio
         throw std::runtime_error("Expected a valid effect: internal compiler error");
     }
 };
-std::string to_string(const effect_expr& e, int indent) {
-    auto single_indent = std::string(indent*2, ' ');
-    auto double_indent = single_indent + "  ";
-
-    std::string str = single_indent + "(effect_expr\n";
-    str += (double_indent + to_string(e.effect));
-    if (e.ion) {
-        str += ("[" + e.ion.value() + "]");
-    }
-    str += "\n";
-    if (e.type) {
-        std::visit([&](auto&& c){str += (to_string(c, indent+1) + "\n");}, *e.type.value());
-    }
-    std::visit([&](auto&& c){str += (to_string(c, indent+1) + "\n");}, *e.value);
-    return str + double_indent + to_string(e.loc) + ")";
-}
-
-// export_expr
-std::string to_string(const export_expr& e, int indent) {
-    auto single_indent = std::string(indent*2, ' ');
-    auto double_indent = single_indent + "  ";
-
-    std::string str = single_indent + "(export_expr\n";
-    std::visit([&](auto&& c){str += (to_string(c, indent+1) + "\n");}, *e.identifier);
-    return str + double_indent + to_string(e.loc) + ")";
-}
-
-// call_expr
-std::string to_string(const call_expr& e, int indent) {
-    auto single_indent = std::string(indent*2, ' ');
-    auto double_indent = single_indent + "  ";
-
-    std::string str = single_indent + "(call_expr\n";
-    str += (double_indent + e.function_name + "\n");
-    for (const auto& f: e.call_args) {
-        std::visit([&](auto&& c){str += (to_string(c, indent+1) + "\n");}, *f);
-    }
-    return str + double_indent + to_string(e.loc) + ")";
-}
-
-// object_expr
-std::string to_string(const object_expr& e, int indent) {
-    assert(e.record_fields.size() == e.record_values.size());
-
-    auto single_indent = std::string(indent*2, ' ');
-    auto double_indent = single_indent + "  ";
-
-    std::string str = single_indent + "(object_expr\n";
-    if (e.record_name) str += (double_indent + e.record_name.value() +  "\n");
-    for (unsigned i = 0; i < e.record_fields.size(); ++i) {
-        str += (double_indent + "(\n");
-        std::visit([&](auto&& c){str += (to_string(c, indent+2) + "\n");}, *(e.record_fields[i]));
-        std::visit([&](auto&& c){str += (to_string(c, indent+2) + "\n");}, *(e.record_values[i]));
-        str += (double_indent + ")\n");
-    }
-    return str + double_indent + to_string(e.loc) + ")";
-}
-
-// let_expr
-std::string to_string(const let_expr& e, int indent) {
-    auto single_indent = std::string(indent*2, ' ');
-    auto double_indent = single_indent + "  ";
-
-    std::string str = single_indent + "(let_expr\n";
-    std::visit([&](auto&& c){str += (to_string(c, indent+1) + "\n");}, *e.identifier);
-    std::visit([&](auto&& c){str += (to_string(c, indent+1) + "\n");}, *e.value);
-    std::visit([&](auto&& c){str += (to_string(c, indent+1) + "\n");}, *e.body);
-    return str + double_indent + to_string(e.loc) + ")";
-}
-
-// with_expr
-std::string to_string(const with_expr& e, int indent) {
-    auto single_indent = std::string(indent*2, ' ');
-    auto double_indent = single_indent + "  ";
-    std::string str = single_indent + "(with_expr\n";
-    std::visit([&](auto&& c){str += (to_string(c, indent+1) + "\n");}, *e.value);
-    std::visit([&](auto&& c){str += (to_string(c, indent+1) + "\n");}, *e.body);
-    return str + double_indent + to_string(e.loc) + ")";
-}
-
-// conditional_expr
-std::string to_string(const conditional_expr& e, int indent) {
-    auto single_indent = std::string(indent*2, ' ');
-    auto double_indent = single_indent + "  ";
-
-    std::string str = single_indent + "(conditional_expr\n";
-    std::visit([&](auto&& c){str += (to_string(c, indent+1) + "\n");}, *e.condition);
-    std::visit([&](auto&& c){str += (to_string(c, indent+1) + "\n");}, *e.value_true);
-    std::visit([&](auto&& c){str += (to_string(c, indent+1) + "\n");}, *e.value_false);
-    return str + double_indent + to_string(e.loc) + ")";
-}
-
-// identifier_expr
-std::string to_string(const identifier_expr& e, int indent) {
-    auto single_indent = std::string(indent*2, ' ');
-    auto double_indent = single_indent + "  ";
-
-    std::string str = single_indent + "(identifier_expr \n";
-    str += (double_indent + e.name + "\n");
-    if (e.type) {
-        std::visit([&](auto&& c) {str += (to_string(c, indent+1) + "\n");}, *(e.type.value()));
-    }
-    return str + double_indent + to_string(e.loc) + ")";
-}
-
-// float_expr
-std::string to_string(const float_expr& e, int indent) {
-    auto single_indent = std::string(indent*2, ' ');
-    auto double_indent = single_indent + "  ";
-
-    std::string str = single_indent + "(float_expr\n";
-    str += (double_indent + std::to_string(e.value) + "\n");
-    std::visit([&](auto&& c) {str += (to_string(c, indent+1) + "\n");}, *e.unit);
-    return str + double_indent + to_string(e.loc) + ")";
-}
-
-// int_expr
-std::string to_string(const int_expr& e, int indent) {
-    auto single_indent = std::string(indent*2, ' ');
-    auto double_indent = single_indent + "  ";
-
-    std::string str = single_indent + "(int_expr\n";
-    str += (double_indent + std::to_string(e.value) + "\n");
-    std::visit([&](auto&& c) {str += (to_string(c, indent+1) + "\n");}, *e.unit);
-    return str + double_indent + to_string(e.loc) + ")";
-}
 
 // unary_expr
 unary_expr::unary_expr(tok t, expr value, const src_location& loc):
@@ -401,15 +140,6 @@ unary_expr::unary_expr(tok t, expr value, const src_location& loc):
 
 bool unary_expr::is_boolean () const {
     return op == unary_op::lnot;
-}
-
-std::string to_string(const unary_expr& e, int indent) {
-    auto single_indent = std::string(indent*2, ' ');
-    auto double_indent = single_indent + "  ";
-
-    std::string str = single_indent + "(unary_expr " + to_string(e.op) + "\n";
-    std::visit([&](auto&& c){str += (to_string(c, indent+1) + "\n");}, *e.value);
-    return str + double_indent + to_string(e.loc) + ")";
 }
 
 // binary_expr
@@ -428,15 +158,303 @@ bool binary_expr::is_boolean () const {
            (op == binary_op::eq)   || (op == binary_op::ne);
 }
 
+// to_string
+
+std::string to_string(const mechanism_expr& e, int indent) {
+    auto indent_str = std::string(indent*2, ' ');
+    std::string str = indent_str + "(module_expr " + e.name + " " + to_string(e.kind) + "\n";
+    for (const auto& p: e.parameters) {
+        str += to_string(p, indent+1) + "\n";
+    }
+    for (const auto& p: e.constants) {
+        str += to_string(p, indent+1) + "\n";
+    }
+    for (const auto& p: e.states) {
+        str += to_string(p, indent+1) + "\n";
+    }
+    for (const auto& p: e.bindings) {
+        str += to_string(p, indent+1) + "\n";
+    }
+    for (const auto& p: e.functions) {
+        str += to_string(p, indent+1) + "\n";
+    }
+    for (const auto& p: e.records) {
+        str += to_string(p, indent+1) + "\n";
+    }
+    for (const auto& p: e.initializations) {
+        str += to_string(p, indent+1) + "\n";
+    }
+    for (const auto& p: e.evolutions) {
+        str += to_string(p, indent+1) + "\n";
+    }
+    for (const auto& p: e.effects) {
+        str += to_string(p, indent+1) + "\n";
+    }
+    for (const auto& p: e.exports) {
+        str += to_string(p, indent+1) + "\n";
+    }
+    str += to_string(e.loc) + ")";
+    return str;
+}
+
+// parameter_expr
+std::string to_string(const parameter_expr& e, int indent) {
+    auto single_indent = std::string(indent*2, ' ');
+    auto double_indent = single_indent + "  ";
+
+    std::string str = single_indent + "(parameter_expr\n";
+    str += to_string(e.identifier, indent+1) + "\n";
+    str += to_string(e.value, indent+1) + "\n";
+    str += double_indent + to_string(e.loc) + ")";
+    return str;
+}
+
+// constant_expr
+std::string to_string(const constant_expr& e, int indent) {
+    auto single_indent = std::string(indent*2, ' ');
+    auto double_indent = single_indent + "  ";
+
+    std::string str = single_indent + "(constant_expr\n";
+    str += to_string(e.identifier, indent+1) + "\n";
+    str += to_string(e.value, indent+1) + "\n";
+    str += double_indent + to_string(e.loc) + ")";
+    return str;
+}
+
+// state_expr
+std::string to_string(const state_expr& e, int indent) {
+    auto single_indent = std::string(indent*2, ' ');
+    auto double_indent = single_indent + "  ";
+
+    std::string str = single_indent + "(state_expr\n";
+    str += to_string(e.identifier, indent+1) + "\n";
+    str += double_indent + to_string(e.loc) + ")";
+    return str;
+}
+
+// record_alias_expr
+std::string to_string(const record_alias_expr& e, int indent) {
+    auto single_indent = std::string(indent*2, ' ');
+    auto double_indent = single_indent + "  ";
+
+    std::string str = single_indent + "(record_alias_expr\n";
+    str += double_indent + e.name + "\n";
+    str += to_string(e.type, indent+1) + "\n";
+    str += double_indent + to_string(e.loc) + ")";
+    return str;
+}
+
+// function_expr
+std::string to_string(const function_expr& e, int indent) {
+    auto single_indent = std::string(indent*2, ' ');
+    auto double_indent = single_indent + "  ";
+
+    std::string str = single_indent + "(function_expr\n";
+    str += (double_indent + e.name +  "\n");
+    if (e.ret) {
+        str += to_string(e.ret.value(), indent+1) + "\n";
+    }
+
+    str += double_indent + "(\n";
+    for (const auto& f: e.args) {
+        str += to_string(f, indent+2) + "\n";
+    }
+    str += double_indent + ")\n";
+    str += to_string(e.body, indent+1) + "\n";
+    str += double_indent + to_string(e.loc) + ")";
+    return str;
+}
+
+std::string to_string(const bind_expr& e, int indent) {
+    auto single_indent = std::string(indent*2, ' ');
+    auto double_indent = single_indent + "  ";
+
+    std::string str = single_indent + "(bind_expr\n";
+    str += (double_indent + to_string(e.bind));
+    if (e.ion) {
+        str += ("[" + e.ion.value() + "]");
+    }
+    str += "\n";
+    str += to_string(e.identifier, indent+1) + "\n";
+    str += double_indent + to_string(e.loc) + ")";
+    return str;
+}
+
+std::string to_string(const initial_expr& e, int indent) {
+    auto single_indent = std::string(indent*2, ' ');
+    auto double_indent = single_indent + "  ";
+
+    std::string str = single_indent + "(initial_expr\n";
+    str += to_string(e.identifier, indent+1) + "\n";
+    str += to_string(e.value, indent+1) + "\n";
+    str += double_indent + to_string(e.loc) + ")";
+    return str;
+}
+
+std::string to_string(const evolve_expr& e, int indent) {
+    auto single_indent = std::string(indent*2, ' ');
+    auto double_indent = single_indent + "  ";
+
+    std::string str = single_indent + "(evolve_expr\n";
+    str += to_string(e.identifier, indent+1) + "\n";
+    str += to_string(e.value, indent+1) + "\n";
+    str += double_indent + to_string(e.loc) + ")";
+    return str;
+}
+
+std::string to_string(const effect_expr& e, int indent) {
+    auto single_indent = std::string(indent*2, ' ');
+    auto double_indent = single_indent + "  ";
+
+    std::string str = single_indent + "(effect_expr\n";
+    str += (double_indent + to_string(e.effect));
+    if (e.ion) {
+        str += ("[" + e.ion.value() + "]");
+    }
+    str += "\n";
+    if (e.type) {
+        str += to_string(e.type.value(), indent+1) + "\n";
+    }
+    str += to_string(e.value, indent+1) + "\n";
+    str += double_indent + to_string(e.loc) + ")";
+    return str;
+}
+
+std::string to_string(const export_expr& e, int indent) {
+    auto single_indent = std::string(indent*2, ' ');
+    auto double_indent = single_indent + "  ";
+
+    std::string str = single_indent + "(export_expr\n";
+    str += to_string(e.identifier, indent+1) + "\n";
+    str += double_indent + to_string(e.loc) + ")";
+    return str;
+}
+
+std::string to_string(const call_expr& e, int indent) {
+    auto single_indent = std::string(indent*2, ' ');
+    auto double_indent = single_indent + "  ";
+
+    std::string str = single_indent + "(call_expr\n";
+    str += double_indent + e.function_name + "\n";
+    for (const auto& f: e.call_args) {
+        str += to_string(f, indent+1) + "\n";
+    }
+    str += double_indent + to_string(e.loc) + ")";
+    return str;
+}
+
+std::string to_string(const object_expr& e, int indent) {
+    assert(e.record_fields.size() == e.record_values.size());
+
+    auto single_indent = std::string(indent*2, ' ');
+    auto double_indent = single_indent + "  ";
+
+    std::string str = single_indent + "(object_expr\n";
+    if (e.record_name) str += (double_indent + e.record_name.value() +  "\n");
+    for (unsigned i = 0; i < e.record_fields.size(); ++i) {
+        str += double_indent + "(\n";
+        str += to_string(e.record_fields[i], indent+2) + "\n";
+        str += to_string(e.record_values[i], indent+2) + "\n";
+        str += double_indent + ")\n";
+    }
+    str += double_indent + to_string(e.loc) + ")";
+    return str;
+}
+
+std::string to_string(const let_expr& e, int indent) {
+    auto single_indent = std::string(indent*2, ' ');
+    auto double_indent = single_indent + "  ";
+
+    std::string str = single_indent + "(let_expr\n";
+    str += to_string(e.identifier, indent+1) + "\n";
+    str += to_string(e.value, indent+1) + "\n";
+    str += to_string(e.body, indent+1) + "\n";
+    str += double_indent + to_string(e.loc) + ")";
+    return str;
+}
+
+std::string to_string(const with_expr& e, int indent) {
+    auto single_indent = std::string(indent*2, ' ');
+    auto double_indent = single_indent + "  ";
+    std::string str = single_indent + "(with_expr\n";
+    str += to_string(e.value, indent+1) + "\n";
+    str += to_string(e.body, indent+1) + "\n";
+    str += double_indent + to_string(e.loc) + ")";
+    return str;
+}
+
+std::string to_string(const conditional_expr& e, int indent) {
+    auto single_indent = std::string(indent*2, ' ');
+    auto double_indent = single_indent + "  ";
+
+    std::string str = single_indent + "(conditional_expr\n";
+    str += to_string(e.condition, indent+1) + "\n";
+    str += to_string(e.value_true, indent+1) + "\n";
+    str += to_string(e.value_false, indent+1) + "\n";
+    str += double_indent + to_string(e.loc) + ")";
+    return str;
+}
+
+std::string to_string(const identifier_expr& e, int indent) {
+    auto single_indent = std::string(indent*2, ' ');
+    auto double_indent = single_indent + "  ";
+
+    std::string str = single_indent + "(identifier_expr \n";
+    str += (double_indent + e.name + "\n");
+    if (e.type) {
+        str += to_string(e.type.value(), indent+1) + "\n";
+    }
+    str += double_indent + to_string(e.loc) + ")";
+    return str;
+}
+
+std::string to_string(const float_expr& e, int indent) {
+    auto single_indent = std::string(indent*2, ' ');
+    auto double_indent = single_indent + "  ";
+
+    std::string str = single_indent + "(float_expr\n";
+    str += double_indent + std::to_string(e.value) + "\n";
+    str += to_string(e.unit, indent+1) + "\n";
+    str += double_indent + to_string(e.loc) + ")";
+    return str;
+}
+
+std::string to_string(const int_expr& e, int indent) {
+    auto single_indent = std::string(indent*2, ' ');
+    auto double_indent = single_indent + "  ";
+
+    std::string str = single_indent + "(int_expr\n";
+    str += double_indent + std::to_string(e.value) + "\n";
+    str += to_string(e.unit, indent+1) + "\n";
+    str += double_indent + to_string(e.loc) + ")";
+    return str;
+}
+
+std::string to_string(const unary_expr& e, int indent) {
+    auto single_indent = std::string(indent*2, ' ');
+    auto double_indent = single_indent + "  ";
+
+    std::string str = single_indent + "(unary_expr " + to_string(e.op) + "\n";
+    str += to_string(e.value, indent+1) + "\n";
+    str += double_indent + to_string(e.loc) + ")";
+    return str;
+}
+
 std::string to_string(const binary_expr& e, int indent) {
     auto single_indent = std::string(indent*2, ' ');
     auto double_indent = single_indent + "  ";
 
     std::string str = single_indent + "(binary_expr " + to_string(e.op) + "\n";
-    std::visit([&](auto&& c){str += (to_string(c, indent+1) + "\n");}, *e.lhs);
-    std::visit([&](auto&& c){str += (to_string(c, indent+1) + "\n");}, *e.rhs);
-    return str + double_indent + to_string(e.loc) + ")";
+    str += to_string(e.lhs, indent+1) + "\n";
+    str += to_string(e.rhs, indent+1) + "\n";
+    str += double_indent + to_string(e.loc) + ")";
+    return str;
 }
+
+std::string to_string(const expr& e, int indent) {
+    return std::visit([&](auto&& c){return to_string(c, indent);}, *e);
+}
+
 
 } // namespace al
 } // namespace raw_ir

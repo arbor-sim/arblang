@@ -3,7 +3,6 @@
 #include <string>
 #include <iostream>
 
-#define FMT_HEADER_ONLY YES
 #include <fmt/core.h>
 #include <fmt/format.h>
 #include <fmt/compile.h>
@@ -907,7 +906,7 @@ t_expr parser::parse_type() {
         return parse_record_type();
     }
     auto type = parse_quantity_type();
-    if (!verify_type(type)) {
+    if (std::get_if<integer_type>(type.get())) {
         throw std::runtime_error("Invalid type.");
     }
     return std::move(type);
@@ -1013,7 +1012,8 @@ u_expr parser::try_parse_unit(int prec) {
         throw std::runtime_error(fmt::format("Expected ']', got {} at {}", t.spelling, to_string(t.loc)));
     }
     next();
-    if (!verify_unit(u)) {
+
+    if (std::get_if<integer_unit>(u.get())) {
         throw std::runtime_error("Invalid unit.");
     }
     return std::move(u);

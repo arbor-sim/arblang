@@ -8,6 +8,10 @@
 #include <arblang/token.hpp>
 #include <arblang/type_expressions.hpp>
 
+#include <fmt/core.h>
+#include <fmt/format.h>
+#include <fmt/compile.h>
+
 namespace al {
 namespace t_raw_ir {
 std::optional<quantity> gen_quantity(tok t) {
@@ -49,6 +53,59 @@ std::optional<t_binary_op> gen_binary_op(tok t) {
     }
 }
 
+//quantity_type;
+quantity_type::quantity_type(tok t, src_location loc): loc(loc) {
+    if (auto q = gen_quantity(t)) {
+        type = q.value();
+    } else {
+        throw std::runtime_error("Unexpected unary operator token");
+    };
+};
+
+//quantity_binary_type;
+quantity_binary_type::quantity_binary_type(t_binary_op op, t_expr l, t_expr r, const src_location& location):
+    op(op), lhs(std::move(l)), rhs(std::move(r)), loc(location)
+{
+    if (!verify()) {
+        throw std::runtime_error(fmt::format("Invalid quantity expression at {}", to_string(location)));
+    }
+}
+
+quantity_binary_type::quantity_binary_type(tok t, t_expr l, t_expr r, const src_location& location):
+    lhs(std::move(l)), rhs(std::move(r)), loc(location)
+{
+    if (auto t_op = gen_binary_op(t)) {
+        op = t_op.value();
+    } else {
+        throw std::runtime_error(fmt::format("Invalid quantity expression operator at {}", to_string(location)));
+    }
+    if (!verify()) {
+        throw std::runtime_error(fmt::format("Invalid quantity expression at {}", to_string(location)));
+    }
+}
+
+bool quantity_binary_type::verify() const {
+    auto is_int  = [](const t_expr& t) {return std::get_if<integer_type>(t.get());};
+    auto is_pow = (op == t_binary_op::pow);
+
+    if (is_int(lhs)) return false;
+    if ((is_pow && !is_int(rhs)) || (!is_pow && is_int(rhs))) return false;
+
+    auto is_allowed = [](const t_expr& t) {
+        return std::visit(al::util::overloaded {
+                [&](const boolean_type& t)         {return false;},
+                [&](const record_type& t)          {return false;},
+                [&](const record_alias_type& t)    {return false;},
+                [&](const quantity_type& t)        {return true;},
+                [&](const integer_type& t)         {return true;},
+                [&](const quantity_binary_type& t) {return true;}
+        }, *t);
+    };
+    if (!is_allowed(lhs) || !is_allowed(rhs)) return false;
+    return true;
+}
+
+// to_string
 std::string to_string(const t_binary_op& op) {
     switch(op) {
         case t_binary_op::mul: return "*";
@@ -56,38 +113,35 @@ std::string to_string(const t_binary_op& op) {
         case t_binary_op::pow: return "^";
         default: return {};
     }
-
 }
 
-std::string to_string(const quantity& q, int indent) {
-    auto single_indent = std::string(indent*2, ' ');
+std::string to_string(quantity q) {
     switch(q) {
-        case quantity::real:          return single_indent + "real";
-        case quantity::length:        return single_indent + "length";
-        case quantity::mass:          return single_indent + "mass";
-        case quantity::time:          return single_indent + "time";
-        case quantity::current:       return single_indent + "current";
-        case quantity::amount:        return single_indent + "amount";
-        case quantity::temperature:   return single_indent + "temperature";
-        case quantity::charge:        return single_indent + "charge";
-        case quantity::frequency:     return single_indent + "frequency";
-        case quantity::voltage:       return single_indent + "voltage";
-        case quantity::resistance:    return single_indent + "resistance";
-        case quantity::conductance:   return single_indent + "conductance";
-        case quantity::capacitance:   return single_indent + "capacitance";
-        case quantity::inductance:    return single_indent + "inductance";
-        case quantity::force:         return single_indent + "force";
-        case quantity::pressure:      return single_indent + "pressure";
-        case quantity::energy:        return single_indent + "energy";
-        case quantity::power:         return single_indent + "power";
-        case quantity::area:          return single_indent + "area";
-        case quantity::volume:        return single_indent + "volume";
-        case quantity::concentration: return single_indent + "concentration";
-        default: return single_indent;
+        case quantity::real:          return "real";
+        case quantity::length:        return "length";
+        case quantity::mass:          return "mass";
+        case quantity::time:          return "time";
+        case quantity::current:       return "current";
+        case quantity::amount:        return "amount";
+        case quantity::temperature:   return "temperature";
+        case quantity::charge:        return "charge";
+        case quantity::frequency:     return "frequency";
+        case quantity::voltage:       return "voltage";
+        case quantity::resistance:    return "resistance";
+        case quantity::conductance:   return "conductance";
+        case quantity::capacitance:   return "capacitance";
+        case quantity::inductance:    return "inductance";
+        case quantity::force:         return "force";
+        case quantity::pressure:      return "pressure";
+        case quantity::energy:        return "energy";
+        case quantity::power:         return "power";
+        case quantity::area:          return "area";
+        case quantity::volume:        return "volume";
+        case quantity::concentration: return "concentration";
+        default: return {};
     }
 }
 
-//integer_type;
 std::string to_string(const integer_type& q, int indent) {
     auto single_indent = std::string(indent*2, ' ');
     auto double_indent = single_indent + "  ";
@@ -97,109 +151,57 @@ std::string to_string(const integer_type& q, int indent) {
     return str + double_indent + to_string(q.loc) + ")";
 }
 
-//quantity_type;
-quantity_type::quantity_type(tok t, src_location loc): loc(loc) {
-    if (auto q = gen_quantity(t)) {
-        type = q.value();
-    } else {
-        throw std::runtime_error("Unexpected unary operator token");
-    };
-};
 std::string to_string(const quantity_type& q, int indent) {
     auto single_indent = std::string(indent*2, ' ');
     auto double_indent = single_indent + "  ";
 
     std::string str = single_indent + "(quantity_type\n";
-    str += (double_indent + to_string(q.type) + "\n");
-    return str + double_indent + to_string(q.loc) + ")";
+    str += double_indent + to_string(q.type) + "\n";
+    str += double_indent + to_string(q.loc) + ")";
+    return str;
 }
 
-//quantity_binary_type;
-quantity_binary_type::quantity_binary_type(tok t, t_expr l, t_expr r, const src_location& location):
-    lhs(std::move(l)), rhs(std::move(r)), loc(location) {
-    auto verify = [](const auto&& t) {return std::get_if<integer_type>(t) || std::get_if<quantity_type>(t) ||std::get_if<quantity_binary_type>(t);};
-    if(!verify(lhs.get()) || !verify(rhs.get())) {
-        throw std::runtime_error("Invalid quantity expression");
-    }
-    if (auto bop = gen_binary_op(t)) {
-        op = bop.value();
-        if (op != t_binary_op::pow) {
-            if (std::get_if<integer_type>(lhs.get()) || std::get_if<integer_type>(rhs.get())) {
-                throw std::runtime_error("Invalid quantity expression");
-            }
-        } else {
-            if (std::get_if<integer_type>(lhs.get()) || !std::get_if<integer_type>(rhs.get())) {
-                throw std::runtime_error("Invalid quantity expression");
-            }
-        };
-    } else {
-        throw std::runtime_error("Unexpected binary operator token");
-    };
-}
 std::string to_string(const quantity_binary_type& q, int indent) {
     auto single_indent = std::string(indent*2, ' ');
     auto double_indent = single_indent + "  ";
 
     std::string str = single_indent + "(quantity_binary_type " + to_string(q.op) + "\n";
-    std::visit([&](auto&& c){str += (to_string(c, indent+1) + "\n");}, *q.lhs);
-    std::visit([&](auto&& c){str += (to_string(c, indent+1) + "\n");}, *q.rhs);
-    return str + double_indent + to_string(q.loc) + ")";
+    str += to_string(q.lhs, indent+1) + "\n";
+    str += to_string(q.rhs, indent+1) + "\n";
+    str += double_indent + to_string(q.loc) + ")";
+    return str;
 }
 
-//boolean_type;
 std::string to_string(const boolean_type& q, int indent) {
     auto single_indent = std::string(indent*2, ' ');
     return single_indent + "(boolean_type " + to_string(q.loc) + ")";
 }
 
-//record_type;
 std::string to_string(const record_type& q, int indent) {
     auto single_indent = std::string(indent*2, ' ');
     auto double_indent = single_indent + "  ";
 
     std::string str = single_indent +  "(record_type\n";
     for (const auto& f: q.fields) {
-        std::visit([&](auto&& c) {str += (to_string(c, indent+1) + "\n");}, *(f.second));
+        str += to_string(f.second, indent+1) + "\n";
     }
-    return str + double_indent + to_string(q.loc) + ")";
+    str += double_indent + to_string(q.loc) + ")";
+    return str;
 }
 
-//record_alias;
 std::string to_string(const record_alias_type& q, int indent) {
     auto single_indent = std::string(indent*2, ' ');
     auto double_indent = single_indent + "  ";
 
     std::string str = single_indent + "(record_alias_type\n";
     str += (double_indent + q.name + "\n");
-    return str + double_indent + to_string(q.loc) + ")";
+    str += double_indent + to_string(q.loc) + ")";
+    return str;
 }
 
-bool verify_sub_types(const t_expr& u) {
-    auto is_int  = [](const t_expr& t) {return std::get_if<integer_type>(t.get());};
-    return std::visit(al::util::overloaded {
-            [&](const boolean_type& t)      {return false;},
-            [&](const record_type& t)       {return false;},
-            [&](const record_alias_type& t) {return false;},
-            [&](const quantity_type& t)     {return true;},
-            [&](const integer_type& t)      {return true;},
-            [&](const quantity_binary_type& t) {
-                if (is_int(t.lhs)) return false;
-                if ((t.op == t_binary_op::pow) && !is_int(t.rhs)) return false;
-                if ((t.op != t_binary_op::pow) && is_int(t.rhs))  return false;
-                return verify_sub_types(t.lhs) && verify_sub_types(t.rhs);
-            },
-    }, *u);
+std::string to_string(const t_expr& t, int indent) {
+    return std::visit([&](auto&& c) {return to_string(c, indent);}, *t);
 }
 
-bool verify_type(const t_expr& u) {
-    return std::visit(al::util::overloaded {
-        [&](const boolean_type& t)      {return true;},
-        [&](const record_type& t)       {return true;},
-        [&](const record_alias_type& t) {return true;},
-        [&](const quantity_type& t)     {return true;},
-        [&](const integer_type& t)      {return false;},
-        [&](const quantity_binary_type& t) {return verify_sub_types(u);}
-    }, *u);
-}
 } // namespace t_raw_ir
 } // namespace al

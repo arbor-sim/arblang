@@ -320,8 +320,8 @@ r_expr resolve(const with_expr& expr, const in_scope_map& map) {
         }
     }
     else {
-        auto v_string = std::visit([](auto&& c){return to_string(c);}, *expr.value);
-        throw std::runtime_error(fmt::format("with value {} referenced at {} is not a record type.", v_string, to_string(expr.loc)));
+        throw std::runtime_error(fmt::format("with value {} referenced at {} is not a record type.",
+                                             to_string(expr.value), to_string(expr.loc)));
     }
 
     auto b_expr = std::visit([&](auto&& c){return resolve(c, available_map);}, *expr.body);
@@ -349,7 +349,7 @@ r_expr resolve(const conditional_expr& expr, const in_scope_map& map) {
 r_expr resolve(const float_expr& expr, const in_scope_map& map) {
     using namespace u_raw_ir;
     auto f_val = expr.value;
-    auto f_type = std::visit([&](auto&& c){return to_type(c);}, *expr.unit);
+    auto f_type = to_type(expr.unit);
     auto r_type = std::visit([&](auto&& c){return resolve_type_of(c, map.type_map);}, *f_type);
     return make_rexpr<resolved_float>(f_val, r_type, expr.loc);
 }
@@ -357,7 +357,7 @@ r_expr resolve(const float_expr& expr, const in_scope_map& map) {
 r_expr resolve(const int_expr& expr, const in_scope_map& map) {
     using namespace u_raw_ir;
     auto i_val = expr.value;
-    auto i_type = std::visit([&](auto&& c){return to_type(c);}, *expr.unit);
+    auto i_type = to_type(expr.unit);
     auto r_type = std::visit([&](auto&& c){return resolve_type_of(c, map.type_map);}, *i_type);
     return make_rexpr<resolved_int>(i_val, r_type, expr.loc);
 }

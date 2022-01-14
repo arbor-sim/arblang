@@ -19,7 +19,7 @@ TEST(normalizer, unit) {
     {
         std::string unit = "[mV]";
         auto p = parser(unit);
-        auto normalized = std::visit([](auto&& c){return normalize_unit(c);}, *p.try_parse_unit());
+        auto normalized = normalize_unit(p.try_parse_unit());
         auto u = std::get<simple_unit>(*normalized.first);
         auto factor = normalized.second;
 
@@ -30,7 +30,7 @@ TEST(normalizer, unit) {
     {
         std::string unit = "[mmol/kA]";
         auto p = parser(unit);
-        auto normalized = std::visit([](auto&& c){return normalize_unit(c);}, *p.try_parse_unit());
+        auto normalized = normalize_unit(p.try_parse_unit());
         auto u = std::get<binary_unit>(*normalized.first);
         auto factor = normalized.second;
         EXPECT_EQ(factor, -6);
@@ -49,7 +49,7 @@ TEST(normalizer, unit) {
     {
         std::string unit = "[K^-2]";
         auto p = parser(unit);
-        auto normalized = std::visit([](auto&& c){return normalize_unit(c);}, *p.try_parse_unit());
+        auto normalized = normalize_unit(p.try_parse_unit());
         auto u = std::get<binary_unit>(*normalized.first);
         auto factor = normalized.second;
         EXPECT_EQ(factor, 0);
@@ -67,7 +67,7 @@ TEST(normalizer, unit) {
     {
         std::string unit = "[Ohm*uV/YS]";
         auto p = parser(unit);
-        auto normalized = std::visit([](auto&& c){return normalize_unit(c);}, *p.try_parse_unit());
+        auto normalized = normalize_unit(p.try_parse_unit());
         auto u = std::get<binary_unit>(*normalized.first);
         auto factor = normalized.second;
         EXPECT_EQ(factor, -30);
@@ -92,7 +92,7 @@ TEST(normalizer, unit) {
     {
         std::string unit = "[kOhm^2/daC/mK^-3]";
         auto p = parser(unit);
-        auto normalized = std::visit([](auto&& c){return normalize_unit(c);}, *p.try_parse_unit());
+        auto normalized = normalize_unit(p.try_parse_unit());
         auto u = std::get<binary_unit>(*normalized.first);
         auto factor = normalized.second;
         EXPECT_EQ(factor, -4);
@@ -129,7 +129,7 @@ TEST(normalizer, unit) {
     {
         std::string unit = "[Ohm^2/daC*mK^-1]";
         auto p = parser(unit);
-        auto normalized = std::visit([](auto&& c){return normalize_unit(c);}, *p.try_parse_unit());
+        auto normalized = normalize_unit(p.try_parse_unit());
         auto u = std::get<binary_unit>(*normalized.first);
         auto factor = normalized.second;
         EXPECT_EQ(factor, 2);

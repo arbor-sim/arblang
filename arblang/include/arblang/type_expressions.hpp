@@ -88,9 +88,11 @@ struct quantity_binary_type {
     t_expr rhs;
     src_location loc;
 
-    quantity_binary_type(t_binary_op op, t_expr lhs, t_expr rhs, const src_location& loc):
-        op(op), lhs(std::move(lhs)), rhs(std::move(rhs)), loc(loc) {};
+    quantity_binary_type(t_binary_op op, t_expr lhs, t_expr rhs, const src_location& loc);
     quantity_binary_type(tok t, t_expr lhs, t_expr rhs, const src_location& loc);
+
+private:
+    bool verify() const;
 };
 
 struct boolean_type {
@@ -113,16 +115,9 @@ struct record_alias_type {
     record_alias_type(std::string name, src_location loc): name(std::move(name)), loc(loc) {};
 };
 
-std::string to_string(const t_binary_op&);
-std::string to_string(const quantity&, int indent=0);
-std::string to_string(const integer_type&, int indent=0);
-std::string to_string(const quantity_type&, int indent=0);
-std::string to_string(const quantity_binary_type&, int indent=0);
-std::string to_string(const boolean_type&, int indent=0);
-std::string to_string(const record_type&, int indent=0);
-std::string to_string(const record_alias_type&, int indent=0);
-
-bool verify_type(const t_expr& u);
+// Generate string representation of type expression
+std::string to_string(quantity);
+std::string to_string(const t_expr&, int indent = 0);
 
 template <typename T, typename... Args>
 t_expr make_t_expr(Args&&... args) {

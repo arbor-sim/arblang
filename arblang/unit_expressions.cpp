@@ -6,144 +6,90 @@
 
 #include <arblang/unit_expressions.hpp>
 
+#include <fmt/core.h>
+#include <fmt/format.h>
+#include <fmt/compile.h>
+
 namespace al {
 namespace u_raw_ir {
 
-std::unordered_map<std::string, unit_sym> string_to_sym = {
-        {"m",   unit_sym::m},
-        {"g",   unit_sym::g},
-        {"s",   unit_sym::s},
-        {"A",   unit_sym::A},
-        {"K",   unit_sym::K},
-        {"mol", unit_sym::mol},
-        {"Hz",  unit_sym::Hz},
-        {"L",   unit_sym::L},
-        {"l",   unit_sym::l},
-        {"N",   unit_sym::N},
-        {"Pa",  unit_sym::Pa},
-        {"W",   unit_sym::W},
-        {"J",   unit_sym::J},
-        {"C",   unit_sym::C},
-        {"V",   unit_sym::V},
-        {"F",   unit_sym::F},
-        {"H",   unit_sym::H},
-        {"Ohm", unit_sym::Ohm},
-        {"S",   unit_sym::S},
-        {"M",   unit_sym::M},
+std::optional<unit_sym> to_unit_symbol(const std::string& s) {
+    if (s == "m")   return unit_sym::m;
+    if (s == "g")   return unit_sym::g;
+    if (s == "s")   return unit_sym::s;
+    if (s == "A")   return unit_sym::A;
+    if (s == "K")   return unit_sym::K;
+    if (s == "mol") return unit_sym::mol;
+    if (s == "Hz")  return unit_sym::Hz;
+    if (s == "L")   return unit_sym::L;
+    if (s == "l")   return unit_sym::l;
+    if (s == "N")   return unit_sym::N;
+    if (s == "Pa")  return unit_sym::Pa;
+    if (s == "W")   return unit_sym::W;
+    if (s == "J")   return unit_sym::J;
+    if (s == "C")   return unit_sym::C;
+    if (s == "V")   return unit_sym::V;
+    if (s == "F")   return unit_sym::F;
+    if (s == "H")   return unit_sym::H;
+    if (s == "Ohm") return unit_sym::Ohm;
+    if (s == "S")   return unit_sym::S;
+    if (s == "M")   return unit_sym::M;
+    return {};
 };
 
-std::unordered_map<std::string, unit_pref> string_to_pref = {
-        {"Y",  unit_pref::Y},
-        {"Z",  unit_pref::Z},
-        {"E",  unit_pref::E},
-        {"P",  unit_pref::P},
-        {"T",  unit_pref::T},
-        {"G",  unit_pref::G},
-        {"M",  unit_pref::M},
-        {"k",  unit_pref::k},
-        {"h",  unit_pref::h},
-        {"da", unit_pref::da},
-        {"d",  unit_pref::d},
-        {"c",  unit_pref::c},
-        {"m",  unit_pref::m},
-        {"u",  unit_pref::u},
-        {"n",  unit_pref::n},
-        {"p",  unit_pref::p},
-        {"f",  unit_pref::f},
-        {"a",  unit_pref::a},
-        {"z",  unit_pref::z},
-        {"y",  unit_pref::y},
+std::optional<unit_pref> to_unit_prefix(const std::string& s) {
+    if (s == "Y")  return unit_pref::Y;
+    if (s == "Z")  return unit_pref::Z;
+    if (s == "E")  return unit_pref::E;
+    if (s == "P")  return unit_pref::P;
+    if (s == "T")  return unit_pref::T;
+    if (s == "G")  return unit_pref::G;
+    if (s == "M")  return unit_pref::M;
+    if (s == "k")  return unit_pref::k;
+    if (s == "h")  return unit_pref::h;
+    if (s == "da") return unit_pref::da;
+    if (s == "d")  return unit_pref::d;
+    if (s == "c")  return unit_pref::c;
+    if (s == "m")  return unit_pref::m;
+    if (s == "u")  return unit_pref::u;
+    if (s == "n")  return unit_pref::n;
+    if (s == "p")  return unit_pref::p;
+    if (s == "f")  return unit_pref::f;
+    if (s == "a")  return unit_pref::a;
+    if (s == "z")  return unit_pref::z;
+    if (s == "y")  return unit_pref::y;
+    return {};
 };
 
-std::unordered_map<unit_sym, std::string> sym_to_string = {
-        {unit_sym::m, "m"},
-        {unit_sym::g, "g"},
-        {unit_sym::s, "s"},
-        {unit_sym::A, "A"},
-        {unit_sym::K, "K"},
-        {unit_sym::mol, "mol"},
-        {unit_sym::Hz, "Hz"},
-        {unit_sym::L, "L"},
-        {unit_sym::l, "l"},
-        {unit_sym::N, "N"},
-        {unit_sym::Pa, "Pa"},
-        {unit_sym::W, "W"},
-        {unit_sym::J, "J"},
-        {unit_sym::C, "C"},
-        {unit_sym::V, "V"},
-        {unit_sym::F, "F"},
-        {unit_sym::H, "H"},
-        {unit_sym::Ohm, "Ohm"},
-        {unit_sym::S, "S"},
-        {unit_sym::M, "M"},
-};
-
-std::unordered_map<unit_pref, std::string> pref_to_string = {
-        {unit_pref::Y, "Y"},
-        {unit_pref::Z, "Z"},
-        {unit_pref::E, "E"},
-        {unit_pref::P, "P"},
-        {unit_pref::T, "T"},
-        {unit_pref::G, "G"},
-        {unit_pref::M, "M"},
-        {unit_pref::k, "k"},
-        {unit_pref::h, "h"},
-        {unit_pref::da, "da"},
-        {unit_pref::d, "d"},
-        {unit_pref::c, "c"},
-        {unit_pref::m, "m"},
-        {unit_pref::u, "u"},
-        {unit_pref::n, "n"},
-        {unit_pref::p, "p"},
-        {unit_pref::f, "f"},
-        {unit_pref::a, "a"},
-        {unit_pref::z, "z"},
-        {unit_pref::y, "y"},
-};
-
-std::unordered_map<unit_pref, int> pref_to_factor = {
-        {unit_pref::Y,  24},
-        {unit_pref::Z,  21},
-        {unit_pref::E,  18},
-        {unit_pref::P,  15},
-        {unit_pref::T,  12},
-        {unit_pref::G,  9},
-        {unit_pref::M,  6},
-        {unit_pref::k,  3},
-        {unit_pref::h,  2},
-        {unit_pref::da, 1},
-        {unit_pref::d,  -1},
-        {unit_pref::c,  -2},
-        {unit_pref::m,  -3},
-        {unit_pref::u,  -6},
-        {unit_pref::n,  -9},
-        {unit_pref::p,  -12},
-        {unit_pref::f,  -15},
-        {unit_pref::a,  -18},
-        {unit_pref::z,  -21},
-        {unit_pref::y,  -24},
-        {unit_pref::none, 0},
-};
-
-std::optional<unit> check_simple_unit(const std::string& s) {
-    // If the string is a unit symbol, return with no prefix.
-    if (string_to_sym.count(s)) return unit{unit_pref::none, string_to_sym.at(s)};
-
-    // Otherwise, must contain a prefix or is not a unit.
-    auto it = s.begin();
-    std::string pref_str;
-
-    while (*it) {
-        pref_str += *it++;
-        if (string_to_pref.count(pref_str)) {
-            auto unit_str = std::string(it, s.end());
-            if (string_to_sym.count(unit_str)) return unit{string_to_pref.at(pref_str), string_to_sym.at(unit_str)};
-        }
+std::optional<int> to_prefix_factor(unit_pref p) {
+    switch (p) {
+        case unit_pref::Y:  return 24;
+        case unit_pref::Z:  return 21;
+        case unit_pref::E:  return 18;
+        case unit_pref::P:  return 15;
+        case unit_pref::T:  return 12;
+        case unit_pref::G:  return 9;
+        case unit_pref::M:  return 6;
+        case unit_pref::k:  return 3;
+        case unit_pref::h:  return 2;
+        case unit_pref::da: return 1;
+        case unit_pref::d:  return -1;
+        case unit_pref::c:  return -2;
+        case unit_pref::m:  return -3;
+        case unit_pref::u:  return -6;
+        case unit_pref::n:  return -9;
+        case unit_pref::p:  return -12;
+        case unit_pref::f:  return -15;
+        case unit_pref::a:  return -18;
+        case unit_pref::z:  return -21;
+        case unit_pref::y:  return -24;
+        case unit_pref::none: return 0;
+        default: return {};
     }
     return {};
-}
+};
 
-std::optional<u_binary_op> gen_binary_op(tok t) {
+std::optional<u_binary_op> to_binary_op(tok t) {
     switch (t) {
         case tok::times:
             return u_binary_op::mul;
@@ -155,68 +101,84 @@ std::optional<u_binary_op> gen_binary_op(tok t) {
     }
 }
 
-std::string to_string(const u_binary_op& op) {
-    switch(op) {
-        case u_binary_op::mul: return "*";
-        case u_binary_op::div: return "/";
-        case u_binary_op::pow: return "^";
-        default: return {};
+//binary_unit
+binary_unit::binary_unit(u_binary_op op, u_expr l, u_expr r, const src_location& location):
+    op(op), lhs(std::move(l)), rhs(std::move(r)), loc(location)
+{
+    if (!verify()) {
+        throw std::runtime_error(fmt::format("Invalid quantity expression at {}", to_string(location)));
     }
 }
 
-//quantity_binary_type;
-binary_unit::binary_unit(tok t, u_expr l, u_expr r, const src_location& location): lhs(std::move(l)), rhs(std::move(r)), loc(location) {
-    if (auto bop = gen_binary_op(t)) {
-        op = bop.value();
+binary_unit::binary_unit(tok t, u_expr l, u_expr r, const src_location& location):
+    lhs(std::move(l)), rhs(std::move(r)), loc(location)
+{
+    if (auto b_op = to_binary_op(t)) {
+        op = b_op.value();
     } else {
         throw std::runtime_error("Unexpected binary operator token");
     }
+    if (!verify()) {
+        throw std::runtime_error(fmt::format("Invalid quantity expression at {}", to_string(location)));
+    }
 }
 
-std::string to_string(const binary_unit& u, int indent) {
-    auto single_indent = std::string(indent*2, ' ');
-    auto double_indent = single_indent + "  ";
 
-    std::string str = single_indent + "(binary_unit " + to_string(u.op) + "\n";
-    std::visit([&](auto&& c){str += (to_string(c, indent+1) + "\n");}, *u.lhs);
-    std::visit([&](auto&& c){str += (to_string(c, indent+1) + "\n");}, *u.rhs);
-    return str + double_indent + to_string(u.loc) + ")";
-}
-std::string to_string(const integer_unit& u, int indent) {
-    auto single_indent = std::string(indent*2, ' ');
-    auto double_indent = single_indent + "  ";
+bool binary_unit::verify() const {
+    auto is_int  = [](const u_expr& u) {return std::get_if<integer_unit>(u.get());};
+    auto is_pow = (op == u_binary_op::pow);
 
-    std::string str = single_indent + "(integer_unit\n";
-    str += (double_indent + std::to_string(u.val) + "\n");
-    return str + double_indent + to_string(u.loc) + ")";
-}
-std::string to_string(const simple_unit& u, int indent) {
-    auto single_indent = std::string(indent*2, ' ');
-    return single_indent + "(simple_unit " + pref_to_string[u.val.prefix] + sym_to_string[u.val.symbol] + " " + to_string(u.loc) + ")";
-}
-std::string to_string(const no_unit& u, int indent) {
-    return {};
+    if (is_int(lhs)) return false;
+    if ((is_pow && !is_int(rhs)) || (!is_pow && is_int(rhs))) return false;
+
+    auto is_allowed = [](const u_expr& u) {
+        return std::visit(al::util::overloaded {
+                [&](const simple_unit& t)  {return true;},
+                [&](const integer_unit& t) {return true;},
+                [&](const no_unit& t)      {return false;},
+                [&](const binary_unit& t)  {return true;},
+        }, *u);
+    };
+    if (!is_allowed(lhs) || !is_allowed(rhs)) return false;
+    return true;
 }
 
-t_raw_ir::t_binary_op to_t_binary_op(u_binary_op op) {
-    switch (op) {
-        case u_binary_op::mul: return t_raw_ir::t_binary_op::mul;
-        case u_binary_op::div: return t_raw_ir::t_binary_op::div;
-        case u_binary_op::pow: return t_raw_ir::t_binary_op::pow;
+// check_simple_unit
+std::optional<unit> check_simple_unit(const std::string& s) {
+    // If the string is a unit symbol, return with no prefix.
+    if (auto sym = to_unit_symbol(s)) return unit{unit_pref::none, sym.value()};
+
+    // Otherwise, must contain a prefix or is not a unit.
+    auto it = s.begin();
+    std::string pref_str;
+
+    while (*it) {
+        pref_str += *it++;
+        if (auto pref = to_unit_prefix(pref_str)) {
+            auto unit_str = std::string(it, s.end());
+            if (auto sym = to_unit_symbol(unit_str)) return unit{pref.value(), sym.value()};
+        }
     }
     return {};
 }
 
+// to_type
 t_raw_ir::t_expr to_type(const binary_unit& u) {
     using namespace t_raw_ir;
-    auto t_lhs = std::visit([&](auto&& c){return to_type(c);}, *u.lhs);
-    auto t_rhs = std::visit([&](auto&& c){return to_type(c);}, *u.rhs);
-    return make_t_expr<quantity_binary_type>(to_t_binary_op(u.op), t_lhs, t_rhs, u.loc);
+    t_binary_op op;
+    switch (u.op) {
+        case u_binary_op::mul: op = t_raw_ir::t_binary_op::mul; break;
+        case u_binary_op::div: op = t_raw_ir::t_binary_op::div; break;
+        case u_binary_op::pow: op = t_raw_ir::t_binary_op::pow; break;
+    }
+    return make_t_expr<quantity_binary_type>(op, to_type(u.lhs), to_type(u.rhs), u.loc);
 }
+
 t_raw_ir::t_expr to_type(const integer_unit& u) {
     using namespace t_raw_ir;
     return make_t_expr<integer_type>(u.val, u.loc);
 }
+
 t_raw_ir::t_expr to_type(const simple_unit& u) {
     using namespace t_raw_ir;
     switch (u.val.symbol) {
@@ -244,9 +206,19 @@ t_raw_ir::t_expr to_type(const simple_unit& u) {
     return {};
 }
 
+t_raw_ir::t_expr to_type(const no_unit& u) {
+    using namespace t_raw_ir;
+    return make_t_expr<quantity_type>(quantity::real, src_location{});
+}
+
+t_raw_ir::t_expr to_type(const u_expr& u) {
+    return std::visit([&](auto&& c){return to_type(c);}, *u);
+}
+
+// normalize
 std::pair<u_expr, int> normalize_unit(const binary_unit& u) {
-    auto lhs = std::visit([&](auto&& c) {return normalize_unit(c);}, *u.lhs);
-    auto rhs = std::visit([&](auto&& c) {return normalize_unit(c);}, *u.rhs);
+    auto lhs = normalize_unit(u.lhs);
+    auto rhs = normalize_unit(u.rhs);
     int factor;
     switch (u.op) {
         case u_binary_op::mul: factor = lhs.second + rhs.second; break;
@@ -255,47 +227,122 @@ std::pair<u_expr, int> normalize_unit(const binary_unit& u) {
     }
     return {make_u_expr<binary_unit>(u.op, lhs.first, rhs.first, u.loc), factor};
 }
+
 std::pair<u_expr, int> normalize_unit(const integer_unit& u) {
     return {make_u_expr<integer_unit>(u), u.val};
 }
+
 std::pair<u_expr, int> normalize_unit(const simple_unit& u) {
     auto base_unit = u.val;
-    auto factor = pref_to_factor[base_unit.prefix];
+    auto factor = to_prefix_factor(base_unit.prefix).value();
     base_unit.prefix = unit_pref::none;
     return {make_u_expr<simple_unit>(base_unit, u.loc), factor};
 }
+
 std::pair<u_expr, int> normalize_unit(const no_unit& u) {
     return {make_u_expr<no_unit>(), 0};
 }
 
-t_raw_ir::t_expr to_type(const no_unit& u) {
-    using namespace t_raw_ir;
-    return make_t_expr<quantity_type>(quantity::real, src_location{});
+std::pair<u_expr, int> normalize_unit(const u_expr& u) {
+    return std::visit([&](auto&& c){return normalize_unit(c);}, *u);
 }
 
-bool verify_sub_units(const u_expr& u) {
-    auto is_int  = [](const u_expr& t) {return std::get_if<integer_unit>(t.get());};
-    return std::visit(al::util::overloaded {
-        [&](const simple_unit& t) {return true;},
-        [&](const integer_unit& t) {return true;},
-        [&](const no_unit& t) {return true;},
-        [&](const binary_unit& t) {
-            if (is_int(t.lhs)) return false;
-            if ((t.op == u_binary_op::pow) && !is_int(t.rhs)) return false;
-            if ((t.op != u_binary_op::pow) && is_int(t.rhs))  return false;
-            return verify_sub_units(t.lhs) && verify_sub_units(t.rhs);
-        }
-    }, *u);
+// to_string
+std::string to_string(unit_sym s) {
+    switch (s) {
+        case unit_sym::m:   return "m";
+        case unit_sym::g:   return "g";
+        case unit_sym::s:   return "s";
+        case unit_sym::A:   return "A";
+        case unit_sym::K:   return "K";
+        case unit_sym::mol: return "mol";
+        case unit_sym::Hz:  return "Hz";
+        case unit_sym::L:   return "L";
+        case unit_sym::l:   return "l";
+        case unit_sym::N:   return "N";
+        case unit_sym::Pa:  return "Pa";
+        case unit_sym::W:   return "W";
+        case unit_sym::J:   return "J";
+        case unit_sym::C:   return "C";
+        case unit_sym::V:   return "V";
+        case unit_sym::F:   return "F";
+        case unit_sym::H:   return "H";
+        case unit_sym::Ohm: return "Ohm";
+        case unit_sym::S:   return "S";
+        case unit_sym::M:   return "M";
+        default: return {};
+    }
+};
+
+std::string to_string(unit_pref p) {
+    switch (p) {
+        case unit_pref::Y:  return "Y";
+        case unit_pref::Z:  return "Z";
+        case unit_pref::E:  return "E";
+        case unit_pref::P:  return "P";
+        case unit_pref::T:  return "T";
+        case unit_pref::G:  return "G";
+        case unit_pref::M:  return "M";
+        case unit_pref::k:  return "k";
+        case unit_pref::h:  return "h";
+        case unit_pref::da: return "da";
+        case unit_pref::d:  return "d";
+        case unit_pref::c:  return "c";
+        case unit_pref::m:  return "m";
+        case unit_pref::u:  return "u";
+        case unit_pref::n:  return "n";
+        case unit_pref::p:  return "p";
+        case unit_pref::f:  return "f";
+        case unit_pref::a:  return "a";
+        case unit_pref::z:  return "z";
+        case unit_pref::y:  return "y";
+        default: return {};
+    }
+};
+
+std::string to_string(const u_binary_op& op) {
+    switch(op) {
+        case u_binary_op::mul: return "*";
+        case u_binary_op::div: return "/";
+        case u_binary_op::pow: return "^";
+        default: return {};
+    }
 }
 
-bool verify_unit(const u_expr& u) {
-    return std::visit(al::util::overloaded {
-        [&](const simple_unit& t) {return true;},
-        [&](const no_unit& t) {return true;},
-        [&](const binary_unit& t) {return verify_sub_units(u);},
-        [&](const integer_unit& t) {return false;}
-    }, *u);
+std::string to_string(const binary_unit& u, int indent) {
+    auto single_indent = std::string(indent*2, ' ');
+    auto double_indent = single_indent + "  ";
+
+    std::string str = single_indent + "(binary_unit " + to_string(u.op) + "\n";
+    str += to_string(u.lhs, indent+1) + "\n";
+    str += to_string(u.rhs, indent+1) + "\n";
+    str += double_indent + to_string(u.loc) + ")";
+    return str;
 }
+
+std::string to_string(const integer_unit& u, int indent) {
+    auto single_indent = std::string(indent*2, ' ');
+    auto double_indent = single_indent + "  ";
+
+    std::string str = single_indent + "(integer_unit\n";
+    str += (double_indent + std::to_string(u.val) + "\n");
+    str += double_indent + to_string(u.loc) + ")";
+    return str;
+}
+
+std::string to_string(const simple_unit& u, int indent) {
+    auto single_indent = std::string(indent*2, ' ');
+    return single_indent + "(simple_unit " + to_string(u.val.prefix) + to_string(u.val.symbol) + " " + to_string(u.loc) + ")";
+}
+
+std::string to_string(const no_unit& u, int indent) {
+    return {};
+}
+
+std::string to_string(const u_expr& u , int indent) {
+    return std::visit([&](auto&& c){return to_string(c, indent);}, *u);
+}
+
 
 } // namespace u_raw_ir
 } // namespace al

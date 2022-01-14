@@ -288,28 +288,9 @@ struct identifier_expr {
     identifier_expr(std::string name, src_location loc): type(std::nullopt), name(name), loc(loc) {};
 };
 
-// Transform to printer class?
+// to_string
 std::string to_string(const mechanism_expr&, int indent=0);
-std::string to_string(const parameter_expr&, int indent=0);
-std::string to_string(const constant_expr&, int indent=0);
-std::string to_string(const state_expr&, int indent=0);
-std::string to_string(const record_alias_expr&, int indent=0);
-std::string to_string(const function_expr&, int indent=0);
-std::string to_string(const initial_expr&, int indent=0);
-std::string to_string(const evolve_expr&, int indent=0);
-std::string to_string(const effect_expr&, int indent=0);
-std::string to_string(const export_expr&, int indent=0);
-std::string to_string(const call_expr&, int indent=0);
-std::string to_string(const bind_expr&, int indent=0);
-std::string to_string(const object_expr&, int indent=0);
-std::string to_string(const let_expr&, int indent=0);
-std::string to_string(const with_expr&, int indent=0);
-std::string to_string(const conditional_expr&, int indent=0);
-std::string to_string(const identifier_expr&, int indent=0);
-std::string to_string(const float_expr&, int indent=0);
-std::string to_string(const int_expr&, int indent=0);
-std::string to_string(const unary_expr&, int indent=0);
-std::string to_string(const binary_expr&, int indent=0);
+std::string to_string(const expr&, int indent=0);
 
 template <typename T, typename... Args>
 expr make_expr(Args&&... args) {

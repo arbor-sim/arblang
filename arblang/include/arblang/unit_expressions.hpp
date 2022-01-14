@@ -82,8 +82,6 @@ enum class u_binary_op {
     mul, div, pow,
 };
 
-std::optional<unit> check_simple_unit(const std::string& s);
-
 struct integer_unit {
     int val;
     src_location loc;
@@ -103,32 +101,31 @@ struct binary_unit {
     src_location loc;
 
     binary_unit(tok t, u_expr lhs, u_expr rhs, const src_location& loc);
-    binary_unit(u_binary_op op, u_expr lhs, u_expr rhs, const src_location& loc):
-        op(op), lhs(std::move(lhs)), rhs(std::move(rhs)), loc(loc) {};
+    binary_unit(u_binary_op op, u_expr lhs, u_expr rhs, const src_location& loc);
+private:
+    bool verify() const;
 };
 
 struct no_unit{};
 
-std::string to_string(const binary_unit&, int indent=0);
-std::string to_string(const integer_unit&, int indent=0);
-std::string to_string(const simple_unit&, int indent=0);
-std::string to_string(const no_unit&, int indent=0);
+// Checks if a string is a simple unit
+std::optional<unit> check_simple_unit(const std::string& s);
 
-t_raw_ir::t_expr to_type(const binary_unit&);
-t_raw_ir::t_expr to_type(const integer_unit&);
-t_raw_ir::t_expr to_type(const simple_unit&);
-t_raw_ir::t_expr to_type(const no_unit&);
+// Generate string representation of unit expression
+std::string to_string(const u_expr&, int indent=0);
 
-std::pair<u_expr, int> normalize_unit(const binary_unit&);
-std::pair<u_expr, int> normalize_unit(const integer_unit&);
-std::pair<u_expr, int> normalize_unit(const simple_unit&);
-std::pair<u_expr, int> normalize_unit(const no_unit&);
+// Generate the equivalent type expression of a unit expression
+t_raw_ir::t_expr to_type(const u_expr &);
+
+// Normalize the unit into the base units and factor
+// example: mV    -> {V, -3}
+//          mV/mA -> {V/A, 0}
+std::pair<u_expr, int> normalize_unit(const u_expr&);
 
 template <typename T, typename... Args>
 u_expr make_u_expr(Args&&... args) {
     return u_expr(new unit_expr(T(std::forward<Args>(args)...)));
 }
 
-bool verify_unit(const u_expr& u);
 } // namespace u_raw_ir
 } // namespace al
