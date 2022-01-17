@@ -292,6 +292,9 @@ struct identifier_expr {
 std::string to_string(const mechanism_expr&, int indent=0);
 std::string to_string(const expr&, int indent=0);
 
+// get location
+src_location location_of(const expr&);
+
 template <typename T, typename... Args>
 expr make_expr(Args&&... args) {
     return expr(new raw_expr(T(std::forward<Args>(args)...)));

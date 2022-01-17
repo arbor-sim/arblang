@@ -11,80 +11,91 @@
 namespace al {
 namespace t_resolved_ir {
 using namespace t_raw_ir;
-static std::unordered_map<quantity, normalized_type> normal_quantities = {
-        //                                         m  g  s  A mol K
-        {quantity::real,          normalized_type({ 0, 0, 0, 0, 0, 0})},
-        {quantity::length,        normalized_type({ 1, 0, 0, 0, 0, 0})},
-        {quantity::mass,          normalized_type({ 0, 1, 0, 0, 0, 0})},
-        {quantity::time,          normalized_type({ 0, 0, 1, 0, 0, 0})},
-        {quantity::current,       normalized_type({ 0, 0, 0, 1, 0, 0})},
-        {quantity::amount,        normalized_type({ 0, 0, 0, 0, 1, 0})},
-        {quantity::temperature,   normalized_type({ 0, 0, 0, 0, 0, 1})},
-        {quantity::charge,        normalized_type({ 0, 0, 1, 1, 0, 0})},
-        {quantity::frequency,     normalized_type({ 0, 0,-1, 0, 0, 0})},
-        {quantity::voltage,       normalized_type({ 2, 1,-3,-1, 0, 0})},
-        {quantity::resistance,    normalized_type({ 2, 1,-3,-2, 0, 0})},
-        {quantity::conductance,   normalized_type({-2,-1, 3, 2, 0, 0})},
-        {quantity::capacitance,   normalized_type({-2,-1, 4, 2, 0, 0})},
-        {quantity::inductance,    normalized_type({ 2, 1,-2,-2, 0, 0})},
-        {quantity::force,         normalized_type({ 1, 1,-2, 0, 0, 0})},
-        {quantity::pressure,      normalized_type({-1, 1,-2, 0, 0, 0})},
-        {quantity::energy,        normalized_type({ 2, 1,-2, 0, 0, 0})},
-        {quantity::power,         normalized_type({ 2, 1,-3, 0, 0, 0})},
-        {quantity::area,          normalized_type({ 2, 0, 0, 0, 0, 0})},
-        {quantity::volume,        normalized_type({ 3, 0, 0, 0, 0, 0})},
-        {quantity::concentration, normalized_type({-3, 0, 0, 0, 1, 0})},
-};
 
-std::unordered_map<quantity, int> normalized_type::q_map = {
-        {quantity::length,         0},
-        {quantity::mass,           1},
-        {quantity::time,           2},
-        {quantity::current,        3},
-        {quantity::amount,         4},
-        {quantity::temperature,    5},
+// normalized_type
+normalized_type::normalized_type(quantity q) {
+    switch (q) {
+        //                                                   m  g  s  A mol K
+        case quantity::real:          quantity_exponents = { 0, 0, 0, 0, 0, 0}; break;
+        case quantity::length:        quantity_exponents = { 1, 0, 0, 0, 0, 0}; break;
+        case quantity::mass:          quantity_exponents = { 0, 1, 0, 0, 0, 0}; break;
+        case quantity::time:          quantity_exponents = { 0, 0, 1, 0, 0, 0}; break;
+        case quantity::current:       quantity_exponents = { 0, 0, 0, 1, 0, 0}; break;
+        case quantity::amount:        quantity_exponents = { 0, 0, 0, 0, 1, 0}; break;
+        case quantity::temperature:   quantity_exponents = { 0, 0, 0, 0, 0, 1}; break;
+        case quantity::charge:        quantity_exponents = { 0, 0, 1, 1, 0, 0}; break;
+        case quantity::frequency:     quantity_exponents = { 0, 0,-1, 0, 0, 0}; break;
+        case quantity::voltage:       quantity_exponents = { 2, 1,-3,-1, 0, 0}; break;
+        case quantity::resistance:    quantity_exponents = { 2, 1,-3,-2, 0, 0}; break;
+        case quantity::conductance:   quantity_exponents = {-2,-1, 3, 2, 0, 0}; break;
+        case quantity::capacitance:   quantity_exponents = {-2,-1, 4, 2, 0, 0}; break;
+        case quantity::inductance:    quantity_exponents = { 2, 1,-2,-2, 0, 0}; break;
+        case quantity::force:         quantity_exponents = { 1, 1,-2, 0, 0, 0}; break;
+        case quantity::pressure:      quantity_exponents = {-1, 1,-2, 0, 0, 0}; break;
+        case quantity::energy:        quantity_exponents = { 2, 1,-2, 0, 0, 0}; break;
+        case quantity::power:         quantity_exponents = { 2, 1,-3, 0, 0, 0}; break;
+        case quantity::area:          quantity_exponents = { 2, 0, 0, 0, 0, 0}; break;
+        case quantity::volume:        quantity_exponents = { 3, 0, 0, 0, 0, 0}; break;
+        case quantity::concentration: quantity_exponents = {-3, 0, 0, 0, 1, 0}; break;
+    }
 };
 bool normalized_type::is_real() {
-    return std::all_of(q_pow.begin(), q_pow.end(), [](int i){return i==0;});
+    return std::all_of(quantity_exponents.begin(), quantity_exponents.end(), [](int i){return i==0;});
 }
 normalized_type& normalized_type::set(quantity q, int val) {
-    if (!q_map.count(q)) {
-        throw std::runtime_error("Internal compiler error: expected base SI quantity");
+    switch (q) {
+        case quantity::length:         quantity_exponents[0] = val; break;
+        case quantity::mass:           quantity_exponents[1] = val; break;
+        case quantity::time:           quantity_exponents[2] = val; break;
+        case quantity::current:        quantity_exponents[3] = val; break;
+        case quantity::amount:         quantity_exponents[4] = val; break;
+        case quantity::temperature:    quantity_exponents[5] = val; break;
+        default: throw std::runtime_error("Internal compiler error: expected base SI quantity");
     }
-    q_pow[q_map[q]] = val;
     return *this;
+}
+int normalized_type::get(quantity q) {
+    switch (q) {
+        case quantity::length:         return quantity_exponents[0];
+        case quantity::mass:           return quantity_exponents[1];
+        case quantity::time:           return quantity_exponents[2];
+        case quantity::current:        return quantity_exponents[3];
+        case quantity::amount:         return quantity_exponents[4];
+        case quantity::temperature:    return quantity_exponents[5];
+        default: throw std::runtime_error("Internal compiler error: expected base SI quantity");
+    }
 }
 
 bool operator==(const normalized_type& lhs, const normalized_type& rhs) {
-    return lhs.q_pow == rhs.q_pow;
+    return lhs.quantity_exponents == rhs.quantity_exponents;
 }
 bool operator!=(const normalized_type& lhs, const normalized_type& rhs) {
-    return !(lhs.q_pow == rhs.q_pow);
+    return !(lhs.quantity_exponents == rhs.quantity_exponents);
 }
 normalized_type operator*(normalized_type& lhs, normalized_type& rhs) {
     normalized_type t = lhs;
     for (unsigned i = 0; i < 6; ++i) {
-        t.q_pow[i] += rhs.q_pow[i];
+        t.quantity_exponents[i] += rhs.quantity_exponents[i];
     }
     return t;
 }
 normalized_type operator/(normalized_type& lhs, normalized_type& rhs) {
     normalized_type t = lhs;
     for (unsigned i = 0; i < 6; ++i) {
-        t.q_pow[i] -= rhs.q_pow[i];
+        t.quantity_exponents[i] -= rhs.quantity_exponents[i];
     }
     return t;
 }
 normalized_type operator^(normalized_type& lhs, int rhs) {
     normalized_type t = lhs;
     for (unsigned i = 0; i < 6; ++i) {
-        t.q_pow[i] *= rhs;
+        t.quantity_exponents[i] *= rhs;
     }
     return t;
 }
 
 // Resolve types
-r_type resolve_type_of(const bindable& b, const src_location& loc) {
+r_type resolve_type(const bindable& b, const src_location& loc) {
     normalized_type t;
     switch (b) {
         case bindable::molar_flux:             t.set(quantity::amount, 1).set(quantity::length, -2).set(quantity::time, -1); break;
@@ -106,7 +117,7 @@ r_type resolve_type_of(const bindable& b, const src_location& loc) {
     return make_rtype<resolved_quantity>(t, loc);
 }
 
-r_type resolve_type_of(const affectable& a, const src_location& loc) {
+r_type resolve_type(const affectable& a, const src_location& loc) {
     normalized_type t;
     switch (a) {
         case affectable::molar_flux:                  t.set(quantity::amount, 1).set(quantity::length, -2).set(quantity::time, -1); break;
@@ -120,11 +131,11 @@ r_type resolve_type_of(const affectable& a, const src_location& loc) {
     return make_rtype<resolved_quantity>(t, loc);
 }
 
-r_type resolve_type_of(const quantity_type& t, const std::unordered_map<std::string, r_type>&) {
-    return make_rtype<resolved_quantity>(normal_quantities[t.type], t.loc);
+r_type resolve_type(const quantity_type& t, const std::unordered_map<std::string, r_type>&) {
+    return make_rtype<resolved_quantity>(normalized_type(t.type), t.loc);
 }
-r_type resolve_type_of(const quantity_binary_type& t, const std::unordered_map<std::string, r_type>& rec_alias) {
-    auto nlhs = std::visit([&](auto&& c){return resolve_type_of(c, rec_alias);}, *t.lhs);
+r_type resolve_type(const quantity_binary_type& t, const std::unordered_map<std::string, r_type>& rec_alias) {
+    auto nlhs = resolve_type(t.lhs, rec_alias);;
     if (!std::get_if<resolved_quantity>(nlhs.get())) {
         throw std::runtime_error(fmt::format("Internal compiler error: expected resolved quantity type at lhs of {}",
                                              to_string(t.loc)));
@@ -140,7 +151,7 @@ r_type resolve_type_of(const quantity_binary_type& t, const std::unordered_map<s
         auto nrhs_q = std::get<integer_type>(*t.rhs);
         type = nlhs_q.type^nrhs_q.val;
     } else {
-        auto nrhs = std::visit([&](auto &&c) { return resolve_type_of(c, rec_alias); }, *t.rhs);
+        auto nrhs = resolve_type(t.rhs, rec_alias);
         if (!std::get_if<resolved_quantity>(nrhs.get())) {
             throw std::runtime_error(fmt::format("Internal compiler error: expected resolved quantity type at rhs of {}",
                                                  to_string(t.loc)));
@@ -154,30 +165,34 @@ r_type resolve_type_of(const quantity_binary_type& t, const std::unordered_map<s
     }
     return make_rtype<resolved_quantity>(type, t.loc);
 }
-r_type resolve_type_of(const integer_type& t, const std::unordered_map<std::string, r_type>&) {
+r_type resolve_type(const integer_type& t, const std::unordered_map<std::string, r_type>&) {
     throw std::runtime_error(fmt::format("Internal compiler error: unexpected integer type at {}", to_string(t.loc)));
 }
-r_type resolve_type_of(const boolean_type& t, const std::unordered_map<std::string, r_type>&) {
+r_type resolve_type(const boolean_type& t, const std::unordered_map<std::string, r_type>&) {
     return make_rtype<resolved_boolean>(t.loc);
 }
-r_type resolve_type_of(const record_type& t, const std::unordered_map<std::string, r_type>& rec_alias) {
+r_type resolve_type(const record_type& t, const std::unordered_map<std::string, r_type>& rec_alias) {
     std::vector<std::pair<std::string, r_type>> fields;
     for (const auto& f: t.fields) {
-        fields.emplace_back(f.first, std::visit([&](auto&& c){return resolve_type_of(c, rec_alias);}, *f.second));
+        fields.emplace_back(f.first, resolve_type(f.second, rec_alias));
     }
     return make_rtype<resolved_record>(fields, t.loc);
 }
-r_type resolve_type_of(const record_alias_type& t, const std::unordered_map<std::string, r_type>& rec_alias) {
+r_type resolve_type(const record_alias_type& t, const std::unordered_map<std::string, r_type>& rec_alias) {
     if (!rec_alias.count(t.name)) {
         throw std::runtime_error(fmt::format("Undefined record {} at {}", t.name, to_string(t.loc)));
     }
     return rec_alias.at(t.name);
 }
 
+r_type resolve_type(const t_expr& t, const std::unordered_map<std::string, r_type>& map) {
+    return std::visit([&](auto&& c){return resolve_type(c, map);}, *t);
+}
+
 // Derive types
 std::optional<r_type> derive(const resolved_quantity& q) {
     auto type = q.type;
-    type.q_pow[normalized_type::q_map[quantity::time]]-=1;
+    type.set(quantity::time, type.get(quantity::time)-1);
     return make_rtype<resolved_quantity>(type, q.loc);
 }
 std::optional<r_type> derive(const resolved_boolean&) {
@@ -186,11 +201,14 @@ std::optional<r_type> derive(const resolved_boolean&) {
 std::optional<r_type> derive(const resolved_record& q) {
     std::vector<std::pair<std::string, r_type>> fields;
     for (auto [f_id, f_type]: q.fields) {
-        auto f_prime_type = std::visit([](auto&& c){return derive(c);}, *f_type);
+        auto f_prime_type = derive(f_type);
         if (!f_prime_type) return {};
         fields.emplace_back(f_id+"'", f_prime_type.value());
     }
     return make_rtype<resolved_record>(fields, q.loc);
+}
+std::optional<r_type> derive(const r_type& t) {
+    return std::visit([](auto&& c){return derive(c);}, *t);
 }
 
 // compare resolved_types
@@ -226,11 +244,12 @@ bool operator!=(const resolved_type& lhs, const resolved_type& rhs) {
 // to_string
 std::string to_string(const normalized_type& t, int indent) {
     std::string str;
-    for (auto [q, idx]: normalized_type::q_map) {
-        if (auto pow = t.q_pow[idx]) {
-            str += (to_string(q) + "^" + std::to_string(pow) + " ");
-        }
-    }
+    if (auto val = t.quantity_exponents[0]) str += "length^" +      std::to_string(val) + " ";
+    if (auto val = t.quantity_exponents[1]) str += "mass^" +        std::to_string(val) + " ";
+    if (auto val = t.quantity_exponents[2]) str += "time^" +        std::to_string(val) + " ";
+    if (auto val = t.quantity_exponents[3]) str += "current^" +     std::to_string(val) + " ";
+    if (auto val = t.quantity_exponents[4]) str += "amount^" +      std::to_string(val) + " ";
+    if (auto val = t.quantity_exponents[5]) str += "temperature^" + std::to_string(val) + " ";
     if (str.empty()) str = "real";
     return std::string(indent*2, ' ') + str;
 }
@@ -258,8 +277,8 @@ std::string to_string(const resolved_record& q, int indent) {
     }
     return str + double_indent + to_string(q.loc) + ")";
 }
-std::string to_string(const resolved_type& q, int indent) {
-    return std::visit([](auto&& c){return to_string(c);}, q);
+std::string to_string(const r_type& q, int indent) {
+    return std::visit([&](auto&& c){return to_string(c, indent);}, *q);
 }
 } // namespace t_resolved_ir
 } // namespace al

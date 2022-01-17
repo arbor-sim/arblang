@@ -455,6 +455,9 @@ std::string to_string(const expr& e, int indent) {
     return std::visit([&](auto&& c){return to_string(c, indent);}, *e);
 }
 
+src_location location_of(const expr& e) {
+    return std::visit([](auto&& c){return c.loc;}, *e);
+}
 
 } // namespace al
 } // namespace raw_ir

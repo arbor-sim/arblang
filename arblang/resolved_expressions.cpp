@@ -20,7 +20,6 @@ using namespace raw_ir;
 using namespace t_resolved_ir;
 
 // Resolver
-
 void check_duplicate(const std::string& name, const in_scope_map& map) {
     if (map.param_map.count(name)) {
         throw std::runtime_error(fmt::format("duplicate parameter name, also found at {}",
@@ -49,14 +48,14 @@ r_expr resolve(const parameter_expr& expr, const in_scope_map& map) {
     available_map.bind_map.clear();
     available_map.state_map.clear();
 
-    auto p_val = std::visit([&](auto&& c){return resolve(c, available_map);}, *(expr.value));
-    auto p_type = std::visit([](auto&& c){return c.type;}, *p_val);
+    auto p_val = resolve(expr.value, available_map);;
+    auto p_type = type_of(p_val);
 
     if (id.type) {
-        auto id_type = std::visit([&](auto&& c){return resolve_type_of(c, map.type_map);}, *id.type.value());
+        auto id_type = resolve_type(id.type.value(), map.type_map);
         if (*id_type != *p_type) {
             throw std::runtime_error(fmt::format("type mismatch between {} and {} at {}.",
-                                                 to_string(*id_type), to_string(*p_type), to_string(id.loc)));
+                                                 to_string(id_type), to_string(p_type), to_string(id.loc)));
         }
     }
     return make_rexpr<resolved_parameter>(p_name, p_val, p_type, expr.loc);
@@ -72,14 +71,14 @@ r_expr resolve(const constant_expr& expr, const in_scope_map& map) {
     available_map.bind_map.clear();
     available_map.state_map.clear();
 
-    auto c_val  = std::visit([&](auto&& c){return resolve(c, available_map);}, *(expr.value));
-    auto c_type = std::visit([](auto&& c){return c.type;}, *c_val);
+    auto c_val  = resolve(expr.value, available_map);
+    auto c_type = type_of(c_val);
 
     if (id.type) {
-        auto id_type = std::visit([&](auto&& c){return resolve_type_of(c, map.type_map);}, *id.type.value());
+        auto id_type = resolve_type(id.type.value(), map.type_map);
         if (*id_type != *c_type) {
             throw std::runtime_error(fmt::format("type mismatch between {} and {} at {}.",
-                                                 to_string(*id_type), to_string(*c_type), to_string(id.loc)));
+                                                 to_string(id_type), to_string(c_type), to_string(id.loc)));
         }
     }
 
@@ -91,7 +90,7 @@ r_expr resolve(const state_expr& expr, const in_scope_map& map) {
     auto s_name = id.name;
     check_duplicate(s_name, map);
 
-    auto s_type = std::visit([&](auto&& c){return resolve_type_of(c, map.type_map);}, *id.type.value());
+    auto s_type = resolve_type(id.type.value(), map.type_map);
 
     if (!id.type) {
         throw std::runtime_error(fmt::format("state identifier {} at {} missing quantity type.",
@@ -105,13 +104,13 @@ r_expr resolve(const bind_expr& expr, const in_scope_map& map) {
     auto b_name = id.name;
     check_duplicate(b_name, map);
 
-    auto b_type = resolve_type_of(expr.bind, expr.loc);
+    auto b_type = resolve_type(expr.bind, expr.loc);
 
     if (id.type) {
-        auto id_type = std::visit([&](auto&& c){return resolve_type_of(c, map.type_map);}, *id.type.value());
+        auto id_type = resolve_type(id.type.value(), map.type_map);
         if (*id_type != *b_type) {
             throw std::runtime_error(fmt::format("type mismatch between {} and {} at {}.",
-                                                 to_string(*id_type), to_string(*b_type), to_string(id.loc)));
+                                                 to_string(id_type), to_string(b_type), to_string(id.loc)));
         }
     }
     return make_rexpr<resolved_bind>(b_name, expr.bind, expr.ion, b_type, expr.loc);
@@ -122,7 +121,7 @@ r_expr resolve(const record_alias_expr& expr, const in_scope_map& map) {
         throw std::runtime_error(fmt::format("duplicate record alias name, also found at {}",
                                              to_string(map.param_map.at(expr.name).loc)));
     }
-    auto a_type = std::visit([&](auto&& c){return resolve_type_of(c, map.type_map);}, *expr.type);
+    auto a_type = resolve_type(expr.type, map.type_map);
     return make_rexpr<resolved_record_alias>(expr.name, a_type, expr.loc);
 }
 
@@ -140,19 +139,19 @@ r_expr resolve(const function_expr& expr, const in_scope_map& map) {
             throw std::runtime_error(fmt::format("function argument {} at {} missing quantity type.",
                                                  a_id.name, to_string(a_id.loc)));
         }
-        auto a_type = std::visit([&](auto&& c){return resolve_type_of(c, map.type_map);}, *a_id.type.value());
+        auto a_type = resolve_type(a_id.type.value(), map.type_map);
         auto f_a = resolved_argument(a_id.name, a_type, a_id.loc);
         f_args.push_back(make_rexpr<resolved_argument>(f_a));
         available_map.local_map.insert({a_id.name, f_a});
     }
-    auto f_body = std::visit([&](auto&& c){return resolve(c, available_map);}, *expr.body);
-    auto f_type = std::visit([](auto&& c){return c.type;}, *f_body);
+    auto f_body = resolve(expr.body, available_map);
+    auto f_type = type_of(f_body);
 
     if (expr.ret) {
-        auto ret_type = std::visit([&](auto&& c){return resolve_type_of(c, map.type_map);}, *expr.ret.value());
+        auto ret_type = resolve_type(expr.ret.value(), map.type_map);
         if (*ret_type != *f_type) {
             throw std::runtime_error(fmt::format("type mismatch between {} and {} at {}.",
-                                                 to_string(*ret_type), to_string(*f_type), to_string(expr.loc)));
+                                                 to_string(ret_type), to_string(f_type), to_string(expr.loc)));
         }
     }
     return make_rexpr<resolved_function>(f_name, f_args, f_body, f_type, expr.loc);
@@ -166,14 +165,14 @@ r_expr resolve(const initial_expr& expr, const in_scope_map& map) {
         throw std::runtime_error(fmt::format("variable {} initialized at {} is not a state variable.", i_name, to_string(expr.loc)));
     }
     auto i_expr = make_rexpr<resolved_state>(map.state_map.at(i_name));
-    auto i_val = std::visit([&](auto&& c){return resolve(c, map);}, *(expr.value));
-    auto i_type = std::visit([](auto&& c){return c.type;}, *i_val);
+    auto i_val = resolve(expr.value, map);
+    auto i_type = type_of(i_val);
 
     if (id.type) {
-        auto id_type = std::visit([&](auto&& c){return resolve_type_of(c, map.type_map);}, *id.type.value());
+        auto id_type = resolve_type(id.type.value(), map.type_map);
         if (*id_type != *i_type) {
             throw std::runtime_error(fmt::format("type mismatch between {} and {} at {}.",
-                                                 to_string(*id_type), to_string(*i_type), to_string(id.loc)));
+                                                 to_string(id_type), to_string(i_type), to_string(id.loc)));
         }
     }
     return make_rexpr<resolved_initial>(i_expr, i_val, i_type, expr.loc);
@@ -191,14 +190,14 @@ r_expr resolve(const evolve_expr& expr, const in_scope_map& map) {
     }
     auto s_expr = map.state_map.at(e_name);
     auto e_expr = make_rexpr<resolved_state>(s_expr);
-    auto e_val = std::visit([&](auto&& c){return resolve(c, map);}, *(expr.value));
-    auto e_type = std::visit([](auto&& c){return c.type;}, *e_val);
+    auto e_val = resolve(expr.value, map);
+    auto e_type = type_of(e_val);
 
     if (id.type) {
-        auto id_type = std::visit([&](auto&& c){return resolve_type_of(c, map.type_map);}, *id.type.value());
+        auto id_type = resolve_type(id.type.value(), map.type_map);
         if (*id_type != *e_type) {
             throw std::runtime_error(fmt::format("type mismatch between {} and {} at {}.",
-                                                 to_string(*id_type), to_string(*e_type), to_string(id.loc)));
+                                                 to_string(id_type), to_string(e_type), to_string(id.loc)));
         }
     }
     return make_rexpr<resolved_evolve>(e_expr, e_val, e_type, expr.loc);
@@ -207,8 +206,8 @@ r_expr resolve(const evolve_expr& expr, const in_scope_map& map) {
 r_expr resolve(const effect_expr& expr, const in_scope_map& map) {
     auto e_effect = expr.effect;
     auto e_ion = expr.ion;
-    auto e_val = std::visit([&](auto&& c){return resolve(c, map);}, *(expr.value));
-    auto e_type = resolve_type_of(e_effect, expr.loc);
+    auto e_val = resolve(expr.value, map);
+    auto e_type = resolve_type(e_effect, expr.loc);
 
     return make_rexpr<resolved_effect>(e_effect, e_ion, e_val, e_type, expr.loc);
 }
@@ -233,17 +232,17 @@ r_expr resolve(const call_expr& expr, const in_scope_map& map) {
 
     std::vector<r_expr> c_args;
     for (const auto& a: expr.call_args) {
-        c_args.push_back(std::visit([&](auto&& c){return resolve(c, map);}, *a));
+        c_args.push_back(resolve(a, map));
     }
     if (f_expr.args.size() != c_args.size()) {
         throw std::runtime_error(fmt::format("argument count mismatch when calling function {} at {}.", f_name, to_string(expr.loc)));
     }
     for (unsigned i=0; i < f_expr.args.size(); ++i) {
-        auto f_arg_type = std::visit([](auto&& c){return c.type;}, *f_expr.args[i]);
-        auto c_arg_type = std::visit([](auto&& c){return c.type;}, *f_expr.args[i]);
+        auto f_arg_type = type_of(f_expr.args[i]);
+        auto c_arg_type = type_of(c_args[i]);
         if (*f_arg_type != *c_arg_type) {
             throw std::runtime_error(fmt::format("type mismatch between {} and {} of argument {} of function call {} at {}.",
-                                     to_string(*f_arg_type), to_string(*c_arg_type), std::to_string(i), f_name,to_string(expr.loc)));
+                                     to_string(f_arg_type), to_string(c_arg_type), std::to_string(i), f_name,to_string(expr.loc)));
         }
     }
 
@@ -257,8 +256,8 @@ r_expr resolve(const object_expr& expr, const in_scope_map& map) {
     std::vector<r_type> o_types;
 
     for (const auto& v: expr.record_values) {
-        o_values.push_back(std::visit([&](auto&& c){return resolve(c, map);}, *v));
-        o_types.push_back(std::visit([&](auto&& c){return c.type;}, *o_values.back()));
+        o_values.push_back(resolve(v, map));
+        o_types.push_back(type_of(o_values.back()));
     }
     std::vector<std::pair<std::string, r_type>> t_vec;
     for (unsigned i = 0; i < expr.record_fields.size(); ++i) {
@@ -279,21 +278,21 @@ r_expr resolve(const object_expr& expr, const in_scope_map& map) {
     auto r_type = map.type_map.at(r_name);
     if (*r_type != *o_type) {
         throw std::runtime_error(fmt::format("type mismatch between {} and {} while constructing object {} at {}.",
-                                             to_string(*r_type), to_string(*o_type), r_name, to_string(expr.loc)));
+                                             to_string(r_type), to_string(o_type), r_name, to_string(expr.loc)));
     }
 
     return make_rexpr<resolved_object>(std::nullopt, o_fields, o_values, o_type, expr.loc);
 }
 
 r_expr resolve(const let_expr& expr, const in_scope_map& map) {
-    auto v_expr = std::visit([&](auto&& c){return resolve(c, map);}, *expr.value);
+    auto v_expr = resolve(expr.value, map);
     auto id = std::get<identifier_expr>(*expr.identifier);
-    auto i_type = std::visit([&](auto&& c){return c.type;}, *v_expr);
+    auto i_type = type_of(v_expr);
     if (id.type) {
-        auto id_type = std::visit([&](auto&& c){return resolve_type_of(c, map.type_map);}, *id.type.value());
+        auto id_type = resolve_type(id.type.value(), map.type_map);
         if (*id_type != *i_type) {
             throw std::runtime_error(fmt::format("type mismatch between {} and {} at {}.",
-                                                 to_string(*id_type), to_string(*i_type), to_string(id.loc)));
+                                                 to_string(id_type), to_string(i_type), to_string(id.loc)));
         }
     }
     auto i_expr = resolved_argument(id.name, i_type, id.loc);
@@ -301,15 +300,15 @@ r_expr resolve(const let_expr& expr, const in_scope_map& map) {
     auto available_map = map;
     available_map.local_map.insert({id.name, i_expr});
 
-    auto b_expr = std::visit([&](auto&& c){return resolve(c, available_map);}, *expr.body);
-    auto b_type = std::visit([&](auto&& c){return c.type;}, *b_expr);
+    auto b_expr = resolve(expr.body, available_map);
+    auto b_type = type_of(b_expr);
 
     return make_rexpr<resolved_let>(make_rexpr<resolved_argument>(i_expr), v_expr, b_expr, b_type, expr.loc);
 }
 
 r_expr resolve(const with_expr& expr, const in_scope_map& map) {
-    auto v_expr = std::visit([&](auto&& c){return resolve(c, map);}, *expr.value);
-    auto v_type = std::visit([&](auto&& c){return c.type;}, *v_expr);
+    auto v_expr = resolve(expr.value, map);
+    auto v_type = type_of(v_expr);
 
     auto available_map = map;
     if (std::get_if<resolved_record>(v_type.get())) {
@@ -324,23 +323,23 @@ r_expr resolve(const with_expr& expr, const in_scope_map& map) {
                                              to_string(expr.value), to_string(expr.loc)));
     }
 
-    auto b_expr = std::visit([&](auto&& c){return resolve(c, available_map);}, *expr.body);
-    auto b_type = std::visit([&](auto&& c){return c.type;}, *b_expr);
+    auto b_expr = resolve(expr.body, available_map);
+    auto b_type = type_of(b_expr);
 
     return make_rexpr<resolved_with>(v_expr, b_expr, b_type, expr.loc);
 }
 
 r_expr resolve(const conditional_expr& expr, const in_scope_map& map) {
-    auto cond    = std::visit([&](auto&& c){return resolve(c, map);}, *expr.condition);
-    auto true_v  = std::visit([&](auto&& c){return resolve(c, map);}, *expr.value_true);
-    auto false_v = std::visit([&](auto&& c){return resolve(c, map);}, *expr.value_false);
-    auto true_t  = std::visit([&](auto&& c){return c.type;}, *true_v);
-    auto false_t = std::visit([&](auto&& c){return c.type;}, *false_v);
+    auto cond    = resolve(expr.condition, map);
+    auto true_v  = resolve(expr.value_true, map);
+    auto false_v = resolve(expr.value_false, map);
+    auto true_t  = type_of(true_v);
+    auto false_t = type_of(false_v);
 
     if (*true_t != *false_t) {
         throw std::runtime_error(fmt::format("type mismatch {} and {} between the true and false branches "
                                              "of the conditional statement at {}.",
-                                             to_string(*true_t), to_string(*false_t), to_string(expr.loc)));
+                                             to_string(true_t), to_string(false_t), to_string(expr.loc)));
     }
 
     return make_rexpr<resolved_conditional>(cond, true_v, false_v, true_t, expr.loc);
@@ -350,7 +349,7 @@ r_expr resolve(const float_expr& expr, const in_scope_map& map) {
     using namespace u_raw_ir;
     auto f_val = expr.value;
     auto f_type = to_type(expr.unit);
-    auto r_type = std::visit([&](auto&& c){return resolve_type_of(c, map.type_map);}, *f_type);
+    auto r_type = resolve_type(f_type, map.type_map);
     return make_rexpr<resolved_float>(f_val, r_type, expr.loc);
 }
 
@@ -358,13 +357,13 @@ r_expr resolve(const int_expr& expr, const in_scope_map& map) {
     using namespace u_raw_ir;
     auto i_val = expr.value;
     auto i_type = to_type(expr.unit);
-    auto r_type = std::visit([&](auto&& c){return resolve_type_of(c, map.type_map);}, *i_type);
+    auto r_type = resolve_type(i_type, map.type_map);
     return make_rexpr<resolved_int>(i_val, r_type, expr.loc);
 }
 
 r_expr resolve(const unary_expr& expr, const in_scope_map& map) {
-    auto val = std::visit([&](auto&& c){return resolve(c, map);}, *expr.value);
-    auto type = std::visit([&](auto&& c){return c.type;}, *val);
+    auto val = resolve(expr.value, map);
+    auto type = type_of(val);
     switch (expr.op) {
         case unary_op::exp:
         case unary_op::log:
@@ -402,9 +401,9 @@ r_expr resolve(const unary_expr& expr, const in_scope_map& map) {
 }
 
 r_expr resolve(const binary_expr& expr, const in_scope_map& map) {
-    auto lhs_v = std::visit([&](auto&& c){return resolve(c, map);}, *expr.lhs);
-    auto lhs_t = std::visit([&](auto&& c){return c.type;}, *lhs_v);
-    auto lhs_loc = std::visit([&](auto&& c){return c.loc;}, *lhs_v);
+    auto lhs_v = resolve(expr.lhs, map);
+    auto lhs_t = type_of(lhs_v);
+    auto lhs_loc = location_of(lhs_v);
 
     if (expr.op == binary_op::dot) {
         auto make_or_throw = [&](const resolved_record& r) {
@@ -413,7 +412,7 @@ r_expr resolve(const binary_expr& expr, const in_scope_map& map) {
             for (auto [f_id, f_type]: r.fields) {
                 available_map.local_map.insert({f_id, resolved_argument(f_id, f_type, r.loc)});
             }
-            auto rhs_v = std::visit([&](auto&& c){return resolve(c, available_map);}, *expr.rhs);
+            auto rhs_v = resolve(expr.rhs, available_map);
 
             // Resolved rhs is expected to be one of the just added fields
             // But we need to check
@@ -423,7 +422,7 @@ r_expr resolve(const binary_expr& expr, const in_scope_map& map) {
             if (!r_rhs) {
                 throw std::runtime_error(fmt::format("incompatible argument type to dot operator, at {}", to_string(expr.loc)));
             }
-            auto rhs_id = (*r_rhs).name;
+            auto rhs_id = r_rhs->name;
 
             // Check that it is an argument of the record
             for (auto [f_id, f_type]: r.fields) {
@@ -432,7 +431,7 @@ r_expr resolve(const binary_expr& expr, const in_scope_map& map) {
                 }
             }
             throw std::runtime_error(fmt::format("argument {} doesn't match any of the record fields, at {}",
-                                                 to_string(*r_rhs), to_string(lhs_loc)));
+                                                 to_string(rhs_v), to_string(lhs_loc)));
         };
 
         if (auto* lhs_rec = std::get_if<resolved_record>(lhs_t.get())) {
@@ -441,9 +440,9 @@ r_expr resolve(const binary_expr& expr, const in_scope_map& map) {
     }
 
     // If it's not a field access, we can use the input map to resolve rhs
-    auto rhs_v = std::visit([&](auto&& c){return resolve(c, map);}, *expr.rhs);
-    auto rhs_t = std::visit([&](auto&& c){return c.type;}, *rhs_v);
-    auto rhs_loc = std::visit([&](auto&& c){return c.loc;}, *rhs_v);
+    auto rhs_v = resolve(expr.rhs, map);
+    auto rhs_t = type_of(rhs_v);
+    auto rhs_loc = location_of(rhs_v);
 
     // In this case, neither lhs nor rhs can have record types.
     if (std::get_if<resolved_record>(rhs_t.get())) {
@@ -469,7 +468,7 @@ r_expr resolve(const binary_expr& expr, const in_scope_map& map) {
         case binary_op::max:
         case binary_op::add:
         case binary_op::sub: {
-            // Only applicable if neither lhs or rhs is a boolean type
+            // Only applicable if neither lhs nor rhs is a boolean type
             if (lhs_q && rhs_q) {
                 if (lhs_q->type != rhs_q->type) {
                     throw std::runtime_error(fmt::format("incompatible arguments types to op {}, at {}",
@@ -481,7 +480,7 @@ r_expr resolve(const binary_expr& expr, const in_scope_map& map) {
                                                    to_string(expr.op), to_string(expr.loc)));
         }
         case binary_op::mul: {
-            // Only applicable if neither lhs or rhs is a boolean type
+            // Only applicable if neither lhs nor rhs is a boolean type
             if (lhs_q && rhs_q) {
                 auto comb_type = make_rtype<resolved_quantity>(lhs_q->type*rhs_q->type, expr.loc);
                 return make_rexpr<resolved_binary>(expr.op, lhs_v, rhs_v, comb_type, expr.loc);
@@ -490,7 +489,7 @@ r_expr resolve(const binary_expr& expr, const in_scope_map& map) {
                                                  to_string(expr.op), to_string(expr.loc)));
         }
         case binary_op::div: {
-            // Only applicable if neither lhs or rhs is a boolean type
+            // Only applicable if neither lhs nor rhs is a boolean type
             if (lhs_q && rhs_q) {
                 auto comb_type = make_rtype<resolved_quantity>(lhs_q->type/rhs_q->type, expr.loc);
                 return make_rexpr<resolved_binary>(expr.op, lhs_v, rhs_v, comb_type, expr.loc);
@@ -499,7 +498,7 @@ r_expr resolve(const binary_expr& expr, const in_scope_map& map) {
                                                  to_string(expr.op), to_string(expr.loc)));
         }
         case binary_op::pow: {
-            // Only applicable if neither lhs or rhs is a boolean type and rhs is a real int type
+            // Only applicable if neither lhs nor rhs is a boolean type and rhs is a real int type
             auto rhs_int = std::get_if<resolved_int>(rhs_v.get());
             if (!rhs_int) {
                 throw std::runtime_error(fmt::format("incompatible arguments types to op {}, at {}",
@@ -565,92 +564,89 @@ resolved_mechanism resolve(const mechanism_expr& expr, const in_scope_map& map) 
     resolved_mechanism mech;
     auto available_map = map;
     for (const auto& c: expr.constants) {
-        auto val = std::visit([&](auto&& c){return resolve(c, available_map);}, *c);
+        auto val = resolve(c, available_map);
         mech.constants.push_back(val);
         auto const_val = std::get_if<resolved_constant>(val.get());
         if (!const_val) {
-            auto loc = std::visit([&](auto&& c){return c.loc;}, *val);
-            throw std::runtime_error(fmt::format("internal compiler error, expected constant expression at {}", to_string(loc)));
+            throw std::runtime_error(fmt::format("internal compiler error, expected constant expression at {}",
+                                                 to_string(location_of(val))));
         }
         available_map.const_map.insert({const_val->name, *const_val});
     }
     for (const auto& c: expr.parameters) {
-        auto val = std::visit([&](auto&& c){return resolve(c, available_map);}, *c);
+        auto val =resolve(c, available_map);
         mech.parameters.push_back(val);
         auto param_val = std::get_if<resolved_parameter>(val.get());
         if (!param_val) {
-            auto loc = std::visit([&](auto&& c){return c.loc;}, *val);
-            throw std::runtime_error(fmt::format("internal compiler error, expected parameter expression at {}", to_string(loc)));
+            throw std::runtime_error(fmt::format("internal compiler error, expected parameter expression at {}",
+                                                 to_string(location_of(val))));
         }
         available_map.param_map.insert({param_val->name, *param_val});
     }
     for (const auto& c: expr.bindings) {
-        auto val = std::visit([&](auto&& c){return resolve(c, available_map);}, *c);
+        auto val = resolve(c, available_map);
         mech.bindings.push_back(val);
         auto bind_val = std::get_if<resolved_bind>(val.get());
         if (!bind_val) {
-            auto loc = std::visit([&](auto&& c){return c.loc;}, *val);
-            throw std::runtime_error(fmt::format("internal compiler error, expected bind expression at {}", to_string(loc)));
+            throw std::runtime_error(fmt::format("internal compiler error, expected bind expression at {}",
+                                                 to_string(location_of(val))));
         }
         available_map.bind_map.insert({bind_val->name, *bind_val});
     }
     // For records, create 2 records: regular and prime
     for (const auto& r: expr.records) {
-        auto loc = std::visit([&](auto&& c){return c.loc;}, *r);
         auto rec = std::get_if<record_alias_expr>(r.get());
         if (!rec) {
-            throw std::runtime_error(fmt::format("internal compiler error, expected record expression at {}", to_string(loc)));
+            throw std::runtime_error(fmt::format("internal compiler error, expected record expression at {}",
+                                                 to_string(location_of(r))));
         }
 
         // regular
-        auto resolved_record = std::visit([&](auto&& c){return resolve(c, available_map);}, *r);
+        auto resolved_record = resolve(r, available_map);
         auto resolved_record_val = std::get_if<resolved_record_alias>(resolved_record.get());
         if (!resolved_record_val) {
-            throw std::runtime_error(fmt::format("internal compiler error, expected record expression at {}", to_string(loc)));
+            throw std::runtime_error(fmt::format("internal compiler error, expected record expression at {}",
+                                                 to_string(location_of(r))));
         }
         available_map.type_map.insert({resolved_record_val->name, resolved_record_val->type});
 
         // prime
-        auto derived_record_type = std::visit([](auto&& c){return derive(c);}, *resolved_record_val->type);
+        auto derived_record_type = derive(resolved_record_val->type);
         if (derived_record_type) {
             available_map.type_map.insert({resolved_record_val->name+"'", derived_record_type.value()});
         }
     }
     for (const auto& c: expr.states) {
-        auto val = std::visit([&](auto&& c){return resolve(c, available_map);}, *c);
+        auto val = resolve(c, available_map);
         mech.states.push_back(val);
         auto state_val = std::get_if<resolved_state>(val.get());
         if (!state_val) {
-            auto loc = std::visit([&](auto&& c){return c.loc;}, *val);
-            throw std::runtime_error(fmt::format("internal compiler error, expected state expression at {}", to_string(loc)));
+            throw std::runtime_error(fmt::format("internal compiler error, expected state expression at {}",
+                                                 to_string(location_of(val))));
         }
         available_map.state_map.insert({state_val->name, *state_val});
     }
     for (const auto& c: expr.functions) {
-        auto val = std::visit([&](auto&& c){return resolve(c, available_map);}, *c);
+        auto val = resolve(c, available_map);
         mech.functions.push_back(val);
         auto func_val = std::get_if<resolved_function>(val.get());
         if (!func_val) {
-            auto loc = std::visit([&](auto&& c){return c.loc;}, *val);
-            throw std::runtime_error(fmt::format("internal compiler error, expected funcyion expression at {}", to_string(loc)));
+            throw std::runtime_error(fmt::format("internal compiler error, expected funcyion expression at {}",
+                                                 to_string(location_of(val))));
         }
         available_map.func_map.insert({func_val->name, *func_val});
     }
     for (const auto& c: expr.initializations) {
-        auto val = std::visit([&](auto&& c){return resolve(c, available_map);}, *c);
-        mech.initializations.push_back(val);
+        mech.initializations.push_back(resolve(c, available_map));
     }
     for (const auto& c: expr.evolutions) {
-        auto val = std::visit([&](auto&& c){return resolve(c, available_map);}, *c);
-        mech.evolutions.push_back(val);
+        mech.evolutions.push_back(resolve(c, available_map));
     }
     for (const auto& c: expr.effects) {
-        auto val = std::visit([&](auto&& c){return resolve(c, available_map);}, *c);
-        mech.effects.push_back(val);
+        mech.effects.push_back(resolve(c, available_map));
     }
     for (const auto& c: expr.exports) {
-        auto val = std::visit([&](auto&& c){return resolve(c, available_map);}, *c);
-        mech.exports.push_back(val);
+        mech.exports.push_back(resolve(c, available_map));
     }
     mech.name = expr.name;
     mech.loc = expr.loc;
@@ -658,36 +654,40 @@ resolved_mechanism resolve(const mechanism_expr& expr, const in_scope_map& map) 
     return mech;
 }
 
+r_expr resolve(const raw_ir::expr& expr, const in_scope_map& map) {
+    return std::visit([&](auto&& c){return resolve(c, map);}, *expr);
+}
+
 // resolved_mechanism
 std::string to_string(const resolved_mechanism& e, int indent) {
     auto indent_str = std::string(indent*2, ' ');
     std::string str = indent_str + "(module_expr " + e.name + " " + to_string(e.kind) + "\n";
     for (const auto& p: e.parameters) {
-        std::visit([&](auto&& c){str += (to_string(c, indent+1) + "\n");}, *p);
+        str += to_string(p, indent+1) + "\n";
     }
     for (const auto& p: e.constants) {
-        std::visit([&](auto&& c){str += (to_string(c, indent+1) + "\n");}, *p);
+        str += to_string(p, indent+1) + "\n";
     }
     for (const auto& p: e.states) {
-        std::visit([&](auto&& c){str += (to_string(c, indent+1) + "\n");}, *p);
+        str += to_string(p, indent+1) + "\n";
     }
     for (const auto& p: e.bindings) {
-        std::visit([&](auto&& c){str += (to_string(c, indent+1) + "\n");}, *p);
+        str += to_string(p, indent+1) + "\n";
     }
     for (const auto& p: e.functions) {
-        std::visit([&](auto&& c){str += (to_string(c, indent+1) + "\n");}, *p);
+        str += to_string(p, indent+1) + "\n";
     }
     for (const auto& p: e.initializations) {
-        std::visit([&](auto&& c){str += (to_string(c, indent+1) + "\n");}, *p);
+        str += to_string(p, indent+1) + "\n";
     }
     for (const auto& p: e.evolutions) {
-        std::visit([&](auto&& c){str += (to_string(c, indent+1) + "\n");}, *p);
+        str += to_string(p, indent+1) + "\n";
     }
     for (const auto& p: e.effects) {
-        std::visit([&](auto&& c){str += (to_string(c, indent+1) + "\n");}, *p);
+        str += to_string(p, indent+1) + "\n";
     }
     for (const auto& p: e.exports) {
-        std::visit([&](auto&& c){str += (to_string(c, indent+1) + "\n");}, *p);
+        str += to_string(p, indent+1) + "\n";
     }
     return str + to_string(e.loc) + ")";
 }
@@ -698,10 +698,11 @@ std::string to_string(const resolved_parameter& e, int indent) {
     auto double_indent = single_indent + "  ";
 
     std::string str = single_indent + "(resolved_parameter\n";
-    str += (double_indent + e.name + "\n");
-    std::visit([&](auto&& c){str += (to_string(c, indent+1) + "\n");}, *e.value);
-    std::visit([&](auto&& c){str += (to_string(c, indent+1) + "\n");}, *e.type);
-    return str + double_indent + to_string(e.loc) + ")";
+    str += double_indent + e.name + "\n";
+    str += to_string(e.value, indent+1) + "\n";
+    str += to_string(e.type, indent+1) + "\n";
+    str += double_indent + to_string(e.loc) + ")";
+    return str;
 }
 
 // resolved_constant
@@ -710,10 +711,11 @@ std::string to_string(const resolved_constant& e, int indent) {
     auto double_indent = single_indent + "  ";
 
     std::string str = single_indent + "(resolved_constant\n";
-    str += (double_indent + e.name + "\n");
-    std::visit([&](auto&& c){str += (to_string(c, indent+1) + "\n");}, *e.value);
-    std::visit([&](auto&& c){str += (to_string(c, indent+1) + "\n");}, *e.type);
-    return str + double_indent + to_string(e.loc) + ")";
+    str += double_indent + e.name + "\n";
+    str += to_string(e.value, indent+1) + "\n";
+    str += to_string(e.type, indent+1) + "\n";
+    str += double_indent + to_string(e.loc) + ")";
+    return str;
 }
 
 // resolved_state
@@ -722,9 +724,10 @@ std::string to_string(const resolved_state& e, int indent) {
     auto double_indent = single_indent + "  ";
 
     std::string str = single_indent + "(resolved_state\n";
-    str += (double_indent + e.name + "\n");
-    std::visit([&](auto&& c){str += (to_string(c, indent+1) + "\n");}, *e.type);
-    return str + double_indent + to_string(e.loc) + ")";
+    str += double_indent + e.name + "\n";
+    str += to_string(e.type, indent+1) + "\n";
+    str += double_indent + to_string(e.loc) + ")";
+    return str;
 }
 
 // resolved_record_alias
@@ -733,9 +736,10 @@ std::string to_string(const resolved_record_alias& e, int indent) {
     auto double_indent = single_indent + "  ";
 
     std::string str = single_indent + "(resolved_record_alias\n";
-    str += (double_indent + e.name + "\n");
-    std::visit([&](auto&& c) {str += (to_string(c, indent+1) + "\n");}, *e.type);
-    return str + double_indent + to_string(e.loc) + ")";
+    str += double_indent + e.name + "\n";
+    str += to_string(e.type, indent+1) + "\n";
+    str += double_indent + to_string(e.loc) + ")";
+    return str;
 }
 
 // resolved_function
@@ -744,16 +748,17 @@ std::string to_string(const resolved_function& e, int indent) {
     auto double_indent = single_indent + "  ";
 
     std::string str = single_indent + "(resolved_function\n";
-    str += (double_indent + e.name +  "\n");
-    std::visit([&](auto&& c){str += (to_string(c, indent+1) + "\n");}, *e.type);
+    str += double_indent + e.name +  "\n";
+    str += to_string(e.type, indent+1) + "\n";
 
-    str += (double_indent + "(\n");
+    str += double_indent + "(\n";
     for (const auto& f: e.args) {
-        std::visit([&](auto&& c){str += (to_string(c, indent+2) + "\n");}, *f);
+        str += to_string(f, indent+2) + "\n";
     }
-    str += (double_indent + ")\n");
-    std::visit([&](auto&& c){str += (to_string(c, indent+1) + "\n");}, *e.body);
-    return str + double_indent + to_string(e.loc) + ")";
+    str += double_indent + ")\n";
+    str += to_string(e.body, indent+1) + "\n";
+    str += double_indent + to_string(e.loc) + ")";
+    return str;
 }
 
 // resolved_bind
@@ -767,9 +772,9 @@ std::string to_string(const resolved_bind& e, int indent) {
         str += ("[" + e.ion.value() + "]");
     }
     str += "\n";
-    str += (double_indent + e.name + "\n");
-    std::visit([&](auto&& c){str += (to_string(c, indent+1) + "\n");}, *e.type);
-    str += (double_indent + to_string(e.loc) + ")");
+    str += double_indent + e.name + "\n";
+    str += to_string(e.type, indent+1) + "\n";
+    str += double_indent + to_string(e.loc) + ")";
     return str;
 }
 
@@ -779,10 +784,11 @@ std::string to_string(const resolved_initial& e, int indent) {
     auto double_indent = single_indent + "  ";
 
     std::string str = single_indent + "(resolved_initial\n";
-    std::visit([&](auto&& c){str += (to_string(c, indent+1) + "\n");}, *e.identifier);
-    std::visit([&](auto&& c){str += (to_string(c, indent+1) + "\n");}, *e.value);
-    std::visit([&](auto&& c){str += (to_string(c, indent+1) + "\n");}, *e.type);
-    return str + double_indent + to_string(e.loc) + ")";
+    str += to_string(e.identifier, indent+1) + "\n";
+    str += to_string(e.value, indent+1) + "\n";
+    str += to_string(e.type, indent+1) + "\n";
+    str += double_indent + to_string(e.loc) + ")";
+    return str;
 }
 
 // resolved_evolve
@@ -791,10 +797,11 @@ std::string to_string(const resolved_evolve& e, int indent) {
     auto double_indent = single_indent + "  ";
 
     std::string str = single_indent + "(resolved_evolve\n";
-    std::visit([&](auto&& c){str += (to_string(c, indent+1) + "\n");}, *e.identifier);
-    std::visit([&](auto&& c){str += (to_string(c, indent+1) + "\n");}, *e.value);
-    std::visit([&](auto&& c){str += (to_string(c, indent+1) + "\n");}, *e.type);
-    return str + double_indent + to_string(e.loc) + ")";
+    str += to_string(e.identifier, indent+1) + "\n";
+    str += to_string(e.value, indent+1) + "\n";
+    str += to_string(e.type, indent+1) + "\n";
+    str += double_indent + to_string(e.loc) + ")";
+    return str;
 }
 
 // resolved_effect
@@ -808,9 +815,10 @@ std::string to_string(const resolved_effect& e, int indent) {
         str += ("[" + e.ion.value() + "]");
     }
     str += "\n";
-    std::visit([&](auto&& c){str += (to_string(c, indent+1) + "\n");}, *e.value);
-    std::visit([&](auto&& c){str += (to_string(c, indent+1) + "\n");}, *e.type);
-    return str + double_indent + to_string(e.loc) + ")";
+    str += to_string(e.value, indent+1) + "\n";
+    str += to_string(e.type, indent+1) + "\n";
+    str += double_indent + to_string(e.loc) + ")";
+    return str;
 }
 
 // resolved_export
@@ -819,9 +827,10 @@ std::string to_string(const resolved_export& e, int indent) {
     auto double_indent = single_indent + "  ";
 
     std::string str = single_indent + "(resolved_export\n";
-    std::visit([&](auto&& c){str += (to_string(c, indent+1) + "\n");}, *e.identifier);
-    std::visit([&](auto&& c){str += (to_string(c, indent+1) + "\n");}, *e.type);
-    return str + double_indent + to_string(e.loc) + ")";
+    str += to_string(e.identifier, indent+1) + "\n";
+    str += to_string(e.type, indent+1) + "\n";
+    str += double_indent + to_string(e.loc) + ")";
+    return str;
 }
 
 // resolved_call
@@ -830,12 +839,13 @@ std::string to_string(const resolved_call& e, int indent) {
     auto double_indent = single_indent + "  ";
 
     std::string str = single_indent + "(resolved_call\n";
-    std::visit([&](auto&& c){str += (to_string(c, indent+1) + "\n");}, *e.f_identifier);
+    str += to_string(e.f_identifier, indent+1) + "\n";
     for (const auto& f: e.call_args) {
-        std::visit([&](auto&& c){str += (to_string(c, indent+1) + "\n");}, *f);
+        str += to_string(f, indent+1) + "\n";
     }
-    std::visit([&](auto&& c){str += (to_string(c, indent+1) + "\n");}, *e.type);
-    return str + double_indent + to_string(e.loc) + ")";
+    str += to_string(e.type, indent+1) + "\n";
+    str += double_indent + to_string(e.loc) + ")";
+    return str;
 }
 
 // resolved_object
@@ -846,15 +856,16 @@ std::string to_string(const resolved_object& e, int indent) {
     auto double_indent = single_indent + "  ";
 
     std::string str = single_indent + "(resolved_object\n";
-    if (e.r_identifier) std::visit([&](auto&& c){str += (to_string(c, indent+1) + "\n");}, *e.r_identifier.value());
+    if (e.r_identifier) str += to_string(e.r_identifier.value(), indent+1) + "\n";
     for (unsigned i = 0; i < e.record_fields.size(); ++i) {
-        str += (double_indent + "(\n");
-        std::visit([&](auto&& c){str += (to_string(c, indent+2) + "\n");}, *(e.record_fields[i]));
-        std::visit([&](auto&& c){str += (to_string(c, indent+2) + "\n");}, *(e.record_values[i]));
-        str += (double_indent + ")\n");
+        str += double_indent + "(\n";
+        str += to_string(e.record_fields[i], indent+2) + "\n";
+        str += to_string(e.record_values[i], indent+2) + "\n";
+        str += double_indent + ")\n";
     }
-    std::visit([&](auto&& c){str += (to_string(c, indent+1) + "\n");}, *e.type);
-    return str + double_indent + to_string(e.loc) + ")";
+    str += to_string(e.type, indent+1) + "\n";
+    str += double_indent + to_string(e.loc) + ")";
+    return str;
 }
 
 // resolved_let
@@ -863,11 +874,12 @@ std::string to_string(const resolved_let& e, int indent) {
     auto double_indent = single_indent + "  ";
 
     std::string str = single_indent + "(resolved_let\n";
-    std::visit([&](auto&& c){str += (to_string(c, indent+1) + "\n");}, *e.identifier);
-    std::visit([&](auto&& c){str += (to_string(c, indent+1) + "\n");}, *e.value);
-    std::visit([&](auto&& c){str += (to_string(c, indent+1) + "\n");}, *e.body);
-    std::visit([&](auto&& c){str += (to_string(c, indent+1) + "\n");}, *e.type);
-    return str + double_indent + to_string(e.loc) + ")";
+    str += to_string(e.identifier, indent+1) + "\n";
+    str += to_string(e.value, indent+1) + "\n";
+    str += to_string(e.body, indent+1) + "\n";
+    str += to_string(e.type, indent+1) + "\n";
+    str += double_indent + to_string(e.loc) + ")";
+    return str;
 }
 
 // resolved_with
@@ -875,10 +887,11 @@ std::string to_string(const resolved_with& e, int indent) {
     auto single_indent = std::string(indent*2, ' ');
     auto double_indent = single_indent + "  ";
     std::string str = single_indent + "(resolved_with\n";
-    std::visit([&](auto&& c){str += (to_string(c, indent+1) + "\n");}, *e.value);
-    std::visit([&](auto&& c){str += (to_string(c, indent+1) + "\n");}, *e.body);
-    std::visit([&](auto&& c){str += (to_string(c, indent+1) + "\n");}, *e.type);
-    return str + double_indent + to_string(e.loc) + ")";
+    str += to_string(e.value, indent+1) + "\n";
+    str += to_string(e.body, indent+1) + "\n";
+    str += to_string(e.type, indent+1) + "\n";
+    str += double_indent + to_string(e.loc) + ")";
+    return str;
 }
 
 // resolved_conditional
@@ -887,11 +900,12 @@ std::string to_string(const resolved_conditional& e, int indent) {
     auto double_indent = single_indent + "  ";
 
     std::string str = single_indent + "(resolved_conditional\n";
-    std::visit([&](auto&& c){str += (to_string(c, indent+1) + "\n");}, *e.condition);
-    std::visit([&](auto&& c){str += (to_string(c, indent+1) + "\n");}, *e.value_true);
-    std::visit([&](auto&& c){str += (to_string(c, indent+1) + "\n");}, *e.value_false);
-    std::visit([&](auto&& c){str += (to_string(c, indent+1) + "\n");}, *e.type);
-    return str + double_indent + to_string(e.loc) + ")";
+    str += to_string(e.condition, indent+1) + "\n";
+    str += to_string(e.value_true, indent+1) + "\n";
+    str += to_string(e.value_false, indent+1) + "\n";
+    str += to_string(e.type, indent+1) + "\n";
+    str += double_indent + to_string(e.loc) + ")";
+    return str;
 }
 
 // resolved_float
@@ -900,9 +914,10 @@ std::string to_string(const resolved_float& e, int indent) {
     auto double_indent = single_indent + "  ";
 
     std::string str = single_indent + "(resolved_float\n";
-    str += (double_indent + std::to_string(e.value) + "\n");
-    std::visit([&](auto&& c) {str += (to_string(c, indent+1) + "\n");}, *e.type);
-    return str + double_indent + to_string(e.loc) + ")";
+    str += double_indent + std::to_string(e.value) + "\n";
+    str += to_string(e.type, indent+1) + "\n";
+    str += double_indent + to_string(e.loc) + ")";
+    return str;
 }
 
 // resolved_int
@@ -911,9 +926,10 @@ std::string to_string(const resolved_int& e, int indent) {
     auto double_indent = single_indent + "  ";
 
     std::string str = single_indent + "(resolved_int\n";
-    str += (double_indent + std::to_string(e.value) + "\n");
-    std::visit([&](auto&& c) {str += (to_string(c, indent+1) + "\n");}, *e.type);
-    return str + double_indent + to_string(e.loc) + ")";
+    str += double_indent + std::to_string(e.value) + "\n";
+    str += to_string(e.type, indent+1) + "\n";
+    str += double_indent + to_string(e.loc) + ")";
+    return str;
 }
 
 // resolved_unary
@@ -922,9 +938,10 @@ std::string to_string(const resolved_unary& e, int indent) {
     auto double_indent = single_indent + "  ";
 
     std::string str = single_indent + "(resolved_unary " + to_string(e.op) + "\n";
-    std::visit([&](auto&& c){str += (to_string(c, indent+1) + "\n");}, *e.arg);
-    std::visit([&](auto&& c){str += (to_string(c, indent+1) + "\n");}, *e.type);
-    return str + double_indent + to_string(e.loc) + ")";
+    str += to_string(e.arg, indent+1) + "\n";
+    str += to_string(e.type, indent+1) + "\n";
+    str += double_indent + to_string(e.loc) + ")";
+    return str;
 }
 
 // resolved_binary
@@ -933,10 +950,11 @@ std::string to_string(const resolved_binary& e, int indent) {
     auto double_indent = single_indent + "  ";
 
     std::string str = single_indent + "(resolved_binary " + to_string(e.op) + "\n";
-    std::visit([&](auto&& c){str += (to_string(c, indent+1) + "\n");}, *e.lhs);
-    std::visit([&](auto&& c){str += (to_string(c, indent+1) + "\n");}, *e.rhs);
-    std::visit([&](auto&& c){str += (to_string(c, indent+1) + "\n");}, *e.type);
-    return str + double_indent + to_string(e.loc) + ")";
+    str += to_string(e.lhs, indent+1) + "\n";
+    str += to_string(e.rhs, indent+1) + "\n";
+    str += to_string(e.type, indent+1) + "\n";
+    str += double_indent + to_string(e.loc) + ")";
+    return str;
 }
 
 std::string to_string(const resolved_argument& e, int indent) {
@@ -944,9 +962,24 @@ std::string to_string(const resolved_argument& e, int indent) {
     auto double_indent = single_indent + "  ";
 
     std::string str = single_indent + "(resolved_argument \n";
-    str += (double_indent + e.name + "\n");
-    std::visit([&](auto&& c){str += (to_string(c, indent+1) + "\n");}, *e.type);
-    return str + double_indent + to_string(e.loc) + ")";
+    str += double_indent + e.name + "\n";
+    str += to_string(e.type, indent+1) + "\n";
+    str += double_indent + to_string(e.loc) + ")";
+    return str;
 }
+
+std::string to_string(const r_expr & e, int indent) {
+    return std::visit([&](auto&& c){return to_string(c, indent);}, *e);
+}
+
+// common member getters
+r_type type_of(const r_expr& e) {
+    return std::visit([](auto&& c){return c.type;}, *e);
+}
+
+src_location location_of(const r_expr& e) {
+    return std::visit([](auto&& c){return c.loc;}, *e);
+}
+
 } // namespace al
 } // namespace raw_ir

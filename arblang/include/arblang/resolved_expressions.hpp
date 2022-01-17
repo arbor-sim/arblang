@@ -315,48 +315,13 @@ struct in_scope_map {
 };
 
 resolved_mechanism resolve(const raw_ir::mechanism_expr&, const in_scope_map&);
-r_expr resolve(const raw_ir::parameter_expr&, const in_scope_map&);
-r_expr resolve(const raw_ir::constant_expr&, const in_scope_map&);
-r_expr resolve(const raw_ir::state_expr&, const in_scope_map&);
-r_expr resolve(const raw_ir::record_alias_expr&, const in_scope_map&);
-r_expr resolve(const raw_ir::function_expr&, const in_scope_map&);
-r_expr resolve(const raw_ir::initial_expr&, const in_scope_map&);
-r_expr resolve(const raw_ir::evolve_expr&, const in_scope_map&);
-r_expr resolve(const raw_ir::effect_expr&, const in_scope_map&);
-r_expr resolve(const raw_ir::export_expr&, const in_scope_map&);
-r_expr resolve(const raw_ir::call_expr&, const in_scope_map&);
-r_expr resolve(const raw_ir::bind_expr&, const in_scope_map&);
-r_expr resolve(const raw_ir::object_expr&, const in_scope_map&);
-r_expr resolve(const raw_ir::let_expr&, const in_scope_map&);
-r_expr resolve(const raw_ir::with_expr&, const in_scope_map&);
-r_expr resolve(const raw_ir::conditional_expr&, const in_scope_map&);
-r_expr resolve(const raw_ir::float_expr&, const in_scope_map&);
-r_expr resolve(const raw_ir::int_expr&, const in_scope_map&);
-r_expr resolve(const raw_ir::unary_expr&, const in_scope_map&);
-r_expr resolve(const raw_ir::binary_expr&, const in_scope_map&);
-r_expr resolve(const raw_ir::identifier_expr&, const in_scope_map&);
+r_expr resolve(const raw_ir::expr &, const in_scope_map&);
 
 std::string to_string(const resolved_mechanism&, int indent=0);
-std::string to_string(const resolved_parameter&, int indent=0);
-std::string to_string(const resolved_constant&, int indent=0);
-std::string to_string(const resolved_state&, int indent=0);
-std::string to_string(const resolved_record_alias&, int indent=0);
-std::string to_string(const resolved_function&, int indent=0);
-std::string to_string(const resolved_initial&, int indent=0);
-std::string to_string(const resolved_evolve&, int indent=0);
-std::string to_string(const resolved_effect&, int indent=0);
-std::string to_string(const resolved_export&, int indent=0);
-std::string to_string(const resolved_call&, int indent=0);
-std::string to_string(const resolved_bind&, int indent=0);
-std::string to_string(const resolved_object&, int indent=0);
-std::string to_string(const resolved_let&, int indent=0);
-std::string to_string(const resolved_with&, int indent=0);
-std::string to_string(const resolved_conditional&, int indent=0);
-std::string to_string(const resolved_float&, int indent=0);
-std::string to_string(const resolved_int&, int indent=0);
-std::string to_string(const resolved_unary&, int indent=0);
-std::string to_string(const resolved_binary&, int indent=0);
-std::string to_string(const resolved_argument&, int indent=0);
+std::string to_string(const r_expr&, int indent=0);
+
+r_type type_of(const r_expr&);
+src_location location_of(const r_expr&);
 
 template <typename T, typename... Args>
 r_expr make_rexpr(Args&&... args) {

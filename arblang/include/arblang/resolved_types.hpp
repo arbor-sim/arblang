@@ -18,17 +18,20 @@ using resolved_type = std::variant<
     resolved_boolean,
     resolved_record>;
 using r_type = std::shared_ptr<resolved_type>;
+
 bool operator==(const resolved_type& lhs, const resolved_type& rhs);
 bool operator!=(const resolved_type& lhs, const resolved_type& rhs);
 
 struct normalized_type {
-    static std::unordered_map<quantity, int> q_map;
-    std::array<int,6> q_pow = {0, 0, 0, 0, 0, 0};
+    std::array<int,6> quantity_exponents = {0, 0, 0, 0, 0, 0};
 
     normalized_type() = default;
-    normalized_type(std::array<int,6> pow): q_pow(pow) {};
+    normalized_type(quantity q);
+    normalized_type(std::array<int,6> pow): quantity_exponents(pow) {};
+
     bool is_real();
     normalized_type& set(quantity, int);
+    int get(quantity);
 };
 bool operator==(const normalized_type& lhs, const normalized_type& rhs);
 bool operator!=(const normalized_type& lhs, const normalized_type& rhs);
@@ -62,25 +65,14 @@ r_type make_rtype(Args&&... args) {
     return r_type(new resolved_type(T(std::forward<Args>(args)...)));
 }
 
-r_type resolve_type_of(const bindable& b, const src_location& loc);
-r_type resolve_type_of(const affectable& a, const src_location& loc);
+r_type resolve_type(const bindable& b, const src_location& loc);
+r_type resolve_type(const affectable& a, const src_location& loc);
+r_type resolve_type(const t_expr&, const std::unordered_map<std::string, r_type>&);
 
-r_type resolve_type_of(const quantity_type&, const std::unordered_map<std::string, r_type>&);
-r_type resolve_type_of(const integer_type&, const std::unordered_map<std::string, r_type>&);
-r_type resolve_type_of(const quantity_binary_type&, const std::unordered_map<std::string, r_type>&);
-r_type resolve_type_of(const boolean_type&, const std::unordered_map<std::string, r_type>&);
-r_type resolve_type_of(const record_type&, const std::unordered_map<std::string, r_type>&);
-r_type resolve_type_of(const record_alias_type&, const std::unordered_map<std::string, r_type>&);
-
-std::optional<r_type> derive(const resolved_quantity&);
-std::optional<r_type> derive(const resolved_boolean&);
-std::optional<r_type> derive(const resolved_record&);
+std::optional<r_type> derive(const r_type&);
 
 std::string to_string(const normalized_type&, int indent=0);
-std::string to_string(const resolved_type& q, int indent=0);
-std::string to_string(const resolved_quantity&, int indent=0);
-std::string to_string(const resolved_boolean&, int indent=0);
-std::string to_string(const resolved_record&, int indent=0);
+std::string to_string(const r_type&, int indent=0);
 
 } // namespace t_resolved_ir
 } // namespace al
