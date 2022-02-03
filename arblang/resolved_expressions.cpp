@@ -189,9 +189,15 @@ r_expr resolve(const evolve_expr& expr, const in_scope_map& map) {
         throw std::runtime_error(fmt::format("variable {} evolved at {} is not a state variable.", e_name, to_string(expr.loc)));
     }
     auto s_expr = map.state_map.at(e_name);
-    auto e_expr = make_rexpr<resolved_state>(s_expr);
+    auto s_val = make_rexpr<resolved_state>(s_expr);
+    auto s_type = derive(s_expr.type).value();
     auto e_val = resolve(expr.value, map);
     auto e_type = type_of(e_val);
+
+    if (*s_type != *e_type) {
+        throw std::runtime_error(fmt::format("type mismatch between {} and {} at {}.",
+                                             to_string(s_type), to_string(e_type), to_string(id.loc)));
+    }
 
     if (id.type) {
         auto id_type = resolve_type(id.type.value(), map.type_map);
@@ -200,7 +206,7 @@ r_expr resolve(const evolve_expr& expr, const in_scope_map& map) {
                                                  to_string(id_type), to_string(e_type), to_string(id.loc)));
         }
     }
-    return make_rexpr<resolved_evolve>(e_expr, e_val, e_type, expr.loc);
+    return make_rexpr<resolved_evolve>(s_val, e_val, e_type, expr.loc);
 }
 
 r_expr resolve(const effect_expr& expr, const in_scope_map& map) {
@@ -541,6 +547,9 @@ r_expr resolve(const binary_expr& expr, const in_scope_map& map) {
 }
 
 r_expr resolve(const identifier_expr& expr, const in_scope_map& map) {
+    if (map.local_map.count(expr.name)) {
+        return make_rexpr<resolved_argument>(map.local_map.at(expr.name));
+    }
     if (map.param_map.count(expr.name)) {
         return make_rexpr<resolved_parameter>(map.param_map.at(expr.name));
     }
@@ -552,9 +561,6 @@ r_expr resolve(const identifier_expr& expr, const in_scope_map& map) {
     }
     if (map.state_map.count(expr.name)) {
         return make_rexpr<resolved_state>(map.state_map.at(expr.name));
-    }
-    if (map.local_map.count(expr.name)) {
-        return make_rexpr<resolved_argument>(map.local_map.at(expr.name));
     }
     throw std::runtime_error(fmt::format("undefined identifier {}, at {}",
                                          expr.name, to_string(expr.loc)));
