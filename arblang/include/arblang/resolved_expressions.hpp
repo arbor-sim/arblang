@@ -232,6 +232,7 @@ struct resolved_let {
     r_type type;
     src_location loc;
 
+    resolved_let() = default;
     resolved_let(r_expr iden, r_expr value, r_expr body, r_type type, const src_location& loc):
         identifier(std::move(iden)), value(std::move(value)), body(std::move(body)), type(std::move(type)), loc(loc) {};
 };

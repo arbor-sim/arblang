@@ -454,6 +454,7 @@ TEST(parser, typed_identifier) {
         }
     }
 }
+
 TEST(parser, float_pt) {
     {
         std::string fpt = "4.2";

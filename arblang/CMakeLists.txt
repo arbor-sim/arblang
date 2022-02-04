@@ -7,7 +7,7 @@ set(arblang-sources
     type_expressions.cpp
     token.cpp
     unit_expressions.cpp
-    unit_normalizer.cpp)
+    unit_normalizer.cpp include/arblang/canonicalize.hpp canonicalize.cpp)
 
 add_library(arblang ${arblang-sources})
 
