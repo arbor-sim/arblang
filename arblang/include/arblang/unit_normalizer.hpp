@@ -7,7 +7,7 @@
 #include <arblang/raw_expressions.hpp>
 
 namespace al {
-using namespace raw_ir;
+namespace raw_ir {
 
 mechanism_expr normalize(const mechanism_expr& e);
 expr normalize(expr e);
@@ -31,4 +31,6 @@ expr normalize(const float_expr& expr);
 expr normalize(const int_expr& expr);
 expr normalize(const unary_expr& expr);
 expr normalize(const binary_expr& expr);
+
+} // namespace raw_ir
 } // namespace al

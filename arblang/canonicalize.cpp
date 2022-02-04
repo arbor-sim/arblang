@@ -71,8 +71,8 @@ r_expr canonicalize(const resolved_export& e, std::unordered_set<std::string>& r
 r_expr canonicalize(const resolved_call& e, std::unordered_set<std::string>& reserved) {
     std::vector<r_expr> args_canon;
 
-    resolved_let* let_outer;
-    resolved_let* let_inner;
+    resolved_let* let_outer = nullptr;
+    resolved_let* let_inner = nullptr;
     for (const auto& arg: e.call_args) {
         auto arg_canon = canonicalize(arg, reserved);
         if (auto let_first = std::get_if<resolved_let>(arg_canon.get())) {
@@ -313,6 +313,11 @@ r_expr canonicalize(const resolved_binary& e, std::unordered_set<std::string>& r
 
 r_expr canonicalize(const r_expr& e, std::unordered_set<std::string>& reserved) {
     return std::visit([&](auto& c) {return canonicalize(c, reserved);}, *e);
+}
+
+r_expr canonicalize(const r_expr& e) {
+    std::unordered_set<std::string> reserved;
+    return canonicalize(e, reserved);
 }
 
 } // namespace resolved_ir

@@ -11,6 +11,7 @@
 #include <arblang/raw_expressions.hpp>
 
 namespace al {
+namespace raw_ir {
 
 expr normalize(expr e) {
     return std::visit([&](auto&& c){return normalize(c);}, *e);
@@ -147,4 +148,5 @@ expr normalize(const int_expr& e) {
     }
     return make_expr<float_expr>(val, unit.first, e.loc);
 }
+} // namespace raw_ir
 } // namespace al

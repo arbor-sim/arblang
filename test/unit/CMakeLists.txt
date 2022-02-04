@@ -1,5 +1,6 @@
 # Build mechanisms used solely in unit tests.
 set(unit_sources
+    test_canonicalizer.cpp
     test_lexer.cpp
     test_normalizer.cpp
     test_parser.cpp
