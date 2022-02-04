@@ -15,6 +15,14 @@ static std::string unique_local_name(std::unordered_set<std::string>& reserved, 
     }
 }
 
+resolved_let* innermost_let(resolved_let* let) {
+    resolved_let* let_last = let;
+    while (auto let_next = std::get_if<resolved_let>(let_last->body.get())) {
+        let_last = let_next;
+    }
+    return let_last;
+}
+
 resolved_mechanism canonicalize(const resolved_mechanism&);
 
 r_expr canonicalize(const resolved_parameter& e, std::unordered_set<std::string>& reserved) {
@@ -71,25 +79,18 @@ r_expr canonicalize(const resolved_export& e, std::unordered_set<std::string>& r
 r_expr canonicalize(const resolved_call& e, std::unordered_set<std::string>& reserved) {
     std::vector<r_expr> args_canon;
 
-    resolved_let* let_outer = nullptr;
-    resolved_let* let_inner = nullptr;
+    bool has_let = false;
+    resolved_let let_outer;
     for (const auto& arg: e.call_args) {
         auto arg_canon = canonicalize(arg, reserved);
         if (auto let_first = std::get_if<resolved_let>(arg_canon.get())) {
-            resolved_let* let_last = let_first;
-            while (auto let_next = std::get_if<resolved_let>(let_last->body.get())) {
-                let_last = let_next;
+            args_canon.push_back(innermost_let(let_first)->body);
+            if (!has_let) {
+                let_outer = *let_first;
+            } else {
+                innermost_let(&let_outer)->body = arg_canon;
             }
-            args_canon.push_back(let_last->body);
-
-            if (!let_outer) {
-                let_outer = let_first;
-                let_inner = let_last;
-            }
-            else {
-                let_inner->body = arg_canon;
-                let_inner = let_last;
-            }
+            has_let = true;
         }
         else {
             args_canon.push_back(arg_canon);
@@ -99,35 +100,30 @@ r_expr canonicalize(const resolved_call& e, std::unordered_set<std::string>& res
     auto temp_expr = make_rexpr<resolved_argument>(unique_local_name(reserved), e.type, e.loc);
     auto let_wrapper = make_rexpr<resolved_let>(temp_expr, call_canon, temp_expr, e.type, e.loc);
 
-    if (!let_outer) return let_wrapper;
+    if (!has_let) return let_wrapper;
 
+    resolved_let* let_inner = innermost_let(&let_outer);
     let_inner->body = let_wrapper;
     let_inner->type = e.type;
-    return make_rexpr<resolved_let>(*let_outer);
+    return make_rexpr<resolved_let>(let_outer);
 }
 
 r_expr canonicalize(const resolved_object& e, std::unordered_set<std::string>& reserved) {
     std::vector<r_expr> values_canon;
-    resolved_let* let_outer;
-    resolved_let* let_inner;
 
+    bool has_let = false;
+    resolved_let let_outer;
     for (const auto& arg: e.record_values) {
         auto arg_canon = canonicalize(arg, reserved);
         if (auto let_first = std::get_if<resolved_let>(arg_canon.get())) {
-            resolved_let* let_last = let_first;
-            while (auto let_next = std::get_if<resolved_let>(let_last->body.get())) {
-                let_last = let_next;
-            }
-            values_canon.push_back(let_last->body);
-
-            if (!let_outer) {
-                let_outer = let_first;
-                let_inner = let_last;
+            values_canon.push_back(innermost_let(let_first)->body);
+            if (!has_let) {
+                let_outer = *let_first;
             }
             else {
-                let_inner->body = arg_canon;
-                let_inner = let_last;
+                innermost_let(&let_outer)->body = arg_canon;
             }
+            has_let = true;
         }
         else {
             values_canon.push_back(arg_canon);
@@ -137,11 +133,12 @@ r_expr canonicalize(const resolved_object& e, std::unordered_set<std::string>& r
     auto temp_expr = make_rexpr<resolved_argument>(unique_local_name(reserved), e.type, e.loc);
     auto let_wrapper = make_rexpr<resolved_let>(temp_expr, object_canon, temp_expr, e.type, e.loc);
 
-    if (!let_outer) return let_wrapper;
+    if (!has_let) return let_wrapper;
 
+    resolved_let* let_inner = innermost_let(&let_outer);
     let_inner->body = let_wrapper;
     let_inner->type = e.type;
-    return make_rexpr<resolved_let>(*let_outer);
+    return make_rexpr<resolved_let>(let_outer);
 }
 
 r_expr canonicalize(const resolved_let& e, std::unordered_set<std::string>& reserved) {
