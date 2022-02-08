@@ -272,6 +272,7 @@ std::string to_string(const resolved_record& q, int indent) {
 
     std::string str = single_indent +  "(resolved_record_type\n";
     for (const auto& f: q.fields) {
+        str += double_indent + f.first + "\n";
         std::visit([&](auto&& c) {str += (to_string(c, indent+1) + "\n");}, *(f.second));
     }
     return str + double_indent + ")";

@@ -110,6 +110,22 @@ TEST(canonicalizer, let) {
 
     {
         in_scope_map scope_map;
+        scope_map.local_map.insert({"a", resolved_argument("a", real_type, loc)});
+
+        std::string expr = "let a = a + 5; let a = a + 5; a;";
+        auto p = parser(expr);
+        auto let = p.parse_let();
+        auto let_normal = normalize(let);
+        auto let_resolved = resolve(let_normal, scope_map);
+        auto let_canon = canonicalize(let_resolved);
+        auto let_ssa = single_assign(let_canon);
+        std::cout << to_string(let_canon) << std::endl;
+        std::cout << std::endl;
+        std::cout << to_string(let_ssa) << std::endl;
+        std::cout << std::endl;
+    }
+    /*{
+        in_scope_map scope_map;
         scope_map.local_map.insert({"a", resolved_argument("a", voltage_type, loc)});
         scope_map.local_map.insert({"s", resolved_argument("s", conductance_type, loc)});
 
@@ -138,5 +154,51 @@ TEST(canonicalizer, let) {
         auto let_canon = canonicalize(let_resolved);
         std::cout << to_string(let_canon) << std::endl;
         std::cout << std::endl;
+    }*/
+}
+
+TEST(canonicalizer, with) {
+    auto loc = src_location{};
+    auto real_type    = make_rtype<resolved_quantity>(normalized_type(quantity::real), loc);
+    auto current_type = make_rtype<resolved_quantity>(normalized_type(quantity::current), loc);
+    auto voltage_type = make_rtype<resolved_quantity>(normalized_type(quantity::voltage), loc);
+    auto conductance_type = make_rtype<resolved_quantity>(normalized_type(quantity::conductance), loc);
+    auto real_body    = make_rexpr<resolved_float>(0, real_type, loc);
+
+    std::vector<std::pair<std::string, r_type>> foo_fields = {{"a", voltage_type}, {"b", current_type}};
+    auto foo_type = make_rtype<resolved_record>(foo_fields, loc);
+    std::vector<std::pair<std::string, r_type>> bar_fields = {{"X", real_type}, {"Y", foo_type}};
+    auto bar_type = make_rtype<resolved_record>(bar_fields, loc);
+
+    {
+        in_scope_map scope_map;
+        scope_map.local_map.insert({"t", resolved_argument("t", real_type, loc)});
+        scope_map.local_map.insert({"q", resolved_argument("q", real_type, loc)});
+        scope_map.func_map.insert({"foo", resolved_function("foo", {}, real_body, real_type, loc)});
+        scope_map.type_map.insert({"foo", foo_type});
+        scope_map.type_map.insert({"bar", bar_type});
+
+        std::string expr = "let B:bar = {X = t + (5 - q); Y = {a = 2[V]; b = foo()*1[A];};};\n"
+                           "with B.Y;\n"
+                           "let r = a/b;\n"
+                           "with B;\n"
+                           "X*r/3;\n";
+
+        auto p = parser(expr);
+        auto let = p.parse_let();
+        auto let_normal = normalize(let);
+        auto let_resolved = resolve(let_normal, scope_map);
+        auto let_canon = canonicalize(let_resolved);
+        auto let_ssa = single_assign(let_canon);
+        std::cout << to_string(let_canon) << std::endl;
+        std::cout << std::endl;
+        std::cout << to_string(let_ssa) << std::endl;
+        std::cout << std::endl;
     }
+}
+
+TEST(canonicalizer, conditional) {
+}
+
+TEST(canonicalizer, object) {
 }

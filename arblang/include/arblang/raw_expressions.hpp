@@ -207,6 +207,7 @@ struct let_expr {
     expr body;
     src_location loc;
 
+    let_expr() = default;
     let_expr(expr iden, expr value, expr body, const src_location& loc):
         identifier(std::move(iden)), value(std::move(value)), body(std::move(body)), loc(loc) {};
 };

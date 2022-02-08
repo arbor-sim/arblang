@@ -316,12 +316,13 @@ r_expr resolve(const with_expr& expr, const in_scope_map& map) {
     auto v_expr = resolve(expr.value, map);
     auto v_type = type_of(v_expr);
 
-    auto available_map = map;
-    if (std::get_if<resolved_record>(v_type.get())) {
-        auto v_rec = std::get<resolved_object>(*v_expr);
-        for (const auto& v_field: v_rec.record_fields) {
-            auto v_arg = std::get<resolved_argument>(*v_field);
-            available_map.local_map.insert({v_arg.name, v_arg});
+    // Transform with to nested let expressions
+    std::vector<let_expr> let_vars;
+    if (auto v_rec = std::get_if<resolved_record>(v_type.get())) {
+        for (const auto& v_field: v_rec->fields) {
+            auto let = let_expr();
+            auto iden = make_expr<identifier_expr>(v_field.first, expr.loc);
+            let_vars.push_back(let_expr(iden, make_expr<binary_expr>(binary_op::dot, expr.value, iden, expr.loc), {}, expr.loc));
         }
     }
     else {
@@ -329,10 +330,13 @@ r_expr resolve(const with_expr& expr, const in_scope_map& map) {
                                              to_string(expr.value), to_string(expr.loc)));
     }
 
-    auto b_expr = resolve(expr.body, available_map);
-    auto b_type = type_of(b_expr);
+    let_vars.back().body = expr.body;
+    for (int i = let_vars.size()-2; i >=0; i--) {
+        let_vars[i].body = make_expr<let_expr>(let_vars[i+1]);
+    }
+    auto equivalent_let = make_expr<let_expr>(let_vars.front());
 
-    return make_rexpr<resolved_with>(v_expr, b_expr, b_type, expr.loc);
+    return resolve(equivalent_let, map);
 }
 
 r_expr resolve(const conditional_expr& expr, const in_scope_map& map) {
@@ -850,10 +854,10 @@ std::string to_string(const resolved_object& e, bool include_type, int indent) {
     auto single_indent = std::string(indent*2, ' ');
     auto double_indent = single_indent + "  ";
 
-    std::string str = single_indent + "(resolved_object\n";
-    if (e.r_identifier) str += double_indent + std::get<resolved_record_alias>(*e.r_identifier.value()).name;
+    std::string str = single_indent + "(resolved_object";
+    if (e.r_identifier) str += "\n" + double_indent + std::get<resolved_record_alias>(*e.r_identifier.value()).name;
     for (unsigned i = 0; i < e.record_fields.size(); ++i) {
-        str += double_indent + "\n(\n";
+        str += "\n" + double_indent + "(\n";
         str += to_string(e.record_fields[i], false, indent+2) + "\n";
         str += to_string(e.record_values[i], false, indent+2) + "\n";
         str += double_indent + ")";
@@ -873,17 +877,6 @@ std::string to_string(const resolved_let& e, bool include_type, int indent) {
     str += to_string(e.body, true, indent+1);
     auto type = to_string(e.type, indent+1);
     if (include_type) str += "\n" + type;
-    return str + ")";
-}
-
-// resolved_with
-std::string to_string(const resolved_with& e, bool include_type, int indent) {
-    auto single_indent = std::string(indent*2, ' ');
-    auto double_indent = single_indent + "  ";
-    std::string str = single_indent + "(resolved_with\n";
-    str += to_string(e.value, false, indent+1) + "\n";
-    str += to_string(e.body, false, indent+1);
-    if (include_type) str += "\n" + to_string(e.type, indent+1);
     return str + ")";
 }
 

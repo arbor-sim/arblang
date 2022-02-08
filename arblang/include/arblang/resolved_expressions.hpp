@@ -32,7 +32,6 @@ struct resolved_export;
 struct resolved_call;
 struct resolved_object;
 struct resolved_let;
-struct resolved_with;
 struct resolved_conditional;
 struct resolved_float;
 struct resolved_int;
@@ -54,7 +53,6 @@ using resolved_expr = std::variant<
     resolved_call,
     resolved_object,
     resolved_let,
-    resolved_with,
     resolved_conditional,
     resolved_float,
     resolved_int,
@@ -237,17 +235,6 @@ struct resolved_let {
         identifier(std::move(iden)), value(std::move(value)), body(std::move(body)), type(std::move(type)), loc(loc) {};
 };
 
-// with bindings
-struct resolved_with {
-    r_expr value;
-    r_expr body;
-    r_type type;
-    src_location loc;
-
-    resolved_with(r_expr value, r_expr body, r_type type, const src_location& loc):
-        value(std::move(value)), body(std::move(body)), type(std::move(type)), loc(loc) {};
-};
-
 // if/else statements
 struct resolved_conditional {
     r_expr condition;
@@ -310,7 +297,6 @@ struct in_scope_map {
     std::unordered_map<std::string, resolved_state> state_map;
     std::unordered_map<std::string, resolved_bind> bind_map;
     std::unordered_map<std::string, resolved_function> func_map;
-    std::unordered_map<std::string, resolved_record_alias> rec_map;
     std::unordered_map<std::string, resolved_argument> local_map;
     std::unordered_map<std::string, r_type> type_map;
 };
