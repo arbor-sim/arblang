@@ -665,91 +665,87 @@ r_expr resolve(const raw_ir::expr& expr, const in_scope_map& map) {
 }
 
 // resolved_mechanism
-std::string to_string(const resolved_mechanism& e, int indent) {
+std::string to_string(const resolved_mechanism& e, bool include_type, int indent) {
     auto indent_str = std::string(indent*2, ' ');
     std::string str = indent_str + "(module_expr " + e.name + " " + to_string(e.kind) + "\n";
     for (const auto& p: e.parameters) {
-        str += to_string(p, indent+1) + "\n";
+        str += to_string(p, include_type, indent+1) + "\n";
     }
     for (const auto& p: e.constants) {
-        str += to_string(p, indent+1) + "\n";
+        str += to_string(p, include_type, indent+1) + "\n";
     }
     for (const auto& p: e.states) {
-        str += to_string(p, indent+1) + "\n";
+        str += to_string(p, include_type, indent+1) + "\n";
     }
     for (const auto& p: e.bindings) {
-        str += to_string(p, indent+1) + "\n";
+        str += to_string(p, include_type, indent+1) + "\n";
     }
     for (const auto& p: e.functions) {
-        str += to_string(p, indent+1) + "\n";
+        str += to_string(p, include_type, indent+1) + "\n";
     }
     for (const auto& p: e.initializations) {
-        str += to_string(p, indent+1) + "\n";
+        str += to_string(p, include_type, indent+1) + "\n";
     }
     for (const auto& p: e.evolutions) {
-        str += to_string(p, indent+1) + "\n";
+        str += to_string(p, include_type, indent+1) + "\n";
     }
     for (const auto& p: e.effects) {
-        str += to_string(p, indent+1) + "\n";
+        str += to_string(p, include_type, indent+1) + "\n";
     }
     for (const auto& p: e.exports) {
-        str += to_string(p, indent+1) + "\n";
+        str += to_string(p, include_type, indent+1) + "\n";
     }
     return str + to_string(e.loc) + ")";
 }
 
 // resolved_parameter
-std::string to_string(const resolved_parameter& e, int indent) {
+std::string to_string(const resolved_parameter& e, bool include_type, int indent) {
     auto single_indent = std::string(indent*2, ' ');
     auto double_indent = single_indent + "  ";
 
     std::string str = single_indent + "(resolved_parameter\n";
     str += double_indent + e.name + "\n";
-    str += to_string(e.value, indent+1) + "\n";
-    str += to_string(e.type, indent+1) + "\n";
-    str += double_indent + to_string(e.loc) + ")";
-    return str;
+    str += to_string(e.value, false, indent+1);
+    if (include_type) str += "\n" + to_string(e.type, indent+1);
+    return str + ")";
 }
 
 // resolved_constant
-std::string to_string(const resolved_constant& e, int indent) {
+std::string to_string(const resolved_constant& e, bool include_type, int indent) {
     auto single_indent = std::string(indent*2, ' ');
     auto double_indent = single_indent + "  ";
 
     std::string str = single_indent + "(resolved_constant\n";
     str += double_indent + e.name + "\n";
-    str += to_string(e.value, indent+1) + "\n";
-    str += to_string(e.type, indent+1) + "\n";
-    str += double_indent + to_string(e.loc) + ")";
-    return str;
+    str += to_string(e.value, false, indent+1);
+    if (include_type) str += "\n" + to_string(e.type, indent+1) + "\n";
+    return str + ")";
 }
 
 // resolved_state
-std::string to_string(const resolved_state& e, int indent) {
+std::string to_string(const resolved_state& e, bool include_type, int indent) {
     auto single_indent = std::string(indent*2, ' ');
     auto double_indent = single_indent + "  ";
 
     std::string str = single_indent + "(resolved_state\n";
-    str += double_indent + e.name + "\n";
-    str += to_string(e.type, indent+1) + "\n";
-    str += double_indent + to_string(e.loc) + ")";
-    return str;
+    str += double_indent + e.name;
+    if (include_type) str += "\n" + to_string(e.type, indent+1);
+    return str + ")";
 }
 
 // resolved_record_alias
-std::string to_string(const resolved_record_alias& e, int indent) {
+std::string to_string(const resolved_record_alias& e, bool include_type, int indent) {
     auto single_indent = std::string(indent*2, ' ');
     auto double_indent = single_indent + "  ";
 
     std::string str = single_indent + "(resolved_record_alias\n";
-    str += double_indent + e.name + "\n";
-    str += to_string(e.type, indent+1) + "\n";
-    str += double_indent + to_string(e.loc) + ")";
-    return str;
+    str += double_indent + e.name;
+    if (include_type) str += "\n" + to_string(e.type, indent+1);
+    return str + ")";
 }
 
 // resolved_function
-std::string to_string(const resolved_function& e, int indent) {
+std::string to_string(const resolved_function& e, bool include_type, int indent) {
     auto single_indent = std::string(indent*2, ' ');
     auto double_indent = single_indent + "  ";
 
@@ -759,16 +755,15 @@ std::string to_string(const resolved_function& e, int indent) {
 
     str += double_indent + "(\n";
     for (const auto& f: e.args) {
-        str += to_string(f, indent+2) + "\n";
+        str += to_string(f, true, indent+2) + "\n";
     }
-    str += double_indent + ")\n";
-    str += to_string(e.body, indent+1) + "\n";
-    str += double_indent + to_string(e.loc) + ")";
-    return str;
+    str += double_indent + ")";
+    if (include_type) str += "\n" + to_string(e.body, false, indent+1);
+    return str + ")";
 }
 
 // resolved_bind
-std::string to_string(const resolved_bind& e, int indent) {
+std::string to_string(const resolved_bind& e, bool include_type, int indent) {
     auto single_indent = std::string(indent*2, ' ');
     auto double_indent = single_indent + "  ";
 
@@ -778,40 +773,37 @@ std::string to_string(const resolved_bind& e, int indent) {
         str += ("[" + e.ion.value() + "]");
     }
     str += "\n";
-    str += double_indent + e.name + "\n";
-    str += to_string(e.type, indent+1) + "\n";
-    str += double_indent + to_string(e.loc) + ")";
-    return str;
+    str += double_indent + e.name;
+    if (include_type) str += "\n" + to_string(e.type, indent+1);
+    return str + ")";
 }
 
 // resolved_initial
-std::string to_string(const resolved_initial& e, int indent) {
+std::string to_string(const resolved_initial& e, bool include_type, int indent) {
     auto single_indent = std::string(indent*2, ' ');
     auto double_indent = single_indent + "  ";
 
     std::string str = single_indent + "(resolved_initial\n";
-    str += to_string(e.identifier, indent+1) + "\n";
-    str += to_string(e.value, indent+1) + "\n";
-    str += to_string(e.type, indent+1) + "\n";
-    str += double_indent + to_string(e.loc) + ")";
-    return str;
+    str += to_string(e.identifier, false, indent+1) + "\n";
+    str += to_string(e.value, false, indent+1);
+    if (include_type) str += "\n" + to_string(e.type, indent+1);
+    return str + ")";
 }
 
 // resolved_evolve
-std::string to_string(const resolved_evolve& e, int indent) {
+std::string to_string(const resolved_evolve& e, bool include_type, int indent) {
     auto single_indent = std::string(indent*2, ' ');
     auto double_indent = single_indent + "  ";
 
     std::string str = single_indent + "(resolved_evolve\n";
-    str += to_string(e.identifier, indent+1) + "\n";
-    str += to_string(e.value, indent+1) + "\n";
-    str += to_string(e.type, indent+1) + "\n";
-    str += double_indent + to_string(e.loc) + ")";
-    return str;
+    str += to_string(e.identifier, false, indent+1) + "\n";
+    str += to_string(e.value, false, indent+1);
+    if (include_type) str += "\n" + to_string(e.type, indent+1);
+    return str + ")";
 }
 
 // resolved_effect
-std::string to_string(const resolved_effect& e, int indent) {
+std::string to_string(const resolved_effect& e, bool include_type, int indent) {
     auto single_indent = std::string(indent*2, ' ');
     auto double_indent = single_indent + "  ";
 
@@ -821,161 +813,150 @@ std::string to_string(const resolved_effect& e, int indent) {
         str += ("[" + e.ion.value() + "]");
     }
     str += "\n";
-    str += to_string(e.value, indent+1) + "\n";
-    str += to_string(e.type, indent+1) + "\n";
-    str += double_indent + to_string(e.loc) + ")";
-    return str;
+    str += to_string(e.value, false, indent+1);
+    if (include_type) str += "\n" + to_string(e.type, indent+1);
+    return str + ")";
 }
 
 // resolved_export
-std::string to_string(const resolved_export& e, int indent) {
+std::string to_string(const resolved_export& e, bool include_type, int indent) {
     auto single_indent = std::string(indent*2, ' ');
     auto double_indent = single_indent + "  ";
 
     std::string str = single_indent + "(resolved_export\n";
-    str += to_string(e.identifier, indent+1) + "\n";
-    str += to_string(e.type, indent+1) + "\n";
-    str += double_indent + to_string(e.loc) + ")";
-    return str;
+    str += to_string(e.identifier, false, indent+1);
+    if (include_type) str += "\n" + to_string(e.type, indent+1);
+    return str + ")";
 }
 
 // resolved_call
-std::string to_string(const resolved_call& e, int indent) {
+std::string to_string(const resolved_call& e, bool include_type, int indent) {
     auto single_indent = std::string(indent*2, ' ');
     auto double_indent = single_indent + "  ";
 
     std::string str = single_indent + "(resolved_call\n";
-    str += to_string(e.f_identifier, indent+1) + "\n";
+    str += double_indent + std::get<resolved_function>(*e.f_identifier).name;
     for (const auto& f: e.call_args) {
-        str += to_string(f, indent+1) + "\n";
+        str += "\n" + to_string(f, false, indent+1);
     }
-    str += to_string(e.type, indent+1) + "\n";
-    str += double_indent + to_string(e.loc) + ")";
-    return str;
+    if (include_type) str += "\n" + to_string(e.type, indent+1);
+    return str + ")";
 }
 
 // resolved_object
-std::string to_string(const resolved_object& e, int indent) {
+std::string to_string(const resolved_object& e, bool include_type, int indent) {
     assert(e.record_fields.size() == e.record_values.size());
 
     auto single_indent = std::string(indent*2, ' ');
     auto double_indent = single_indent + "  ";
 
     std::string str = single_indent + "(resolved_object\n";
-    if (e.r_identifier) str += to_string(e.r_identifier.value(), indent+1) + "\n";
+    if (e.r_identifier) str += double_indent + std::get<resolved_record_alias>(*e.r_identifier.value()).name;
     for (unsigned i = 0; i < e.record_fields.size(); ++i) {
-        str += double_indent + "(\n";
-        str += to_string(e.record_fields[i], indent+2) + "\n";
-        str += to_string(e.record_values[i], indent+2) + "\n";
-        str += double_indent + ")\n";
+        str += double_indent + "\n(\n";
+        str += to_string(e.record_fields[i], false, indent+2) + "\n";
+        str += to_string(e.record_values[i], false, indent+2) + "\n";
+        str += double_indent + ")";
     }
-    str += to_string(e.type, indent+1) + "\n";
-    str += double_indent + to_string(e.loc) + ")";
-    return str;
+    if (include_type) str += "\n" + to_string(e.type, indent+1);
+    return str + ")";
 }
 
 // resolved_let
-std::string to_string(const resolved_let& e, int indent) {
+std::string to_string(const resolved_let& e, bool include_type, int indent) {
     auto single_indent = std::string(indent*2, ' ');
     auto double_indent = single_indent + "  ";
 
     std::string str = single_indent + "(resolved_let\n";
-    str += to_string(e.identifier, indent+1) + "\n";
-    str += to_string(e.value, indent+1) + "\n";
-    str += to_string(e.body, indent+1) + "\n";
-    str += to_string(e.type, indent+1) + "\n";
-    str += double_indent + to_string(e.loc) + ")";
-    return str;
+    str += to_string(e.identifier, false, indent+1) + "\n";
+    str += to_string(e.value, true, indent+1) + "\n";
+    str += to_string(e.body, true, indent+1);
+    auto type = to_string(e.type, indent+1);
+    if (include_type) str += "\n" + type;
+    return str + ")";
 }
 
 // resolved_with
-std::string to_string(const resolved_with& e, int indent) {
+std::string to_string(const resolved_with& e, bool include_type, int indent) {
     auto single_indent = std::string(indent*2, ' ');
     auto double_indent = single_indent + "  ";
     std::string str = single_indent + "(resolved_with\n";
-    str += to_string(e.value, indent+1) + "\n";
-    str += to_string(e.body, indent+1) + "\n";
-    str += to_string(e.type, indent+1) + "\n";
-    str += double_indent + to_string(e.loc) + ")";
-    return str;
+    str += to_string(e.value, false, indent+1) + "\n";
+    str += to_string(e.body, false, indent+1);
+    if (include_type) str += "\n" + to_string(e.type, indent+1);
+    return str + ")";
 }
 
 // resolved_conditional
-std::string to_string(const resolved_conditional& e, int indent) {
+std::string to_string(const resolved_conditional& e, bool include_type, int indent) {
     auto single_indent = std::string(indent*2, ' ');
     auto double_indent = single_indent + "  ";
 
     std::string str = single_indent + "(resolved_conditional\n";
-    str += to_string(e.condition, indent+1) + "\n";
-    str += to_string(e.value_true, indent+1) + "\n";
-    str += to_string(e.value_false, indent+1) + "\n";
-    str += to_string(e.type, indent+1) + "\n";
-    str += double_indent + to_string(e.loc) + ")";
-    return str;
+    str += to_string(e.condition, false, indent+1) + "\n";
+    str += to_string(e.value_true, false, indent+1) + "\n";
+    str += to_string(e.value_false, false, indent+1);
+    if (include_type) str += "\n" + to_string(e.type, indent+1);
+    return str + ")";
 }
 
 // resolved_float
-std::string to_string(const resolved_float& e, int indent) {
+std::string to_string(const resolved_float& e, bool include_type, int indent) {
     auto single_indent = std::string(indent*2, ' ');
     auto double_indent = single_indent + "  ";
 
     std::string str = single_indent + "(resolved_float\n";
-    str += double_indent + std::to_string(e.value) + "\n";
-    str += to_string(e.type, indent+1) + "\n";
-    str += double_indent + to_string(e.loc) + ")";
-    return str;
+    str += double_indent + std::to_string(e.value);
+    if (include_type) str += "\n" + to_string(e.type, indent+1);
+    return str + ")";
 }
 
 // resolved_int
-std::string to_string(const resolved_int& e, int indent) {
+std::string to_string(const resolved_int& e, bool include_type, int indent) {
     auto single_indent = std::string(indent*2, ' ');
     auto double_indent = single_indent + "  ";
 
     std::string str = single_indent + "(resolved_int\n";
-    str += double_indent + std::to_string(e.value) + "\n";
-    str += to_string(e.type, indent+1) + "\n";
-    str += double_indent + to_string(e.loc) + ")";
-    return str;
+    str += double_indent + std::to_string(e.value);
+    if (include_type) str += "\n" + to_string(e.type, indent+1);
+    return str + ")";
 }
 
 // resolved_unary
-std::string to_string(const resolved_unary& e, int indent) {
+std::string to_string(const resolved_unary& e, bool include_type, int indent) {
     auto single_indent = std::string(indent*2, ' ');
     auto double_indent = single_indent + "  ";
 
     std::string str = single_indent + "(resolved_unary " + to_string(e.op) + "\n";
-    str += to_string(e.arg, indent+1) + "\n";
-    str += to_string(e.type, indent+1) + "\n";
-    str += double_indent + to_string(e.loc) + ")";
-    return str;
+    str += to_string(e.arg, false, indent+1);
+    if (include_type) str += "\n" + to_string(e.type, indent+1);
+    return str + ")";
 }
 
 // resolved_binary
-std::string to_string(const resolved_binary& e, int indent) {
+std::string to_string(const resolved_binary& e, bool include_type, int indent) {
     auto single_indent = std::string(indent*2, ' ');
     auto double_indent = single_indent + "  ";
 
     std::string str = single_indent + "(resolved_binary " + to_string(e.op) + "\n";
-    str += to_string(e.lhs, indent+1) + "\n";
-    str += to_string(e.rhs, indent+1) + "\n";
-    str += to_string(e.type, indent+1) + "\n";
-    str += double_indent + to_string(e.loc) + ")";
-    return str;
+    str += to_string(e.lhs, false, indent+1) + "\n";
+    str += to_string(e.rhs, false, indent+1);
+    if (include_type) str += "\n" + to_string(e.type, indent+1);
+    return str + ")";
 }
 
-std::string to_string(const resolved_argument& e, int indent) {
+std::string to_string(const resolved_argument& e, bool include_type, int indent) {
     auto single_indent = std::string(indent*2, ' ');
     auto double_indent = single_indent + "  ";
 
     std::string str = single_indent + "(resolved_argument \n";
-    str += double_indent + e.name + "\n";
-    str += to_string(e.type, indent+1) + "\n";
-    str += double_indent + to_string(e.loc) + ")";
-    return str;
+    str += double_indent + e.name;
+    if (include_type) str += "\n" + to_string(e.type, indent+1);
+    return str + ")";
 }
 
-std::string to_string(const r_expr & e, int indent) {
-    return std::visit([&](auto&& c){return to_string(c, indent);}, *e);
+std::string to_string(const r_expr & e, bool include_type, int indent) {
+    return std::visit([&](auto&& c){return to_string(c, include_type, indent);}, *e);
 }
 
 // common member getters

@@ -318,8 +318,8 @@ struct in_scope_map {
 resolved_mechanism resolve(const raw_ir::mechanism_expr&, const in_scope_map&);
 r_expr resolve(const raw_ir::expr &, const in_scope_map&);
 
-std::string to_string(const resolved_mechanism&, int indent=0);
-std::string to_string(const r_expr&, int indent=0);
+std::string to_string(const resolved_mechanism&, bool include_type=true, int indent=0);
+std::string to_string(const r_expr&, bool include_type=true, int indent=0);
 
 r_type type_of(const r_expr&);
 src_location location_of(const r_expr&);

@@ -258,14 +258,13 @@ std::string to_string(const resolved_quantity& q, int indent) {
     auto double_indent = single_indent + "  ";
 
     std::string str = single_indent + "(resolved_quantity_type\n";
-    str += (to_string(q.type, indent+1) + "\n");
-    return str + double_indent + to_string(q.loc) + ")";
+    return str += (to_string(q.type, indent+1) + ")");
 }
 std::string to_string(const resolved_boolean& q, int indent) {
     auto single_indent = std::string(indent*2, ' ');
     auto double_indent = single_indent + "  ";
 
-    return single_indent + "(resolved_boolean_type " + to_string(q.loc) + ")";
+    return single_indent + "(resolved_boolean_type)";
 }
 std::string to_string(const resolved_record& q, int indent) {
     auto single_indent = std::string(indent*2, ' ');
@@ -275,7 +274,7 @@ std::string to_string(const resolved_record& q, int indent) {
     for (const auto& f: q.fields) {
         std::visit([&](auto&& c) {str += (to_string(c, indent+1) + "\n");}, *(f.second));
     }
-    return str + double_indent + to_string(q.loc) + ")";
+    return str + double_indent + ")";
 }
 std::string to_string(const r_type& q, int indent) {
     return std::visit([&](auto&& c){return to_string(c, indent);}, *q);
