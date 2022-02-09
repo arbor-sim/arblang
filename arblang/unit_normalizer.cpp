@@ -117,7 +117,7 @@ expr normalize(const with_expr& e) {
 expr normalize(const conditional_expr& e) {
     auto cond = std::visit([&](auto&& c){return normalize(c);}, *e.condition);
     auto val_true  = std::visit([&](auto&& c){return normalize(c);}, *e.value_true);
-    auto val_false = std::visit([&](auto&& c){return normalize(c);}, *e.value_true);
+    auto val_false = std::visit([&](auto&& c){return normalize(c);}, *e.value_false);
     return make_expr<conditional_expr>(cond, val_true, val_false, e.loc);
 }
 expr normalize(const identifier_expr& e) {

@@ -332,6 +332,7 @@ r_expr single_assign(const resolved_argument& e,
                      std::unordered_map<std::string, std::string>& rewrites)
 {
     if (rewrites.count(e.name)) {
+        auto arg = resolved_argument(rewrites[e.name], e.type, e.loc);
         return make_rexpr<resolved_argument>(rewrites[e.name], e.type, e.loc);
     }
     return make_rexpr<resolved_argument>(e);
@@ -453,7 +454,7 @@ r_expr single_assign(const resolved_unary& e,
                      std::unordered_set<std::string>& reserved,
                      std::unordered_map<std::string, std::string>& rewrites)
 {
-    auto arg_ssa = single_assign(e.arg);
+    auto arg_ssa = single_assign(e.arg, reserved, rewrites);
     return make_rexpr<resolved_unary>(e.op, arg_ssa, e.type, e.loc);
 }
 
@@ -461,9 +462,9 @@ r_expr single_assign(const resolved_binary& e,
                      std::unordered_set<std::string>& reserved,
                      std::unordered_map<std::string, std::string>& rewrites)
 {
-    auto lhs_ssa = single_assign(e.lhs);
-    auto rhs_ssa = single_assign(e.rhs);
-    return make_rexpr<resolved_binary>(e.op, e.lhs, e.rhs, e.type, e.loc);
+    auto lhs_ssa = single_assign(e.lhs, reserved, rewrites);
+    auto rhs_ssa = e.op == binary_op::dot? e.rhs: single_assign(e.rhs, reserved, rewrites);
+    return make_rexpr<resolved_binary>(e.op, lhs_ssa, rhs_ssa, e.type, e.loc);
 }
 
 r_expr single_assign(const r_expr& e,
