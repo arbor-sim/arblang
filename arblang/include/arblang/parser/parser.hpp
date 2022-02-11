@@ -5,48 +5,48 @@
 #include <vector>
 
 #include <arblang/parser/lexer.hpp>
-#include <arblang/parser/raw_expressions.hpp>
+#include <arblang/parser/parsed_expressions.hpp>
 #include <arblang/parser/type_expressions.hpp>
 #include <arblang/parser/unit_expressions.hpp>
 
 namespace al {
-using namespace raw_ir;
-using namespace t_raw_ir;
-using namespace u_raw_ir;
+using namespace parsed_ir;
+using namespace parsed_type_ir;
+using namespace parsed_unit_ir;
 
 class parser: lexer {
 public:
     parser(std::string const&);
     void parse();
 
-    const std::vector<mechanism_expr>& mechanisms() {return mechanisms_;};
-    mechanism_expr parse_mechanism();
+    const std::vector<parsed_mechanism>& mechanisms() {return mechanisms_;};
+    parsed_mechanism parse_mechanism();
 
-    expr parse_parameter();
-    expr parse_constant();
-    expr parse_state();
-    expr parse_record_alias();
-    expr parse_function();
-    expr parse_binding();
-    expr parse_effect();
-    expr parse_evolve();
-    expr parse_initial();
-    expr parse_export();
+    p_expr parse_parameter();
+    p_expr parse_constant();
+    p_expr parse_state();
+    p_expr parse_record_alias();
+    p_expr parse_function();
+    p_expr parse_binding();
+    p_expr parse_effect();
+    p_expr parse_evolve();
+    p_expr parse_initial();
+    p_expr parse_export();
 
-    expr parse_identifier();
-    expr parse_typed_identifier();
-    expr parse_call();
-    expr parse_object();
-    expr parse_let();
-    expr parse_with();
-    expr parse_conditional();
-    expr parse_float();
-    expr parse_int();
+    p_expr parse_identifier();
+    p_expr parse_typed_identifier();
+    p_expr parse_call();
+    p_expr parse_object();
+    p_expr parse_let();
+    p_expr parse_with();
+    p_expr parse_conditional();
+    p_expr parse_float();
+    p_expr parse_int();
 
-    expr parse_prefix_expr();
-    expr parse_value_expr();
-    expr parse_binary_expr(expr&&, const token&);
-    expr parse_expr(int prec=0);
+    p_expr parse_prefix_expr();
+    p_expr parse_value_expr();
+    p_expr parse_parsed_binary(p_expr&&, const token&);
+    p_expr parse_expr(int prec=0);
 
     t_expr parse_binary_type(t_expr&& lhs, const token& lop);
     t_expr parse_type_element();
@@ -60,8 +60,8 @@ public:
     u_expr try_parse_unit(int prec=0);
 
 private:
-    std::pair<expr, expr> parse_assignment();
+    std::pair<p_expr, p_expr> parse_assignment();
 
-    std::vector<mechanism_expr> mechanisms_;
+    std::vector<parsed_mechanism> mechanisms_;
 };
 } // namespace al

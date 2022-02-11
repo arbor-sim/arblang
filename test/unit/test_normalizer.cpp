@@ -8,12 +8,12 @@
 #include "../gtest.h"
 
 using namespace al;
-using namespace raw_ir;
+using namespace parsed_ir;
 
 // TODO test exceptions properly
 
 TEST(normalizer, unit) {
-    using namespace u_raw_ir;
+    using namespace parsed_unit_ir;
     {
         std::string unit = "[mV]";
         auto p = parser(unit);
@@ -168,7 +168,7 @@ TEST(normalizer, number_expr) {
         std::string fpt = "2.22 [mV]";
         auto p = parser(fpt);
         auto normalized = normalize(p.parse_float());
-        auto v = std::get<float_expr>(*normalized);
+        auto v = std::get<parsed_float>(*normalized);
         EXPECT_EQ(2.22e-3, v.value);
 
         auto u = std::get<simple_unit>(*v.unit);
@@ -179,7 +179,7 @@ TEST(normalizer, number_expr) {
         std::string fpt = "2e-4 [kA/s]";
         auto p = parser(fpt);
         auto normalized = normalize(p.parse_float());
-        auto v = std::get<float_expr>(*normalized);
+        auto v = std::get<parsed_float>(*normalized);
         EXPECT_EQ(2e-1, v.value);
 
         auto u = std::get<binary_unit>(*v.unit);
@@ -197,7 +197,7 @@ TEST(normalizer, number_expr) {
         std::string fpt = "2000 [dOhm^3]";
         auto p = parser(fpt);
         auto normalized = normalize(p.parse_int());
-        auto v = std::get<int_expr>(*normalized);
+        auto v = std::get<parsed_int>(*normalized);
         EXPECT_EQ(2, v.value);
 
         auto u = std::get<binary_unit>(*v.unit);
@@ -214,7 +214,7 @@ TEST(normalizer, number_expr) {
         std::string fpt = "1.09 [nA/um^2]";
         auto p = parser(fpt);
         auto normalized = normalize(p.parse_float());
-        auto v = std::get<int_expr>(*normalized);
+        auto v = std::get<parsed_int>(*normalized);
         EXPECT_EQ(1090, v.value);
 
         auto u = std::get<binary_unit>(*v.unit);
@@ -238,7 +238,7 @@ TEST(normalizer, number_expr) {
         std::string fpt = "10 [nA/um]";
         auto p = parser(fpt);
         auto normalized = normalize(p.parse_int());
-        auto v = std::get<float_expr>(*normalized);
+        auto v = std::get<parsed_float>(*normalized);
         EXPECT_EQ(0.01, v.value);
 
         auto u = std::get<binary_unit>(*v.unit);
@@ -256,7 +256,7 @@ TEST(normalizer, number_expr) {
         std::string fpt = "1";
         auto p = parser(fpt);
         auto normalized = normalize(p.parse_int());
-        auto v = std::get<int_expr>(*normalized);
+        auto v = std::get<parsed_int>(*normalized);
         EXPECT_EQ(1, v.value);
     }
 }

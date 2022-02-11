@@ -3108,7 +3108,7 @@ namespace internal {
 namespace {
 
 // Helper function for IsHRESULT{SuccessFailure} predicates
-AssertionResult HRESULTFailureHelper(const char* expr,
+AssertionResult HRESULTFailureHelper(const char* p_expr,
                                      const char* expected,
                                      long hr) {  // NOLINT
 # if GTEST_OS_WINDOWS_MOBILE
@@ -3143,24 +3143,24 @@ AssertionResult HRESULTFailureHelper(const char* expr,
 
   const std::string error_hex("0x" + String::FormatHexInt(hr));
   return ::testing::AssertionFailure()
-      << "Expected: " << expr << " " << expected << ".\n"
+      << "Expected: " << p_expr << " " << expected << ".\n"
       << "  Actual: " << error_hex << " " << error_text << "\n";
 }
 
 }  // namespace
 
-AssertionResult IsHRESULTSuccess(const char* expr, long hr) {  // NOLINT
+AssertionResult IsHRESULTSuccess(const char* p_expr, long hr) {  // NOLINT
   if (SUCCEEDED(hr)) {
     return AssertionSuccess();
   }
-  return HRESULTFailureHelper(expr, "succeeds", hr);
+  return HRESULTFailureHelper(p_expr, "succeeds", hr);
 }
 
-AssertionResult IsHRESULTFailure(const char* expr, long hr) {  // NOLINT
+AssertionResult IsHRESULTFailure(const char* p_expr, long hr) {  // NOLINT
   if (FAILED(hr)) {
     return AssertionSuccess();
   }
-  return HRESULTFailureHelper(expr, "fails", hr);
+  return HRESULTFailureHelper(p_expr, "fails", hr);
 }
 
 #endif  // GTEST_OS_WINDOWS

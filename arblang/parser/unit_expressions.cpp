@@ -8,7 +8,7 @@
 #include <arblang/parser/unit_expressions.hpp>
 
 namespace al {
-namespace u_raw_ir {
+namespace parsed_unit_ir {
 
 std::optional<unit_sym> to_unit_symbol(const std::string& s) {
     if (s == "m")   return unit_sym::m;
@@ -160,24 +160,24 @@ std::optional<unit> check_simple_unit(const std::string& s) {
 }
 
 // to_type
-t_raw_ir::t_expr to_type(const binary_unit& u) {
-    using namespace t_raw_ir;
+parsed_type_ir::t_expr to_type(const binary_unit& u) {
+    using namespace parsed_type_ir;
     t_binary_op op;
     switch (u.op) {
-        case u_binary_op::mul: op = t_raw_ir::t_binary_op::mul; break;
-        case u_binary_op::div: op = t_raw_ir::t_binary_op::div; break;
-        case u_binary_op::pow: op = t_raw_ir::t_binary_op::pow; break;
+        case u_binary_op::mul: op = parsed_type_ir::t_binary_op::mul; break;
+        case u_binary_op::div: op = parsed_type_ir::t_binary_op::div; break;
+        case u_binary_op::pow: op = parsed_type_ir::t_binary_op::pow; break;
     }
     return make_t_expr<quantity_binary_type>(op, to_type(u.lhs), to_type(u.rhs), u.loc);
 }
 
-t_raw_ir::t_expr to_type(const integer_unit& u) {
-    using namespace t_raw_ir;
+parsed_type_ir::t_expr to_type(const integer_unit& u) {
+    using namespace parsed_type_ir;
     return make_t_expr<integer_type>(u.val, u.loc);
 }
 
-t_raw_ir::t_expr to_type(const simple_unit& u) {
-    using namespace t_raw_ir;
+parsed_type_ir::t_expr to_type(const simple_unit& u) {
+    using namespace parsed_type_ir;
     switch (u.val.symbol) {
         case unit_sym::A:   return make_t_expr<quantity_type>(quantity::current, u.loc);
         case unit_sym::m:   return make_t_expr<quantity_type>(quantity::length, u.loc);
@@ -203,12 +203,12 @@ t_raw_ir::t_expr to_type(const simple_unit& u) {
     return {};
 }
 
-t_raw_ir::t_expr to_type(const no_unit& u) {
-    using namespace t_raw_ir;
+parsed_type_ir::t_expr to_type(const no_unit& u) {
+    using namespace parsed_type_ir;
     return make_t_expr<quantity_type>(quantity::real, src_location{});
 }
 
-t_raw_ir::t_expr to_type(const u_expr& u) {
+parsed_type_ir::t_expr to_type(const u_expr& u) {
     return std::visit([&](auto&& c){return to_type(c);}, *u);
 }
 
@@ -341,5 +341,5 @@ std::string to_string(const u_expr& u , int indent) {
 }
 
 
-} // namespace u_raw_ir
+} // namespace parsed_unit_ir
 } // namespace al

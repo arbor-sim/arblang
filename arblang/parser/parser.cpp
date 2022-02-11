@@ -28,8 +28,8 @@ void parser::parse() {
     }
 }
 
-mechanism_expr parser::parse_mechanism() {
-    mechanism_expr m;
+parsed_mechanism parser::parse_mechanism() {
+    parsed_mechanism m;
     auto t = current();
     m.loc = t.loc;
     if (t.type != tok::mechanism) {
@@ -100,7 +100,7 @@ mechanism_expr parser::parse_mechanism() {
 
 // A parameter declaration of the form:
 // parameter `iden` [: `type`] = `value_expression`;
-expr parser::parse_parameter() {
+p_expr parser::parse_parameter() {
     auto t = current();
     if (t.type != tok::parameter) {
         throw std::runtime_error(fmt::format("Expected parameter, got {} at {}", t.spelling, to_string(t.loc)));
@@ -109,12 +109,12 @@ expr parser::parse_parameter() {
     next(); // consume 'parameter'
 
     auto assign = parse_assignment();
-    return make_expr<parameter_expr>(std::move(assign.first), std::move(assign.second), loc);
+    return make_expr<parsed_parameter>(std::move(assign.first), std::move(assign.second), loc);
 };
 
 // A constant declaration of the form:
 // constant `iden` [: `type`] = `value_expression`;
-expr parser::parse_constant()  {
+p_expr parser::parse_constant()  {
     auto t = current();
     if (t.type != tok::constant) {
         throw std::runtime_error(fmt::format("Expected constant, got {} at {} ", t.spelling, to_string(t.loc)));
@@ -123,12 +123,12 @@ expr parser::parse_constant()  {
     next(); // consume 'constant'
 
     auto assign = parse_assignment();
-    return make_expr<constant_expr>(std::move(assign.first), std::move(assign.second), loc);
+    return make_expr<parsed_constant>(std::move(assign.first), std::move(assign.second), loc);
 };
 
 // A state declaration of the form:
 // state `iden` [: `type`];
-expr parser::parse_state()  {
+p_expr parser::parse_state()  {
     auto t = current();
     if (t.type != tok::state) {
         throw std::runtime_error(fmt::format("Expected `state`, got {} at {}", t.spelling, to_string(t.loc)));
@@ -146,12 +146,12 @@ expr parser::parse_state()  {
         throw std::runtime_error(fmt::format("Expected ;, got {} at {}", current().spelling, to_string(t.loc)));
     }
     next(); // consume ';'
-    return make_expr<state_expr>(std::move(iden), loc);
+    return make_expr<parsed_state>(std::move(iden), loc);
 };
 
 // A record definition (type alias) of the form:
 // record `iden` {`field_id0`: `type0`, `field_id1`: `type_1`, ...}[;]
-expr parser::parse_record_alias()    {
+p_expr parser::parse_record_alias()    {
     auto t = current();
     if (t.type != tok::record) {
         throw std::runtime_error(fmt::format("Expected `record`, got {} at {}", t.spelling, to_string(t.loc)));
@@ -171,12 +171,12 @@ expr parser::parse_record_alias()    {
         next(); // consume ;
     }
 
-    return make_expr<record_alias_expr>(iden, type, loc);
+    return make_expr<parsed_record_alias>(iden, type, loc);
 };
 
 // A function definition of the form:
 // function `iden` (`arg0`:`type0`, `arg1`:`type`, ...) [: `return_type`] {`value_expression`}[;]
-expr parser::parse_function() {
+p_expr parser::parse_function() {
     auto t = current();
     if (t.type != tok::function) {
         throw std::runtime_error(fmt::format("Expected `function`, got {} at {}", t.spelling, to_string(t.loc)));
@@ -195,7 +195,7 @@ expr parser::parse_function() {
     }
     t = next(); // consume '('
 
-    std::vector<expr> args;
+    std::vector<p_expr> args;
     while (t.type != tok::rparen) {
         if (peek().type != tok::colon) {
             throw std::runtime_error("function arguments must have a type.");
@@ -245,12 +245,12 @@ expr parser::parse_function() {
         next(); // consume ;
     }
 
-    return make_expr<function_expr>(name, args, ret_quantity, ret_value, loc);
+    return make_expr<parsed_function>(name, args, ret_quantity, ret_value, loc);
 };
 
 // A binding of the form
 // bind `iden`[:`type`] = `bindable`;
-expr parser::parse_binding() {
+p_expr parser::parse_binding() {
     auto t = current();
     if (t.type != tok::bind) {
         throw std::runtime_error(fmt::format("Expected `bind`, got {} at {}", t.spelling, to_string(t.loc)));
@@ -295,12 +295,12 @@ expr parser::parse_binding() {
     if (t.type == tok::semicolon) {
         next(); // consume ';'
     }
-    return make_expr<bind_expr>(std::move(iden), bindable, ion_name, loc);
+    return make_expr<parsed_bind>(std::move(iden), bindable, ion_name, loc);
 }
 
 // An initialization of the form
 // `initial` `identifier`[:`type`] = `value_expression`;
-expr parser::parse_initial() {
+p_expr parser::parse_initial() {
     auto t = current();
     if (t.type != tok::initial) {
         throw std::runtime_error(fmt::format("Expected `initial`, got {} at {}" + t.spelling, to_string(t.loc)));
@@ -309,12 +309,12 @@ expr parser::parse_initial() {
     next(); // consume 'initial'
 
     auto assign = parse_assignment();
-    return make_expr<initial_expr>(std::move(assign.first), std::move(assign.second), loc);
+    return make_expr<parsed_initial>(std::move(assign.first), std::move(assign.second), loc);
 }
 
 // An effect of the form
 // `effect` `affectable`[:`type`] = `value_expression`;
-expr parser::parse_effect() {
+p_expr parser::parse_effect() {
     auto t = current();
     if (t.type != tok::effect) {
         throw std::runtime_error(fmt::format("Expected `effect`, got {} at {}", t.spelling, to_string(t.loc)));
@@ -365,12 +365,12 @@ expr parser::parse_effect() {
     }
     next(); // consume ';'
 
-    return make_expr<effect_expr>(affectable, ion_name, type, value, loc);
+    return make_expr<parsed_effect>(affectable, ion_name, type, value, loc);
 }
 
 // An evolution of the form
 // `evolve` `identifier`[:`type`] = `value_expression`;
-expr parser::parse_evolve() {
+p_expr parser::parse_evolve() {
     auto t = current();
     if (t.type != tok::evolve) {
         throw std::runtime_error("Expected `evolve`, got " + t.spelling);
@@ -379,12 +379,12 @@ expr parser::parse_evolve() {
     next(); // consume 'evolve'
 
     auto assign = parse_assignment();
-    return make_expr<evolve_expr>(std::move(assign.first), std::move(assign.second), loc);
+    return make_expr<parsed_evolve>(std::move(assign.first), std::move(assign.second), loc);
 }
 
 // An export of the form
 // `export` `identifier`[;]
-expr parser::parse_export() {
+p_expr parser::parse_export() {
     auto t = current();
     if (t.type != tok::param_export) {
         throw std::runtime_error("Expected `export`, got " + t.spelling);
@@ -398,12 +398,12 @@ expr parser::parse_export() {
     if (current().type == tok::semicolon) {
         next(); // consume ';'
     }
-    return make_expr<export_expr>(std::move(iden), loc);
+    return make_expr<parsed_export>(std::move(iden), loc);
 }
 
 // A function call of the form:
 // `func_name`(`value_expression0`, `value_exprssion1`, ...)
-expr parser::parse_call() {
+p_expr parser::parse_call() {
     auto t = current();
     if (t.type != tok::identifier) {
         throw std::runtime_error(fmt::format("Expected identifier, got {} at {}", t.spelling, to_string(t.loc)));
@@ -417,7 +417,7 @@ expr parser::parse_call() {
     }
     t = next(); // consume '('
 
-    std::vector<expr> args;
+    std::vector<p_expr> args;
     while (t.type != tok::rparen) {
         args.emplace_back(parse_expr());
 
@@ -436,12 +436,12 @@ expr parser::parse_call() {
     }
     next(); // consume ')'
 
-    return make_expr<call_expr>(iden, std::move(args), loc);
+    return make_expr<parsed_call>(iden, std::move(args), loc);
 }
 
 // An object of the form:
 // [`name`] {`field0`[:`type0`] = `value_expression0`; `field1`[:`type1`] = `value_expression1`}
-expr parser::parse_object() {
+p_expr parser::parse_object() {
     auto t = current();
     auto loc = t.loc;
     std::optional<std::string> record_name;
@@ -455,7 +455,7 @@ expr parser::parse_object() {
     }
     t = next(); // consume '{'
 
-    std::vector<expr> fields, values;
+    std::vector<p_expr> fields, values;
     while (t.type != tok::rbrace) {
         fields.emplace_back(parse_typed_identifier());
         t = current();
@@ -478,12 +478,12 @@ expr parser::parse_object() {
     }
     next(); // consume '}'
 
-    return make_expr<object_expr>(record_name, std::move(fields), std::move(values), loc);
+    return make_expr<parsed_object>(record_name, std::move(fields), std::move(values), loc);
 }
 
 // A let expression of the form:
 // let `iden`[: `type`] = `value_expression0`; `value_expression1`
-expr parser::parse_let() {
+p_expr parser::parse_let() {
     auto t = current();
     if (t.type != tok::let) {
         throw std::runtime_error(fmt::format("Expected 'let', got {} at {}", t.spelling, to_string(t.loc)));
@@ -507,12 +507,12 @@ expr parser::parse_let() {
     }
     next(); // consume ';'
     auto body = parse_expr();
-    return make_expr<let_expr>(std::move(iden), std::move(value), std::move(body), let.loc);
+    return make_expr<parsed_let>(std::move(iden), std::move(value), std::move(body), let.loc);
 }
 
 // A with expression of the form:
 // with `iden`; `value_expression`
-expr parser::parse_with() {
+p_expr parser::parse_with() {
     auto t = current();
     if (t.type != tok::with) {
         throw std::runtime_error(fmt::format("Expected 'with', got {} at {}", t.spelling, to_string(t.loc)));
@@ -530,12 +530,12 @@ expr parser::parse_with() {
 
     auto body = parse_expr();
 
-    return make_expr<with_expr>(std::move(val), std::move(body), with.loc);
+    return make_expr<parsed_with>(std::move(val), std::move(body), with.loc);
 }
 
 // A conditional expression of the form:
 // if `boolean_expression` then `value_expression0` else `value_expression1`
-expr parser::parse_conditional() {
+p_expr parser::parse_conditional() {
     auto t = current();
     if (t.type != tok::if_stmt) {
         throw std::runtime_error(fmt::format("Expected 'if', got {} at {}", t.spelling, to_string(t.loc)));
@@ -561,12 +561,12 @@ expr parser::parse_conditional() {
 
     auto if_false = parse_expr();
 
-    return make_expr<conditional_expr>(std::move(condition), std::move(if_true), std::move(if_false), if_stmt.loc);
+    return make_expr<parsed_conditional>(std::move(condition), std::move(if_true), std::move(if_false), if_stmt.loc);
 }
 
 // Floating point expression of the form:
 // `float_pt` `unit`
-expr parser::parse_float() {
+p_expr parser::parse_float() {
     auto t = current();
     if (t.type != tok::floatpt) {
         throw std::runtime_error(fmt::format("Expected floating point number, got {} at {}", t.spelling, to_string(t.loc)));
@@ -574,12 +574,12 @@ expr parser::parse_float() {
     auto num = current();
     t = next(); // consume float
 
-    return make_expr<float_expr>(std::stold(num.spelling), try_parse_unit(), num.loc);
+    return make_expr<parsed_float>(std::stold(num.spelling), try_parse_unit(), num.loc);
 }
 
 // Integer expression of the form:
 // `integer` `unit`
-expr parser::parse_int() {
+p_expr parser::parse_int() {
     auto t = current();
     if (t.type != tok::integer) {
         throw std::runtime_error(fmt::format("Expected integer number, got {} at {}", t.spelling, to_string(t.loc)));
@@ -587,24 +587,24 @@ expr parser::parse_int() {
     auto num = current();
     t = next(); // consume int
 
-    return make_expr<int_expr>(std::stoll(num.spelling), try_parse_unit(), num.loc);
+    return make_expr<parsed_int>(std::stoll(num.spelling), try_parse_unit(), num.loc);
 }
 
 // Identifier expression of the form:
 // `iden`
-expr parser::parse_identifier() {
+p_expr parser::parse_identifier() {
     auto t = current();
     if (current().type != tok::identifier) {
         throw std::runtime_error(fmt::format("Expected identifier, got {} at {}", t.spelling, to_string(t.loc)));
     }
     t = current();
     next(); // consume identifier;
-    return make_expr<identifier_expr>(t.spelling, t.loc);
+    return make_expr<parsed_identifier>(t.spelling, t.loc);
 }
 
 // Identifier expression of the form:
 // `iden`[:`type`]
-expr parser::parse_typed_identifier() {
+p_expr parser::parse_typed_identifier() {
     auto t = current();
     if (t.type != tok::identifier) {
         throw std::runtime_error(fmt::format("Expected identifier, got {} at {}", t.spelling, to_string(t.loc)));
@@ -614,13 +614,13 @@ expr parser::parse_typed_identifier() {
     if (t.type == tok::colon) {
         next(); // consume colon;
         auto type = parse_type();
-        return make_expr<identifier_expr>(type, iden.spelling, iden.loc);
+        return make_expr<parsed_identifier>(type, iden.spelling, iden.loc);
     }
-    return make_expr<identifier_expr>(iden.spelling, iden.loc);
+    return make_expr<parsed_identifier>(iden.spelling, iden.loc);
 }
 
 // Prefixed operations: exp, exprelr, log, cos, sin, abs, !, -, +, max, min.
-expr parser::parse_prefix_expr() {
+p_expr parser::parse_prefix_expr() {
     auto prefix_op = current();
     switch (prefix_op.type) {
         case tok::exp:
@@ -640,12 +640,12 @@ expr parser::parse_prefix_expr() {
                 throw std::runtime_error(fmt::format("Expected ')' expression, got {} at {}", t.spelling, to_string(t.loc)));
             }
             next(); // consume ')'
-            return make_expr<unary_expr>(prefix_op.type, std::move(e), prefix_op.loc);
+            return make_expr<parsed_unary>(prefix_op.type, std::move(e), prefix_op.loc);
         }
         case tok::lnot:
         case tok::minus:
             next(); // consume '-'
-            return make_expr<unary_expr>(prefix_op.type, parse_expr(), prefix_op.loc);
+            return make_expr<parsed_unary>(prefix_op.type, parse_expr(), prefix_op.loc);
         case tok::plus:
             next(); // consume '+'
             return parse_expr();
@@ -668,23 +668,23 @@ expr parser::parse_prefix_expr() {
                 throw std::runtime_error(fmt::format("Expected ')' expression, got {} at {}", t.spelling, to_string(t.loc)));
             }
             next(); // consume ')'
-            return make_expr<binary_expr>(prefix_op.type, std::move(lhs), std::move(rhs), prefix_op.loc);
+            return make_expr<parsed_binary>(prefix_op.type, std::move(lhs), std::move(rhs), prefix_op.loc);
         }
         default: throw std::runtime_error(fmt::format("Expected prefix operator, got {} at {}", prefix_op.spelling, to_string(prefix_op.loc)));
     }
 }
 
 // This is one of:
-// - call_expr
-// - object_expr
-// - identifier_expr
-// - let_expr
-// - with_expr
-// - conditional_expr
-// - float_expr
-// - int_expr
+// - parsed_call
+// - parsed_object
+// - parsed_identifier
+// - parsed_let
+// - parsed_with
+// - parsed_conditional
+// - parsed_float
+// - parsed_int
 // - prefix_expr
-expr parser::parse_value_expr() {
+p_expr parser::parse_value_expr() {
     auto t = current();
     switch (t.type) {
         // Every
@@ -725,7 +725,7 @@ expr parser::parse_value_expr() {
 }
 
 // Handles infix operations
-expr parser::parse_binary_expr(expr&& lhs, const token& lop) {
+p_expr parser::parse_parsed_binary(p_expr&& lhs, const token& lop) {
     auto lop_prec = lop.precedence();
     auto rhs = parse_expr(lop_prec);
 
@@ -733,24 +733,24 @@ expr parser::parse_binary_expr(expr&& lhs, const token& lop) {
     auto rop_prec = rop.precedence();
 
     if (rop_prec > lop_prec) {
-        throw std::runtime_error("parse_binary_expr() : encountered operator of higher precedence");
+        throw std::runtime_error("parse_parsed_binary() : encountered operator of higher precedence");
     }
     if (rop_prec < lop_prec) {
-        return make_expr<binary_expr>(lop.type, std::move(lhs), std::move(rhs), lop.loc);
+        return make_expr<parsed_binary>(lop.type, std::move(lhs), std::move(rhs), lop.loc);
     }
     next(); // consume rop
     if (rop.right_associative()) {
-        rhs = parse_binary_expr(std::move(rhs), rop);
-        return make_expr<binary_expr>(lop.type, std::move(lhs), std::move(rhs), lop.loc);
+        rhs = parse_parsed_binary(std::move(rhs), rop);
+        return make_expr<parsed_binary>(lop.type, std::move(lhs), std::move(rhs), lop.loc);
     }
     else {
-        lhs = make_expr<binary_expr>(lop.type, std::move(lhs), std::move(rhs), lop.loc);
-        return parse_binary_expr(std::move(lhs), rop);
+        lhs = make_expr<parsed_binary>(lop.type, std::move(lhs), std::move(rhs), lop.loc);
+        return parse_parsed_binary(std::move(lhs), rop);
     }
 }
 
 // Handles full nested value expressions
-expr parser::parse_expr(int prec) {
+p_expr parser::parse_expr(int prec) {
     auto lhs = parse_value_expr();
 
     // Combine all sub-expressions with precedence greater than prec.
@@ -764,7 +764,7 @@ expr parser::parse_expr(int prec) {
 
         next(); // consume the infix binary operator
 
-        lhs = parse_binary_expr(std::move(lhs), op);
+        lhs = parse_parsed_binary(std::move(lhs), op);
     }
 }
 
@@ -1017,7 +1017,7 @@ u_expr parser::try_parse_unit(int prec) {
     return std::move(u);
 }
 
-std::pair<expr, expr> parser::parse_assignment()  {
+std::pair<p_expr, p_expr> parser::parse_assignment()  {
     auto iden = parse_typed_identifier();
     auto t = current();
     if (t.type != tok::eq) {

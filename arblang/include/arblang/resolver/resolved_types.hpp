@@ -6,8 +6,8 @@
 #include <arblang/parser/type_expressions.hpp>
 
 namespace al {
-namespace t_resolved_ir {
-using namespace t_raw_ir;
+namespace resolved_type_ir {
+using namespace parsed_type_ir;
 
 struct resolved_quantity;
 struct resolved_boolean;
@@ -74,5 +74,5 @@ std::optional<r_type> derive(const r_type&);
 std::string to_string(const normalized_type&, int indent=0);
 std::string to_string(const r_type&, int indent=0);
 
-} // namespace t_resolved_ir
+} // namespace resolved_type_ir
 } // namespace al

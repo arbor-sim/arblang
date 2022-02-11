@@ -8,14 +8,14 @@
 #include <variant>
 
 #include <arblang/parser/token.hpp>
-#include <arblang/parser/raw_expressions.hpp>
+#include <arblang/parser/parsed_expressions.hpp>
 #include <arblang/resolver/resolved_types.hpp>
 #include <arblang/util/common.hpp>
 
 namespace al {
 namespace resolved_ir {
 
-using namespace t_resolved_ir;
+using namespace resolved_type_ir;
 
 struct resolved_mechanism;
 struct resolved_parameter;
@@ -301,8 +301,8 @@ struct in_scope_map {
     std::unordered_map<std::string, r_type> type_map;
 };
 
-resolved_mechanism resolve(const raw_ir::mechanism_expr&, const in_scope_map&);
-r_expr resolve(const raw_ir::expr &, const in_scope_map&);
+resolved_mechanism resolve(const parsed_ir::parsed_mechanism&, const in_scope_map&);
+r_expr resolve(const parsed_ir::p_expr &, const in_scope_map&);
 
 std::string to_string(const resolved_mechanism&, bool include_type=true, int indent=0);
 std::string to_string(const r_expr&, bool include_type=true, int indent=0);
@@ -315,5 +315,5 @@ r_expr make_rexpr(Args&&... args) {
     return r_expr(new resolved_expr(T(std::forward<Args>(args)...)));
 }
 
-} // namespace raw_ir
+} // namespace parsed_ir
 } // namespace al

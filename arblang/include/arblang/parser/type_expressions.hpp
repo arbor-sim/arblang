@@ -12,7 +12,7 @@
 #include <arblang/util/visitor.hpp>
 
 namespace al {
-namespace t_raw_ir {
+namespace parsed_type_ir {
 
 struct integer_type;
 struct quantity_type;
@@ -123,5 +123,5 @@ template <typename T, typename... Args>
 t_expr make_t_expr(Args&&... args) {
     return t_expr(new type_expr(T(std::forward<Args>(args)...)));
 }
-} // namespace t_raw_ir
+} // namespace parsed_type_ir
 } // namespace al

@@ -6,8 +6,8 @@
 #include <arblang/resolver/resolved_types.hpp>
 
 namespace al {
-namespace t_resolved_ir {
-using namespace t_raw_ir;
+namespace resolved_type_ir {
+using namespace parsed_type_ir;
 
 // normalized_type
 normalized_type::normalized_type(quantity q) {
@@ -277,5 +277,5 @@ std::string to_string(const resolved_record& q, int indent) {
 std::string to_string(const r_type& q, int indent) {
     return std::visit([&](auto&& c){return to_string(c, indent);}, *q);
 }
-} // namespace t_resolved_ir
+} // namespace resolved_type_ir
 } // namespace al

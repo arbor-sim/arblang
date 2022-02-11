@@ -9,7 +9,7 @@
 #include <arblang/parser/type_expressions.hpp>
 
 namespace al {
-namespace t_raw_ir {
+namespace parsed_type_ir {
 std::optional<quantity> gen_quantity(tok t) {
     switch (t) {
         case tok::real: return quantity::real;
@@ -199,5 +199,5 @@ std::string to_string(const t_expr& t, int indent) {
     return std::visit([&](auto&& c) {return to_string(c, indent);}, *t);
 }
 
-} // namespace t_raw_ir
+} // namespace parsed_type_ir
 } // namespace al

@@ -6,15 +6,15 @@
 
 #include <fmt/core.h>
 
-#include <arblang/parser/raw_expressions.hpp>
+#include <arblang/parser/parsed_expressions.hpp>
 #include <arblang/resolver/resolved_expressions.hpp>
 #include <arblang/resolver/resolved_types.hpp>
 #include <arblang/util/common.hpp>
 
 namespace al {
 namespace resolved_ir {
-using namespace raw_ir;
-using namespace t_resolved_ir;
+using namespace parsed_ir;
+using namespace resolved_type_ir;
 
 // Resolver
 void check_duplicate(const std::string& name, const in_scope_map& map) {
@@ -36,8 +36,8 @@ void check_duplicate(const std::string& name, const in_scope_map& map) {
     }
 }
 
-r_expr resolve(const parameter_expr& expr, const in_scope_map& map) {
-    auto id = std::get<identifier_expr>(*expr.identifier);
+r_expr resolve(const parsed_parameter& e, const in_scope_map& map) {
+    auto id = std::get<parsed_identifier>(*e.identifier);
     auto p_name = id.name;
     check_duplicate(p_name, map);
 
@@ -45,7 +45,7 @@ r_expr resolve(const parameter_expr& expr, const in_scope_map& map) {
     available_map.bind_map.clear();
     available_map.state_map.clear();
 
-    auto p_val = resolve(expr.value, available_map);;
+    auto p_val = resolve(e.value, available_map);;
     auto p_type = type_of(p_val);
 
     if (id.type) {
@@ -55,11 +55,11 @@ r_expr resolve(const parameter_expr& expr, const in_scope_map& map) {
                                                  to_string(id_type), to_string(p_type), to_string(id.loc)));
         }
     }
-    return make_rexpr<resolved_parameter>(p_name, p_val, p_type, expr.loc);
+    return make_rexpr<resolved_parameter>(p_name, p_val, p_type, e.loc);
 }
 
-r_expr resolve(const constant_expr& expr, const in_scope_map& map) {
-    auto id = std::get<identifier_expr>(*expr.identifier);
+r_expr resolve(const parsed_constant& e, const in_scope_map& map) {
+    auto id = std::get<parsed_identifier>(*e.identifier);
     auto c_name = id.name;
     check_duplicate(c_name, map);
 
@@ -68,7 +68,7 @@ r_expr resolve(const constant_expr& expr, const in_scope_map& map) {
     available_map.bind_map.clear();
     available_map.state_map.clear();
 
-    auto c_val  = resolve(expr.value, available_map);
+    auto c_val  = resolve(e.value, available_map);
     auto c_type = type_of(c_val);
 
     if (id.type) {
@@ -79,11 +79,11 @@ r_expr resolve(const constant_expr& expr, const in_scope_map& map) {
         }
     }
 
-    return make_rexpr<resolved_constant>(c_name, c_val, c_type, expr.loc);
+    return make_rexpr<resolved_constant>(c_name, c_val, c_type, e.loc);
 }
 
-r_expr resolve(const state_expr& expr, const in_scope_map& map) {
-    auto id = std::get<identifier_expr>(*expr.identifier);
+r_expr resolve(const parsed_state& e, const in_scope_map& map) {
+    auto id = std::get<parsed_identifier>(*e.identifier);
     auto s_name = id.name;
     check_duplicate(s_name, map);
 
@@ -93,15 +93,15 @@ r_expr resolve(const state_expr& expr, const in_scope_map& map) {
         throw std::runtime_error(fmt::format("state identifier {} at {} missing quantity type.",
                                              s_name, to_string(id.loc)));
     }
-    return make_rexpr<resolved_state>(s_name, s_type, expr.loc);
+    return make_rexpr<resolved_state>(s_name, s_type, e.loc);
 }
 
-r_expr resolve(const bind_expr& expr, const in_scope_map& map) {
-    auto id = std::get<identifier_expr>(*expr.identifier);
+r_expr resolve(const parsed_bind& e, const in_scope_map& map) {
+    auto id = std::get<parsed_identifier>(*e.identifier);
     auto b_name = id.name;
     check_duplicate(b_name, map);
 
-    auto b_type = resolve_type(expr.bind, expr.loc);
+    auto b_type = resolve_type(e.bind, e.loc);
 
     if (id.type) {
         auto id_type = resolve_type(id.type.value(), map.type_map);
@@ -110,28 +110,28 @@ r_expr resolve(const bind_expr& expr, const in_scope_map& map) {
                                                  to_string(id_type), to_string(b_type), to_string(id.loc)));
         }
     }
-    return make_rexpr<resolved_bind>(b_name, expr.bind, expr.ion, b_type, expr.loc);
+    return make_rexpr<resolved_bind>(b_name, e.bind, e.ion, b_type, e.loc);
 }
 
-r_expr resolve(const record_alias_expr& expr, const in_scope_map& map) {
-    if (map.func_map.count(expr.name)) {
+r_expr resolve(const parsed_record_alias& e, const in_scope_map& map) {
+    if (map.func_map.count(e.name)) {
         throw std::runtime_error(fmt::format("duplicate record alias name, also found at {}",
-                                             to_string(map.param_map.at(expr.name).loc)));
+                                             to_string(map.param_map.at(e.name).loc)));
     }
-    auto a_type = resolve_type(expr.type, map.type_map);
-    return make_rexpr<resolved_record_alias>(expr.name, a_type, expr.loc);
+    auto a_type = resolve_type(e.type, map.type_map);
+    return make_rexpr<resolved_record_alias>(e.name, a_type, e.loc);
 }
 
-r_expr resolve(const function_expr& expr, const in_scope_map& map) {
-    auto f_name = expr.name;
+r_expr resolve(const parsed_function& e, const in_scope_map& map) {
+    auto f_name = e.name;
     if (map.func_map.count(f_name)) {
         throw std::runtime_error(fmt::format("duplicate function name, also found at {}",
                                              to_string(map.param_map.at(f_name).loc)));
     }
     auto available_map = map;
     std::vector<r_expr> f_args;
-    for (const auto& a: expr.args) {
-        auto a_id = std::get<identifier_expr>(*a);
+    for (const auto& a: e.args) {
+        auto a_id = std::get<parsed_identifier>(*a);
         if (!a_id.type) {
             throw std::runtime_error(fmt::format("function argument {} at {} missing quantity type.",
                                                  a_id.name, to_string(a_id.loc)));
@@ -141,28 +141,28 @@ r_expr resolve(const function_expr& expr, const in_scope_map& map) {
         f_args.push_back(make_rexpr<resolved_argument>(f_a));
         available_map.local_map.insert({a_id.name, f_a});
     }
-    auto f_body = resolve(expr.body, available_map);
+    auto f_body = resolve(e.body, available_map);
     auto f_type = type_of(f_body);
 
-    if (expr.ret) {
-        auto ret_type = resolve_type(expr.ret.value(), map.type_map);
+    if (e.ret) {
+        auto ret_type = resolve_type(e.ret.value(), map.type_map);
         if (*ret_type != *f_type) {
             throw std::runtime_error(fmt::format("type mismatch between {} and {} at {}.",
-                                                 to_string(ret_type), to_string(f_type), to_string(expr.loc)));
+                                                 to_string(ret_type), to_string(f_type), to_string(e.loc)));
         }
     }
-    return make_rexpr<resolved_function>(f_name, f_args, f_body, f_type, expr.loc);
+    return make_rexpr<resolved_function>(f_name, f_args, f_body, f_type, e.loc);
 }
 
-r_expr resolve(const initial_expr& expr, const in_scope_map& map) {
-    auto id = std::get<identifier_expr>(*expr.identifier);
+r_expr resolve(const parsed_initial& e, const in_scope_map& map) {
+    auto id = std::get<parsed_identifier>(*e.identifier);
     auto i_name = id.name;
 
     if (!map.state_map.count(i_name)) {
-        throw std::runtime_error(fmt::format("variable {} initialized at {} is not a state variable.", i_name, to_string(expr.loc)));
+        throw std::runtime_error(fmt::format("variable {} initialized at {} is not a state variable.", i_name, to_string(e.loc)));
     }
     auto i_expr = make_rexpr<resolved_state>(map.state_map.at(i_name));
-    auto i_val = resolve(expr.value, map);
+    auto i_val = resolve(e.value, map);
     auto i_type = type_of(i_val);
 
     if (id.type) {
@@ -172,23 +172,23 @@ r_expr resolve(const initial_expr& expr, const in_scope_map& map) {
                                                  to_string(id_type), to_string(i_type), to_string(id.loc)));
         }
     }
-    return make_rexpr<resolved_initial>(i_expr, i_val, i_type, expr.loc);
+    return make_rexpr<resolved_initial>(i_expr, i_val, i_type, e.loc);
 }
 
-r_expr resolve(const evolve_expr& expr, const in_scope_map& map) {
-    auto id = std::get<identifier_expr>(*expr.identifier);
+r_expr resolve(const parsed_evolve& e, const in_scope_map& map) {
+    auto id = std::get<parsed_identifier>(*e.identifier);
     auto e_name = id.name;
     if (e_name.back() != '\'') {
-        throw std::runtime_error(fmt::format("variable {} evolved at {} is not a derivative.", e_name, to_string(expr.loc)));
+        throw std::runtime_error(fmt::format("variable {} evolved at {} is not a derivative.", e_name, to_string(e.loc)));
     }
     e_name.pop_back();
     if (!map.state_map.count(e_name)) {
-        throw std::runtime_error(fmt::format("variable {} evolved at {} is not a state variable.", e_name, to_string(expr.loc)));
+        throw std::runtime_error(fmt::format("variable {} evolved at {} is not a state variable.", e_name, to_string(e.loc)));
     }
     auto s_expr = map.state_map.at(e_name);
     auto s_val = make_rexpr<resolved_state>(s_expr);
     auto s_type = derive(s_expr.type).value();
-    auto e_val = resolve(expr.value, map);
+    auto e_val = resolve(e.value, map);
     auto e_type = type_of(e_val);
 
     if (*s_type != *e_type) {
@@ -203,93 +203,93 @@ r_expr resolve(const evolve_expr& expr, const in_scope_map& map) {
                                                  to_string(id_type), to_string(e_type), to_string(id.loc)));
         }
     }
-    return make_rexpr<resolved_evolve>(s_val, e_val, e_type, expr.loc);
+    return make_rexpr<resolved_evolve>(s_val, e_val, e_type, e.loc);
 }
 
-r_expr resolve(const effect_expr& expr, const in_scope_map& map) {
-    auto e_effect = expr.effect;
-    auto e_ion = expr.ion;
-    auto e_val = resolve(expr.value, map);
-    auto e_type = resolve_type(e_effect, expr.loc);
+r_expr resolve(const parsed_effect& e, const in_scope_map& map) {
+    auto e_effect = e.effect;
+    auto e_ion = e.ion;
+    auto e_val = resolve(e.value, map);
+    auto e_type = resolve_type(e_effect, e.loc);
 
-    return make_rexpr<resolved_effect>(e_effect, e_ion, e_val, e_type, expr.loc);
+    return make_rexpr<resolved_effect>(e_effect, e_ion, e_val, e_type, e.loc);
 }
 
-r_expr resolve(const export_expr& expr, const in_scope_map& map) {
-    auto id = std::get<identifier_expr>(*expr.identifier);
+r_expr resolve(const parsed_export& e, const in_scope_map& map) {
+    auto id = std::get<parsed_identifier>(*e.identifier);
     auto p_name = id.name;
 
     if (!map.param_map.count(p_name)) {
-        throw std::runtime_error(fmt::format("variable {} exported at {} is not a parameter.", p_name, to_string(expr.loc)));
+        throw std::runtime_error(fmt::format("variable {} exported at {} is not a parameter.", p_name, to_string(e.loc)));
     }
     auto p_expr = map.param_map.at(p_name);
-    return make_rexpr<resolved_export>(make_rexpr<resolved_parameter>(p_expr), p_expr.type, expr.loc);
+    return make_rexpr<resolved_export>(make_rexpr<resolved_parameter>(p_expr), p_expr.type, e.loc);
 }
 
-r_expr resolve(const call_expr& expr, const in_scope_map& map) {
-    auto f_name = expr.function_name;
+r_expr resolve(const parsed_call& e, const in_scope_map& map) {
+    auto f_name = e.function_name;
     if (!map.func_map.count(f_name)) {
-        throw std::runtime_error(fmt::format("function {} called at {} is not defined.", f_name, to_string(expr.loc)));
+        throw std::runtime_error(fmt::format("function {} called at {} is not defined.", f_name, to_string(e.loc)));
     }
     auto f_expr = map.func_map.at(f_name);
 
     std::vector<r_expr> c_args;
-    for (const auto& a: expr.call_args) {
+    for (const auto& a: e.call_args) {
         c_args.push_back(resolve(a, map));
     }
     if (f_expr.args.size() != c_args.size()) {
-        throw std::runtime_error(fmt::format("argument count mismatch when calling function {} at {}.", f_name, to_string(expr.loc)));
+        throw std::runtime_error(fmt::format("argument count mismatch when calling function {} at {}.", f_name, to_string(e.loc)));
     }
     for (unsigned i=0; i < f_expr.args.size(); ++i) {
         auto f_arg_type = type_of(f_expr.args[i]);
         auto c_arg_type = type_of(c_args[i]);
         if (*f_arg_type != *c_arg_type) {
             throw std::runtime_error(fmt::format("type mismatch between {} and {} of argument {} of function call {} at {}.",
-                                     to_string(f_arg_type), to_string(c_arg_type), std::to_string(i), f_name,to_string(expr.loc)));
+                                     to_string(f_arg_type), to_string(c_arg_type), std::to_string(i), f_name,to_string(e.loc)));
         }
     }
 
-    return make_rexpr<resolved_call>(make_rexpr<resolved_function>(f_expr), c_args, f_expr.type, expr.loc);
+    return make_rexpr<resolved_call>(make_rexpr<resolved_function>(f_expr), c_args, f_expr.type, e.loc);
 }
 
-r_expr resolve(const object_expr& expr, const in_scope_map& map) {
-    assert(expr.record_fields.size() == expr.record_values.size());
+r_expr resolve(const parsed_object& e, const in_scope_map& map) {
+    assert(e.record_fields.size() == e.record_values.size());
     std::vector<r_expr> o_values;
     std::vector<r_expr> o_fields;
     std::vector<r_type> o_types;
 
-    for (const auto& v: expr.record_values) {
+    for (const auto& v: e.record_values) {
         o_values.push_back(resolve(v, map));
         o_types.push_back(type_of(o_values.back()));
     }
     std::vector<std::pair<std::string, r_type>> t_vec;
-    for (unsigned i = 0; i < expr.record_fields.size(); ++i) {
-        auto f_id = std::get<identifier_expr>(*expr.record_fields[i]);
+    for (unsigned i = 0; i < e.record_fields.size(); ++i) {
+        auto f_id = std::get<parsed_identifier>(*e.record_fields[i]);
         o_fields.push_back(make_rexpr<resolved_argument>(f_id.name, o_types[i], f_id.loc));
         t_vec.emplace_back(f_id.name, o_types[i]);
     }
-    auto o_type = make_rtype<resolved_record>(t_vec, expr.loc);
+    auto o_type = make_rtype<resolved_record>(t_vec, e.loc);
 
-    if (!expr.record_name) {
-        return make_rexpr<resolved_object>(std::nullopt, o_fields, o_values, o_type, expr.loc);
+    if (!e.record_name) {
+        return make_rexpr<resolved_object>(std::nullopt, o_fields, o_values, o_type, e.loc);
     }
 
-    auto r_name = expr.record_name.value();
+    auto r_name = e.record_name.value();
     if (!map.type_map.count(r_name)) {
-        throw std::runtime_error(fmt::format("record {} referenced at {} is not defined.", r_name, to_string(expr.loc)));
+        throw std::runtime_error(fmt::format("record {} referenced at {} is not defined.", r_name, to_string(e.loc)));
     }
     auto r_type = map.type_map.at(r_name);
     if (*r_type != *o_type) {
         throw std::runtime_error(fmt::format("type mismatch between {} and {} while constructing object {} at {}.",
-                                             to_string(r_type), to_string(o_type), r_name, to_string(expr.loc)));
+                                             to_string(r_type), to_string(o_type), r_name, to_string(e.loc)));
     }
 
-    return make_rexpr<resolved_object>(std::nullopt, o_fields, o_values, o_type, expr.loc);
+    return make_rexpr<resolved_object>(std::nullopt, o_fields, o_values, o_type, e.loc);
 }
 
-r_expr resolve(const let_expr& expr, const in_scope_map& map) {
-    auto v_expr = resolve(expr.value, map);
-    auto id = std::get<identifier_expr>(*expr.identifier);
+r_expr resolve(const parsed_let& e, const in_scope_map& map) {
+    auto v_expr = resolve(e.value, map);
+    auto id = std::get<parsed_identifier>(*e.identifier);
     auto i_type = type_of(v_expr);
     if (id.type) {
         auto id_type = resolve_type(id.type.value(), map.type_map);
@@ -303,75 +303,75 @@ r_expr resolve(const let_expr& expr, const in_scope_map& map) {
     auto available_map = map;
     available_map.local_map.insert({id.name, i_expr});
 
-    auto b_expr = resolve(expr.body, available_map);
+    auto b_expr = resolve(e.body, available_map);
     auto b_type = type_of(b_expr);
 
-    return make_rexpr<resolved_let>(make_rexpr<resolved_argument>(i_expr), v_expr, b_expr, b_type, expr.loc);
+    return make_rexpr<resolved_let>(make_rexpr<resolved_argument>(i_expr), v_expr, b_expr, b_type, e.loc);
 }
 
-r_expr resolve(const with_expr& expr, const in_scope_map& map) {
-    auto v_expr = resolve(expr.value, map);
+r_expr resolve(const parsed_with& e, const in_scope_map& map) {
+    auto v_expr = resolve(e.value, map);
     auto v_type = type_of(v_expr);
 
     // Transform with to nested let expressions
-    std::vector<let_expr> let_vars;
+    std::vector<parsed_let> let_vars;
     if (auto v_rec = std::get_if<resolved_record>(v_type.get())) {
         for (const auto& v_field: v_rec->fields) {
-            auto let = let_expr();
-            auto iden = make_expr<identifier_expr>(v_field.first, expr.loc);
-            let_vars.push_back(let_expr(iden, make_expr<binary_expr>(binary_op::dot, expr.value, iden, expr.loc), {}, expr.loc));
+            auto let = parsed_let();
+            auto iden = make_expr<parsed_identifier>(v_field.first, e.loc);
+            let_vars.push_back(parsed_let(iden, make_expr<parsed_binary>(binary_op::dot, e.value, iden, e.loc), {}, e.loc));
         }
     }
     else {
         throw std::runtime_error(fmt::format("with value {} referenced at {} is not a record type.",
-                                             to_string(expr.value), to_string(expr.loc)));
+                                             to_string(e.value), to_string(e.loc)));
     }
 
-    let_vars.back().body = expr.body;
+    let_vars.back().body = e.body;
     for (int i = let_vars.size()-2; i >=0; i--) {
-        let_vars[i].body = make_expr<let_expr>(let_vars[i+1]);
+        let_vars[i].body = make_expr<parsed_let>(let_vars[i+1]);
     }
-    auto equivalent_let = make_expr<let_expr>(let_vars.front());
+    auto equivalent_let = make_expr<parsed_let>(let_vars.front());
 
     return resolve(equivalent_let, map);
 }
 
-r_expr resolve(const conditional_expr& expr, const in_scope_map& map) {
-    auto cond    = resolve(expr.condition, map);
-    auto true_v  = resolve(expr.value_true, map);
-    auto false_v = resolve(expr.value_false, map);
+r_expr resolve(const parsed_conditional& e, const in_scope_map& map) {
+    auto cond    = resolve(e.condition, map);
+    auto true_v  = resolve(e.value_true, map);
+    auto false_v = resolve(e.value_false, map);
     auto true_t  = type_of(true_v);
     auto false_t = type_of(false_v);
 
     if (*true_t != *false_t) {
         throw std::runtime_error(fmt::format("type mismatch {} and {} between the true and false branches "
                                              "of the conditional statement at {}.",
-                                             to_string(true_t), to_string(false_t), to_string(expr.loc)));
+                                             to_string(true_t), to_string(false_t), to_string(e.loc)));
     }
 
-    return make_rexpr<resolved_conditional>(cond, true_v, false_v, true_t, expr.loc);
+    return make_rexpr<resolved_conditional>(cond, true_v, false_v, true_t, e.loc);
 }
 
-r_expr resolve(const float_expr& expr, const in_scope_map& map) {
-    using namespace u_raw_ir;
-    auto f_val = expr.value;
-    auto f_type = to_type(expr.unit);
+r_expr resolve(const parsed_float& e, const in_scope_map& map) {
+    using namespace parsed_unit_ir;
+    auto f_val = e.value;
+    auto f_type = to_type(e.unit);
     auto r_type = resolve_type(f_type, map.type_map);
-    return make_rexpr<resolved_float>(f_val, r_type, expr.loc);
+    return make_rexpr<resolved_float>(f_val, r_type, e.loc);
 }
 
-r_expr resolve(const int_expr& expr, const in_scope_map& map) {
-    using namespace u_raw_ir;
-    auto i_val = expr.value;
-    auto i_type = to_type(expr.unit);
+r_expr resolve(const parsed_int& e, const in_scope_map& map) {
+    using namespace parsed_unit_ir;
+    auto i_val = e.value;
+    auto i_type = to_type(e.unit);
     auto r_type = resolve_type(i_type, map.type_map);
-    return make_rexpr<resolved_int>(i_val, r_type, expr.loc);
+    return make_rexpr<resolved_int>(i_val, r_type, e.loc);
 }
 
-r_expr resolve(const unary_expr& expr, const in_scope_map& map) {
-    auto val = resolve(expr.value, map);
+r_expr resolve(const parsed_unary& e, const in_scope_map& map) {
+    auto val = resolve(e.value, map);
     auto type = type_of(val);
-    switch (expr.op) {
+    switch (e.op) {
         case unary_op::exp:
         case unary_op::log:
         case unary_op::cos:
@@ -380,46 +380,46 @@ r_expr resolve(const unary_expr& expr, const in_scope_map& map) {
             auto q_type = std::get_if<resolved_quantity>(type.get());
             if (!q_type) {
                 throw std::runtime_error(fmt::format("Cannot apply op {} to non-real type, at {}",
-                                                     to_string(expr.op), to_string(expr.loc)));
+                                                     to_string(e.op), to_string(e.loc)));
             }
             if (!q_type->type.is_real()) {
                 throw std::runtime_error(fmt::format("Cannot apply op {} to non-real type, at {}",
-                                                     to_string(expr.op), to_string(expr.loc)));
+                                                     to_string(e.op), to_string(e.loc)));
             }
             break;
         }
         case unary_op::lnot: {
             if (!std::get_if<resolved_boolean>(type.get())) {
                 throw std::runtime_error(fmt::format("Cannot apply op {} to non-boolean type, at {}",
-                                                     to_string(expr.op), to_string(expr.loc)));
+                                                     to_string(e.op), to_string(e.loc)));
             }
             break;
         }
         case unary_op::neg: {
             if (std::get_if<resolved_record>(type.get())) {
                 throw std::runtime_error(fmt::format("Cannot apply op {} to record type, at {}",
-                                                     to_string(expr.op), to_string(expr.loc)));
+                                                     to_string(e.op), to_string(e.loc)));
             }
             break;
         }
         default: break;
     }
-    return make_rexpr<resolved_unary>(expr.op, val, type, expr.loc);
+    return make_rexpr<resolved_unary>(e.op, val, type, e.loc);
 }
 
-r_expr resolve(const binary_expr& expr, const in_scope_map& map) {
-    auto lhs_v = resolve(expr.lhs, map);
+r_expr resolve(const parsed_binary& e, const in_scope_map& map) {
+    auto lhs_v = resolve(e.lhs, map);
     auto lhs_t = type_of(lhs_v);
     auto lhs_loc = location_of(lhs_v);
 
-    if (expr.op == binary_op::dot) {
+    if (e.op == binary_op::dot) {
         auto make_or_throw = [&](const resolved_record& r) {
             // Add fields to the local map
             auto available_map = map;
             for (auto [f_id, f_type]: r.fields) {
                 available_map.local_map.insert({f_id, resolved_argument(f_id, f_type, r.loc)});
             }
-            auto rhs_v = resolve(expr.rhs, available_map);
+            auto rhs_v = resolve(e.rhs, available_map);
 
             // Resolved rhs is expected to be one of the just added fields
             // But we need to check
@@ -427,14 +427,14 @@ r_expr resolve(const binary_expr& expr, const in_scope_map& map) {
             // Check that it is a resolved_argument
             auto* r_rhs = std::get_if<resolved_argument>(rhs_v.get());
             if (!r_rhs) {
-                throw std::runtime_error(fmt::format("incompatible argument type to dot operator, at {}", to_string(expr.loc)));
+                throw std::runtime_error(fmt::format("incompatible argument type to dot operator, at {}", to_string(e.loc)));
             }
             auto rhs_id = r_rhs->name;
 
             // Check that it is an argument of the record
             for (auto [f_id, f_type]: r.fields) {
                 if (rhs_id == f_id) {
-                    return make_rexpr<resolved_binary>(expr.op, lhs_v, rhs_v, f_type, expr.loc);
+                    return make_rexpr<resolved_binary>(e.op, lhs_v, rhs_v, f_type, e.loc);
                 }
             }
             throw std::runtime_error(fmt::format("argument {} doesn't match any of the record fields, at {}",
@@ -447,30 +447,30 @@ r_expr resolve(const binary_expr& expr, const in_scope_map& map) {
     }
 
     // If it's not a field access, we can use the input map to resolve rhs
-    auto rhs_v = resolve(expr.rhs, map);
+    auto rhs_v = resolve(e.rhs, map);
     auto rhs_t = type_of(rhs_v);
     auto rhs_loc = location_of(rhs_v);
 
     // In this case, neither lhs nor rhs can have record types.
     if (std::get_if<resolved_record>(rhs_t.get())) {
         throw std::runtime_error(fmt::format("Cannot apply op {} to record type, at {}",
-                                             to_string(expr.op), to_string(rhs_loc)));
+                                             to_string(e.op), to_string(rhs_loc)));
     }
     if (std::get_if<resolved_record>(lhs_t.get())) {
         throw std::runtime_error(fmt::format("Cannot apply op {} to record type, at {}",
-                                             to_string(expr.op), to_string(lhs_loc)));
+                                             to_string(e.op), to_string(lhs_loc)));
     }
 
     // And, they both have to have the same type.
     if ((std::get_if<resolved_boolean>(lhs_t.get()) && !std::get_if<resolved_boolean>(rhs_t.get())) ||
         (!std::get_if<resolved_boolean>(lhs_t.get()) && std::get_if<resolved_boolean>(rhs_t.get()))) {
         throw std::runtime_error(fmt::format("incompatible arguments types to op {}, at {}",
-                                             to_string(expr.op), to_string(expr.loc)));
+                                             to_string(e.op), to_string(e.loc)));
     }
 
     auto lhs_q = std::get_if<resolved_quantity>(lhs_t.get());
     auto rhs_q = std::get_if<resolved_quantity>(rhs_t.get());
-    switch (expr.op) {
+    switch (e.op) {
         case binary_op::min:
         case binary_op::max:
         case binary_op::add:
@@ -479,49 +479,49 @@ r_expr resolve(const binary_expr& expr, const in_scope_map& map) {
             if (lhs_q && rhs_q) {
                 if (lhs_q->type != rhs_q->type) {
                     throw std::runtime_error(fmt::format("incompatible arguments types to op {}, at {}",
-                                                         to_string(expr.op), to_string(expr.loc)));
+                                                         to_string(e.op), to_string(e.loc)));
                 }
-                return make_rexpr<resolved_binary>(expr.op, lhs_v, rhs_v, lhs_t, expr.loc);
+                return make_rexpr<resolved_binary>(e.op, lhs_v, rhs_v, lhs_t, e.loc);
             }
             throw std::runtime_error(fmt::format("incompatible arguments types to op {}, at {}",
-                                                   to_string(expr.op), to_string(expr.loc)));
+                                                   to_string(e.op), to_string(e.loc)));
         }
         case binary_op::mul: {
             // Only applicable if neither lhs nor rhs is a boolean type
             if (lhs_q && rhs_q) {
-                auto comb_type = make_rtype<resolved_quantity>(lhs_q->type*rhs_q->type, expr.loc);
-                return make_rexpr<resolved_binary>(expr.op, lhs_v, rhs_v, comb_type, expr.loc);
+                auto comb_type = make_rtype<resolved_quantity>(lhs_q->type*rhs_q->type, e.loc);
+                return make_rexpr<resolved_binary>(e.op, lhs_v, rhs_v, comb_type, e.loc);
             }
             throw std::runtime_error(fmt::format("incompatible arguments types to op {}, at {}",
-                                                 to_string(expr.op), to_string(expr.loc)));
+                                                 to_string(e.op), to_string(e.loc)));
         }
         case binary_op::div: {
             // Only applicable if neither lhs nor rhs is a boolean type
             if (lhs_q && rhs_q) {
-                auto comb_type = make_rtype<resolved_quantity>(lhs_q->type/rhs_q->type, expr.loc);
-                return make_rexpr<resolved_binary>(expr.op, lhs_v, rhs_v, comb_type, expr.loc);
+                auto comb_type = make_rtype<resolved_quantity>(lhs_q->type/rhs_q->type, e.loc);
+                return make_rexpr<resolved_binary>(e.op, lhs_v, rhs_v, comb_type, e.loc);
             }
             throw std::runtime_error(fmt::format("incompatible arguments types to op {}, at {}",
-                                                 to_string(expr.op), to_string(expr.loc)));
+                                                 to_string(e.op), to_string(e.loc)));
         }
         case binary_op::pow: {
             // Only applicable if neither lhs nor rhs is a boolean type and rhs is a real int type
             auto rhs_int = std::get_if<resolved_int>(rhs_v.get());
             if (!rhs_int) {
                 throw std::runtime_error(fmt::format("incompatible arguments types to op {}, at {}",
-                                                     to_string(expr.op), to_string(expr.loc)));
+                                                     to_string(e.op), to_string(e.loc)));
             }
             auto rhs_int_q = std::get_if<resolved_quantity>(rhs_int->type.get());
             if (!rhs_int_q || !rhs_int_q->type.is_real()) {
                 throw std::runtime_error(fmt::format("incompatible arguments types to op {}, at {}",
-                                                     to_string(expr.op), to_string(expr.loc)));
+                                                     to_string(e.op), to_string(e.loc)));
             }
             if (lhs_q && rhs_q) {
-                auto comb_type = make_rtype<resolved_quantity>(lhs_q->type^rhs_int->value, expr.loc);
-                return make_rexpr<resolved_binary>(expr.op, lhs_v, rhs_v, comb_type, expr.loc);
+                auto comb_type = make_rtype<resolved_quantity>(lhs_q->type^rhs_int->value, e.loc);
+                return make_rexpr<resolved_binary>(e.op, lhs_v, rhs_v, comb_type, e.loc);
             }
             throw std::runtime_error(fmt::format("incompatible arguments types to op {}, at {}",
-                                                 to_string(expr.op), to_string(expr.loc)));
+                                                 to_string(e.op), to_string(e.loc)));
         }
         case binary_op::lt:
         case binary_op::le:
@@ -533,44 +533,44 @@ r_expr resolve(const binary_expr& expr, const in_scope_map& map) {
             if (lhs_q && rhs_q) {
                 if (lhs_q->type != rhs_q->type) {
                     throw std::runtime_error(fmt::format("incompatible arguments types to op {}, at {}",
-                                                         to_string(expr.op), to_string(expr.loc)));
+                                                         to_string(e.op), to_string(e.loc)));
                 }
             }
-            return make_rexpr<resolved_binary>(expr.op, lhs_v, rhs_v, make_rtype<resolved_boolean>(expr.loc), expr.loc);
+            return make_rexpr<resolved_binary>(e.op, lhs_v, rhs_v, make_rtype<resolved_boolean>(e.loc), e.loc);
         }
         case binary_op::land:
         case binary_op::lor: {
-            return make_rexpr<resolved_binary>(expr.op, lhs_v, rhs_v, make_rtype<resolved_boolean>(expr.loc), expr.loc);
+            return make_rexpr<resolved_binary>(e.op, lhs_v, rhs_v, make_rtype<resolved_boolean>(e.loc), e.loc);
         }
         default: break;
     }
-    return make_rexpr<resolved_binary>(expr.op, lhs_v, rhs_v, lhs_t, expr.loc);
+    return make_rexpr<resolved_binary>(e.op, lhs_v, rhs_v, lhs_t, e.loc);
 }
 
-r_expr resolve(const identifier_expr& expr, const in_scope_map& map) {
-    if (map.local_map.count(expr.name)) {
-        return make_rexpr<resolved_argument>(map.local_map.at(expr.name));
+r_expr resolve(const parsed_identifier& e, const in_scope_map& map) {
+    if (map.local_map.count(e.name)) {
+        return make_rexpr<resolved_argument>(map.local_map.at(e.name));
     }
-    if (map.param_map.count(expr.name)) {
-        return make_rexpr<resolved_parameter>(map.param_map.at(expr.name));
+    if (map.param_map.count(e.name)) {
+        return make_rexpr<resolved_parameter>(map.param_map.at(e.name));
     }
-    if (map.const_map.count(expr.name)) {
-        return make_rexpr<resolved_constant>(map.const_map.at(expr.name));
+    if (map.const_map.count(e.name)) {
+        return make_rexpr<resolved_constant>(map.const_map.at(e.name));
     }
-    if (map.bind_map.count(expr.name)) {
-        return make_rexpr<resolved_bind>(map.bind_map.at(expr.name));
+    if (map.bind_map.count(e.name)) {
+        return make_rexpr<resolved_bind>(map.bind_map.at(e.name));
     }
-    if (map.state_map.count(expr.name)) {
-        return make_rexpr<resolved_state>(map.state_map.at(expr.name));
+    if (map.state_map.count(e.name)) {
+        return make_rexpr<resolved_state>(map.state_map.at(e.name));
     }
     throw std::runtime_error(fmt::format("undefined identifier {}, at {}",
-                                         expr.name, to_string(expr.loc)));
+                                         e.name, to_string(e.loc)));
 }
 
-resolved_mechanism resolve(const mechanism_expr& expr, const in_scope_map& map) {
+resolved_mechanism resolve(const parsed_mechanism& e, const in_scope_map& map) {
     resolved_mechanism mech;
     auto available_map = map;
-    for (const auto& c: expr.constants) {
+    for (const auto& c: e.constants) {
         auto val = resolve(c, available_map);
         mech.constants.push_back(val);
         auto const_val = std::get_if<resolved_constant>(val.get());
@@ -580,7 +580,7 @@ resolved_mechanism resolve(const mechanism_expr& expr, const in_scope_map& map) 
         }
         available_map.const_map.insert({const_val->name, *const_val});
     }
-    for (const auto& c: expr.parameters) {
+    for (const auto& c: e.parameters) {
         auto val =resolve(c, available_map);
         mech.parameters.push_back(val);
         auto param_val = std::get_if<resolved_parameter>(val.get());
@@ -590,7 +590,7 @@ resolved_mechanism resolve(const mechanism_expr& expr, const in_scope_map& map) 
         }
         available_map.param_map.insert({param_val->name, *param_val});
     }
-    for (const auto& c: expr.bindings) {
+    for (const auto& c: e.bindings) {
         auto val = resolve(c, available_map);
         mech.bindings.push_back(val);
         auto bind_val = std::get_if<resolved_bind>(val.get());
@@ -601,8 +601,8 @@ resolved_mechanism resolve(const mechanism_expr& expr, const in_scope_map& map) 
         available_map.bind_map.insert({bind_val->name, *bind_val});
     }
     // For records, create 2 records: regular and prime
-    for (const auto& r: expr.records) {
-        auto rec = std::get_if<record_alias_expr>(r.get());
+    for (const auto& r: e.records) {
+        auto rec = std::get_if<parsed_record_alias>(r.get());
         if (!rec) {
             throw std::runtime_error(fmt::format("internal compiler error, expected record expression at {}",
                                                  to_string(location_of(r))));
@@ -623,7 +623,7 @@ resolved_mechanism resolve(const mechanism_expr& expr, const in_scope_map& map) 
             available_map.type_map.insert({resolved_record_val->name+"'", derived_record_type.value()});
         }
     }
-    for (const auto& c: expr.states) {
+    for (const auto& c: e.states) {
         auto val = resolve(c, available_map);
         mech.states.push_back(val);
         auto state_val = std::get_if<resolved_state>(val.get());
@@ -633,7 +633,7 @@ resolved_mechanism resolve(const mechanism_expr& expr, const in_scope_map& map) 
         }
         available_map.state_map.insert({state_val->name, *state_val});
     }
-    for (const auto& c: expr.functions) {
+    for (const auto& c: e.functions) {
         auto val = resolve(c, available_map);
         mech.functions.push_back(val);
         auto func_val = std::get_if<resolved_function>(val.get());
@@ -643,26 +643,26 @@ resolved_mechanism resolve(const mechanism_expr& expr, const in_scope_map& map) 
         }
         available_map.func_map.insert({func_val->name, *func_val});
     }
-    for (const auto& c: expr.initializations) {
+    for (const auto& c: e.initializations) {
         mech.initializations.push_back(resolve(c, available_map));
     }
-    for (const auto& c: expr.evolutions) {
+    for (const auto& c: e.evolutions) {
         mech.evolutions.push_back(resolve(c, available_map));
     }
-    for (const auto& c: expr.effects) {
+    for (const auto& c: e.effects) {
         mech.effects.push_back(resolve(c, available_map));
     }
-    for (const auto& c: expr.exports) {
+    for (const auto& c: e.exports) {
         mech.exports.push_back(resolve(c, available_map));
     }
-    mech.name = expr.name;
-    mech.loc = expr.loc;
-    mech.kind = expr.kind;
+    mech.name = e.name;
+    mech.loc = e.loc;
+    mech.kind = e.kind;
     return mech;
 }
 
-r_expr resolve(const raw_ir::expr& expr, const in_scope_map& map) {
-    return std::visit([&](auto&& c){return resolve(c, map);}, *expr);
+r_expr resolve(const parsed_ir::p_expr& e, const in_scope_map& map) {
+    return std::visit([&](auto&& c){return resolve(c, map);}, *e);
 }
 
 // resolved_mechanism
@@ -959,4 +959,4 @@ src_location location_of(const r_expr& e) {
 }
 
 } // namespace al
-} // namespace raw_ir
+} // namespace parsed_ir

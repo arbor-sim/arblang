@@ -4,33 +4,33 @@
 #include <string>
 #include <vector>
 
-#include <arblang/parser/raw_expressions.hpp>
+#include <arblang/parser/parsed_expressions.hpp>
 
 namespace al {
-namespace raw_ir {
+namespace parsed_ir {
 
-mechanism_expr normalize(const mechanism_expr& e);
-expr normalize(expr e);
-expr normalize(const parameter_expr& e);
-expr normalize(const constant_expr& e);
-expr normalize(const state_expr& e);
-expr normalize(const record_alias_expr& e);
-expr normalize(const function_expr& e);
-expr normalize(const bind_expr& e);
-expr normalize(const initial_expr& e);
-expr normalize(const evolve_expr& e);
-expr normalize(const effect_expr& e);
-expr normalize(const export_expr& expr);
-expr normalize(const call_expr& expr);
-expr normalize(const object_expr& expr);
-expr normalize(const let_expr& expr);
-expr normalize(const with_expr& expr);
-expr normalize(const conditional_expr& expr);
-expr normalize(const identifier_expr& expr);
-expr normalize(const float_expr& expr);
-expr normalize(const int_expr& expr);
-expr normalize(const unary_expr& expr);
-expr normalize(const binary_expr& expr);
+parsed_mechanism normalize(const parsed_mechanism& e);
+p_expr normalize(p_expr e);
+p_expr normalize(const parsed_parameter& e);
+p_expr normalize(const parsed_constant& e);
+p_expr normalize(const parsed_state& e);
+p_expr normalize(const parsed_record_alias& e);
+p_expr normalize(const parsed_function& e);
+p_expr normalize(const parsed_bind& e);
+p_expr normalize(const parsed_initial& e);
+p_expr normalize(const parsed_evolve& e);
+p_expr normalize(const parsed_effect& e);
+p_expr normalize(const parsed_export& p_expr);
+p_expr normalize(const parsed_call& p_expr);
+p_expr normalize(const parsed_object& p_expr);
+p_expr normalize(const parsed_let& p_expr);
+p_expr normalize(const parsed_with& p_expr);
+p_expr normalize(const parsed_conditional& p_expr);
+p_expr normalize(const parsed_identifier& p_expr);
+p_expr normalize(const parsed_float& p_expr);
+p_expr normalize(const parsed_int& p_expr);
+p_expr normalize(const parsed_unary& p_expr);
+p_expr normalize(const parsed_binary& p_expr);
 
-} // namespace raw_ir
+} // namespace parsed_ir
 } // namespace al

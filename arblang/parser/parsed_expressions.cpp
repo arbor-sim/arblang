@@ -4,11 +4,11 @@
 #include <string>
 #include <utility>
 
-#include <arblang/parser/raw_expressions.hpp>
+#include <arblang/parser/parsed_expressions.hpp>
 #include <arblang/util/common.hpp>
 
 namespace al {
-namespace raw_ir {
+namespace parsed_ir {
 std::optional<binary_op> gen_binary_op(tok t) {
     switch (t) {
         case tok::plus:     return binary_op::add;
@@ -80,8 +80,8 @@ std::optional<affectable> gen_affectable(tok t) {
     }
 }
 
-// mechanism_expr
-bool mechanism_expr::set_kind(tok t) {
+// parsed_mechanism
+bool parsed_mechanism::set_kind(tok t) {
     if (auto k = gen_mechanism_kind(t)) {
         kind = k.value();
         return true;
@@ -89,8 +89,8 @@ bool mechanism_expr::set_kind(tok t) {
     return false;
 }
 
-// bind_expr
-bind_expr::bind_expr(expr iden, const token& t, const std::string& ion_name, const src_location& loc):
+// parsed_bind
+parsed_bind::parsed_bind(p_expr iden, const token& t, const std::string& ion_name, const src_location& loc):
     identifier(std::move(iden)), loc(loc)
 {
     if (auto b = gen_bindable(t.type)) {
@@ -110,8 +110,8 @@ bind_expr::bind_expr(expr iden, const token& t, const std::string& ion_name, con
     }
 };
 
-// effect_expr
-effect_expr::effect_expr(const token& t, const std::string& ion_name, std::optional<t_raw_ir::t_expr> type, expr value, const src_location& loc):
+// parsed_effect
+parsed_effect::parsed_effect(const token& t, const std::string& ion_name, std::optional<parsed_type_ir::t_expr> type, p_expr value, const src_location& loc):
         value(std::move(value)), type(std::move(type)), loc(loc)
 {
     if (auto b = gen_affectable(t.type)) {
@@ -128,8 +128,8 @@ effect_expr::effect_expr(const token& t, const std::string& ion_name, std::optio
     }
 };
 
-// unary_expr
-unary_expr::unary_expr(tok t, expr value, const src_location& loc):
+// parsed_unary
+parsed_unary::parsed_unary(tok t, p_expr value, const src_location& loc):
     value(std::move(value)), loc(loc) {
     if (auto uop = gen_unary_op(t)) {
         op = uop.value();
@@ -138,12 +138,12 @@ unary_expr::unary_expr(tok t, expr value, const src_location& loc):
     };
 }
 
-bool unary_expr::is_boolean () const {
+bool parsed_unary::is_boolean () const {
     return op == unary_op::lnot;
 }
 
-// binary_expr
-binary_expr::binary_expr(tok t, expr lhs, expr rhs, const src_location& loc):
+// parsed_binary
+parsed_binary::parsed_binary(tok t, p_expr lhs, p_expr rhs, const src_location& loc):
     lhs(std::move(lhs)), rhs(std::move(rhs)), loc(loc) {
     if (auto bop = gen_binary_op(t)) {
         op = bop.value();
@@ -152,7 +152,7 @@ binary_expr::binary_expr(tok t, expr lhs, expr rhs, const src_location& loc):
     };
 }
 
-bool binary_expr::is_boolean () const {
+bool parsed_binary::is_boolean () const {
     return (op == binary_op::land) || (op == binary_op::lor) || (op == binary_op::ge) ||
            (op == binary_op::gt)   || (op == binary_op::le)  || (op == binary_op::lt) ||
            (op == binary_op::eq)   || (op == binary_op::ne);
@@ -160,7 +160,7 @@ bool binary_expr::is_boolean () const {
 
 // to_string
 
-std::string to_string(const mechanism_expr& e, int indent) {
+std::string to_string(const parsed_mechanism& e, int indent) {
     auto indent_str = std::string(indent*2, ' ');
     std::string str = indent_str + "(module_expr " + e.name + " " + to_string(e.kind) + "\n";
     for (const auto& p: e.parameters) {
@@ -197,59 +197,59 @@ std::string to_string(const mechanism_expr& e, int indent) {
     return str;
 }
 
-// parameter_expr
-std::string to_string(const parameter_expr& e, int indent) {
+// parsed_parameter
+std::string to_string(const parsed_parameter& e, int indent) {
     auto single_indent = std::string(indent*2, ' ');
     auto double_indent = single_indent + "  ";
 
-    std::string str = single_indent + "(parameter_expr\n";
+    std::string str = single_indent + "(parsed_parameter\n";
     str += to_string(e.identifier, indent+1) + "\n";
     str += to_string(e.value, indent+1) + "\n";
     str += double_indent + to_string(e.loc) + ")";
     return str;
 }
 
-// constant_expr
-std::string to_string(const constant_expr& e, int indent) {
+// parsed_constant
+std::string to_string(const parsed_constant& e, int indent) {
     auto single_indent = std::string(indent*2, ' ');
     auto double_indent = single_indent + "  ";
 
-    std::string str = single_indent + "(constant_expr\n";
+    std::string str = single_indent + "(parsed_constant\n";
     str += to_string(e.identifier, indent+1) + "\n";
     str += to_string(e.value, indent+1) + "\n";
     str += double_indent + to_string(e.loc) + ")";
     return str;
 }
 
-// state_expr
-std::string to_string(const state_expr& e, int indent) {
+// parsed_state
+std::string to_string(const parsed_state& e, int indent) {
     auto single_indent = std::string(indent*2, ' ');
     auto double_indent = single_indent + "  ";
 
-    std::string str = single_indent + "(state_expr\n";
+    std::string str = single_indent + "(parsed_state\n";
     str += to_string(e.identifier, indent+1) + "\n";
     str += double_indent + to_string(e.loc) + ")";
     return str;
 }
 
-// record_alias_expr
-std::string to_string(const record_alias_expr& e, int indent) {
+// parsed_record_alias
+std::string to_string(const parsed_record_alias& e, int indent) {
     auto single_indent = std::string(indent*2, ' ');
     auto double_indent = single_indent + "  ";
 
-    std::string str = single_indent + "(record_alias_expr\n";
+    std::string str = single_indent + "(parsed_record_alias\n";
     str += double_indent + e.name + "\n";
     str += to_string(e.type, indent+1) + "\n";
     str += double_indent + to_string(e.loc) + ")";
     return str;
 }
 
-// function_expr
-std::string to_string(const function_expr& e, int indent) {
+// parsed_function
+std::string to_string(const parsed_function& e, int indent) {
     auto single_indent = std::string(indent*2, ' ');
     auto double_indent = single_indent + "  ";
 
-    std::string str = single_indent + "(function_expr\n";
+    std::string str = single_indent + "(parsed_function\n";
     str += (double_indent + e.name +  "\n");
     if (e.ret) {
         str += to_string(e.ret.value(), indent+1) + "\n";
@@ -265,11 +265,11 @@ std::string to_string(const function_expr& e, int indent) {
     return str;
 }
 
-std::string to_string(const bind_expr& e, int indent) {
+std::string to_string(const parsed_bind& e, int indent) {
     auto single_indent = std::string(indent*2, ' ');
     auto double_indent = single_indent + "  ";
 
-    std::string str = single_indent + "(bind_expr\n";
+    std::string str = single_indent + "(parsed_bind\n";
     str += (double_indent + to_string(e.bind));
     if (e.ion) {
         str += ("[" + e.ion.value() + "]");
@@ -280,33 +280,33 @@ std::string to_string(const bind_expr& e, int indent) {
     return str;
 }
 
-std::string to_string(const initial_expr& e, int indent) {
+std::string to_string(const parsed_initial& e, int indent) {
     auto single_indent = std::string(indent*2, ' ');
     auto double_indent = single_indent + "  ";
 
-    std::string str = single_indent + "(initial_expr\n";
+    std::string str = single_indent + "(parsed_initial\n";
     str += to_string(e.identifier, indent+1) + "\n";
     str += to_string(e.value, indent+1) + "\n";
     str += double_indent + to_string(e.loc) + ")";
     return str;
 }
 
-std::string to_string(const evolve_expr& e, int indent) {
+std::string to_string(const parsed_evolve& e, int indent) {
     auto single_indent = std::string(indent*2, ' ');
     auto double_indent = single_indent + "  ";
 
-    std::string str = single_indent + "(evolve_expr\n";
+    std::string str = single_indent + "(parsed_evolve\n";
     str += to_string(e.identifier, indent+1) + "\n";
     str += to_string(e.value, indent+1) + "\n";
     str += double_indent + to_string(e.loc) + ")";
     return str;
 }
 
-std::string to_string(const effect_expr& e, int indent) {
+std::string to_string(const parsed_effect& e, int indent) {
     auto single_indent = std::string(indent*2, ' ');
     auto double_indent = single_indent + "  ";
 
-    std::string str = single_indent + "(effect_expr\n";
+    std::string str = single_indent + "(parsed_effect\n";
     str += (double_indent + to_string(e.effect));
     if (e.ion) {
         str += ("[" + e.ion.value() + "]");
@@ -320,21 +320,21 @@ std::string to_string(const effect_expr& e, int indent) {
     return str;
 }
 
-std::string to_string(const export_expr& e, int indent) {
+std::string to_string(const parsed_export& e, int indent) {
     auto single_indent = std::string(indent*2, ' ');
     auto double_indent = single_indent + "  ";
 
-    std::string str = single_indent + "(export_expr\n";
+    std::string str = single_indent + "(parsed_export\n";
     str += to_string(e.identifier, indent+1) + "\n";
     str += double_indent + to_string(e.loc) + ")";
     return str;
 }
 
-std::string to_string(const call_expr& e, int indent) {
+std::string to_string(const parsed_call& e, int indent) {
     auto single_indent = std::string(indent*2, ' ');
     auto double_indent = single_indent + "  ";
 
-    std::string str = single_indent + "(call_expr\n";
+    std::string str = single_indent + "(parsed_call\n";
     str += double_indent + e.function_name + "\n";
     for (const auto& f: e.call_args) {
         str += to_string(f, indent+1) + "\n";
@@ -343,13 +343,13 @@ std::string to_string(const call_expr& e, int indent) {
     return str;
 }
 
-std::string to_string(const object_expr& e, int indent) {
+std::string to_string(const parsed_object& e, int indent) {
     assert(e.record_fields.size() == e.record_values.size());
 
     auto single_indent = std::string(indent*2, ' ');
     auto double_indent = single_indent + "  ";
 
-    std::string str = single_indent + "(object_expr\n";
+    std::string str = single_indent + "(parsed_object\n";
     if (e.record_name) str += (double_indent + e.record_name.value() +  "\n");
     for (unsigned i = 0; i < e.record_fields.size(); ++i) {
         str += double_indent + "(\n";
@@ -361,11 +361,11 @@ std::string to_string(const object_expr& e, int indent) {
     return str;
 }
 
-std::string to_string(const let_expr& e, int indent) {
+std::string to_string(const parsed_let& e, int indent) {
     auto single_indent = std::string(indent*2, ' ');
     auto double_indent = single_indent + "  ";
 
-    std::string str = single_indent + "(let_expr\n";
+    std::string str = single_indent + "(parsed_let\n";
     str += to_string(e.identifier, indent+1) + "\n";
     str += to_string(e.value, indent+1) + "\n";
     str += to_string(e.body, indent+1) + "\n";
@@ -373,21 +373,21 @@ std::string to_string(const let_expr& e, int indent) {
     return str;
 }
 
-std::string to_string(const with_expr& e, int indent) {
+std::string to_string(const parsed_with& e, int indent) {
     auto single_indent = std::string(indent*2, ' ');
     auto double_indent = single_indent + "  ";
-    std::string str = single_indent + "(with_expr\n";
+    std::string str = single_indent + "(parsed_with\n";
     str += to_string(e.value, indent+1) + "\n";
     str += to_string(e.body, indent+1) + "\n";
     str += double_indent + to_string(e.loc) + ")";
     return str;
 }
 
-std::string to_string(const conditional_expr& e, int indent) {
+std::string to_string(const parsed_conditional& e, int indent) {
     auto single_indent = std::string(indent*2, ' ');
     auto double_indent = single_indent + "  ";
 
-    std::string str = single_indent + "(conditional_expr\n";
+    std::string str = single_indent + "(parsed_conditional\n";
     str += to_string(e.condition, indent+1) + "\n";
     str += to_string(e.value_true, indent+1) + "\n";
     str += to_string(e.value_false, indent+1) + "\n";
@@ -395,11 +395,11 @@ std::string to_string(const conditional_expr& e, int indent) {
     return str;
 }
 
-std::string to_string(const identifier_expr& e, int indent) {
+std::string to_string(const parsed_identifier& e, int indent) {
     auto single_indent = std::string(indent*2, ' ');
     auto double_indent = single_indent + "  ";
 
-    std::string str = single_indent + "(identifier_expr \n";
+    std::string str = single_indent + "(parsed_identifier \n";
     str += (double_indent + e.name + "\n");
     if (e.type) {
         str += to_string(e.type.value(), indent+1) + "\n";
@@ -408,56 +408,56 @@ std::string to_string(const identifier_expr& e, int indent) {
     return str;
 }
 
-std::string to_string(const float_expr& e, int indent) {
+std::string to_string(const parsed_float& e, int indent) {
     auto single_indent = std::string(indent*2, ' ');
     auto double_indent = single_indent + "  ";
 
-    std::string str = single_indent + "(float_expr\n";
+    std::string str = single_indent + "(parsed_float\n";
     str += double_indent + std::to_string(e.value) + "\n";
     str += to_string(e.unit, indent+1) + "\n";
     str += double_indent + to_string(e.loc) + ")";
     return str;
 }
 
-std::string to_string(const int_expr& e, int indent) {
+std::string to_string(const parsed_int& e, int indent) {
     auto single_indent = std::string(indent*2, ' ');
     auto double_indent = single_indent + "  ";
 
-    std::string str = single_indent + "(int_expr\n";
+    std::string str = single_indent + "(parsed_int\n";
     str += double_indent + std::to_string(e.value) + "\n";
     str += to_string(e.unit, indent+1) + "\n";
     str += double_indent + to_string(e.loc) + ")";
     return str;
 }
 
-std::string to_string(const unary_expr& e, int indent) {
+std::string to_string(const parsed_unary& e, int indent) {
     auto single_indent = std::string(indent*2, ' ');
     auto double_indent = single_indent + "  ";
 
-    std::string str = single_indent + "(unary_expr " + to_string(e.op) + "\n";
+    std::string str = single_indent + "(parsed_unary " + to_string(e.op) + "\n";
     str += to_string(e.value, indent+1) + "\n";
     str += double_indent + to_string(e.loc) + ")";
     return str;
 }
 
-std::string to_string(const binary_expr& e, int indent) {
+std::string to_string(const parsed_binary& e, int indent) {
     auto single_indent = std::string(indent*2, ' ');
     auto double_indent = single_indent + "  ";
 
-    std::string str = single_indent + "(binary_expr " + to_string(e.op) + "\n";
+    std::string str = single_indent + "(parsed_binary " + to_string(e.op) + "\n";
     str += to_string(e.lhs, indent+1) + "\n";
     str += to_string(e.rhs, indent+1) + "\n";
     str += double_indent + to_string(e.loc) + ")";
     return str;
 }
 
-std::string to_string(const expr& e, int indent) {
+std::string to_string(const p_expr& e, int indent) {
     return std::visit([&](auto&& c){return to_string(c, indent);}, *e);
 }
 
-src_location location_of(const expr& e) {
+src_location location_of(const p_expr& e) {
     return std::visit([](auto&& c){return c.loc;}, *e);
 }
 
 } // namespace al
-} // namespace raw_ir
+} // namespace parsed_ir

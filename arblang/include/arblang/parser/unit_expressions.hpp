@@ -11,7 +11,7 @@
 #include <arblang/util/visitor.hpp>
 
 namespace al {
-namespace u_raw_ir {
+namespace parsed_unit_ir {
 
 struct integer_unit;
 struct simple_unit;
@@ -115,7 +115,7 @@ std::optional<unit> check_simple_unit(const std::string& s);
 std::string to_string(const u_expr&, int indent=0);
 
 // Generate the equivalent type expression of a unit expression
-t_raw_ir::t_expr to_type(const u_expr &);
+parsed_type_ir::t_expr to_type(const u_expr &);
 
 // Normalize the unit into the base units and factor
 // example: mV    -> {V, -3}
@@ -127,5 +127,5 @@ u_expr make_u_expr(Args&&... args) {
     return u_expr(new unit_expr(T(std::forward<Args>(args)...)));
 }
 
-} // namespace u_raw_ir
+} // namespace parsed_unit_ir
 } // namespace al
