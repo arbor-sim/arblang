@@ -301,6 +301,26 @@ struct in_scope_map {
     std::unordered_map<std::string, r_type> type_map;
 };
 
+bool operator==(const resolved_parameter& lhs, const resolved_parameter& rhs);
+bool operator==(const resolved_constant& lhs, const resolved_constant& rhs);
+bool operator==(const resolved_state& lhs, const resolved_state& rhs);
+bool operator==(const resolved_record_alias& lhs, const resolved_record_alias& rhs);
+bool operator==(const resolved_function& lhs, const resolved_function& rhs);
+bool operator==(const resolved_argument& lhs, const resolved_argument& rhs);
+bool operator==(const resolved_bind& lhs, const resolved_bind& rhs);
+bool operator==(const resolved_initial& lhs, const resolved_initial& rhs);
+bool operator==(const resolved_evolve& lhs, const resolved_evolve& rhs);
+bool operator==(const resolved_effect& lhs, const resolved_effect& rhs);
+bool operator==(const resolved_export& lhs, const resolved_export& rhs);
+bool operator==(const resolved_call& lhs, const resolved_call& rhs);
+bool operator==(const resolved_object& lhs, const resolved_object& rhs);
+bool operator==(const resolved_let& lhs, const resolved_let& rhs);
+bool operator==(const resolved_conditional& lhs, const resolved_conditional& rhs);
+bool operator==(const resolved_float& lhs, const resolved_float& rhs);
+bool operator==(const resolved_int& lhs, const resolved_int& rhs);
+bool operator==(const resolved_unary& lhs, const resolved_unary& rhs);
+bool operator==(const resolved_binary& lhs, const resolved_binary& rhs);
+
 resolved_mechanism resolve(const parsed_ir::parsed_mechanism&, const in_scope_map&);
 r_expr resolve(const parsed_ir::p_expr &, const in_scope_map&);
 

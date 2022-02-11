@@ -10,6 +10,7 @@
 #include <arblang/resolver/resolved_expressions.hpp>
 #include <arblang/resolver/resolved_types.hpp>
 #include <arblang/resolver/single_assign.hpp>
+#include <arblang/resolver/custom_hash.hpp>
 
 #include "../gtest.h"
 
@@ -299,4 +300,19 @@ TEST(canonicalizer, conditional) {
         std::cout << to_string(if_ssa) << std::endl;
         std::cout << std::endl;
     }
+}
+
+TEST(tester, conditional) {
+    auto loc = src_location{};
+    auto real_type    = make_rtype<resolved_quantity>(normalized_type(quantity::real), loc);
+
+    auto t0 = resolved_argument("t", real_type, loc);
+    auto t1 = resolved_argument("t", real_type, loc);
+    auto t2 = resolved_argument("a", real_type, loc);
+    std::unordered_map<resolved_expr, int> map;
+
+    map.insert({t0, 0});
+    map.insert({t1, 1});
+    map.insert({t2, 2});
+    std::cout << "hello" << std::endl;
 }

@@ -949,6 +949,102 @@ std::string to_string(const r_expr & e, bool include_type, int indent) {
     return std::visit([&](auto&& c){return to_string(c, include_type, indent);}, *e);
 }
 
+// equality comparison
+bool operator==(const resolved_parameter& lhs, const resolved_parameter& rhs) {
+    return (lhs.name == rhs.name) && (*lhs.value == *rhs.value) && (*lhs.type == *rhs.type);
+}
+
+bool operator==(const resolved_constant& lhs, const resolved_constant& rhs) {
+    return (lhs.name == rhs.name) && (*lhs.value == *rhs.value) && (*lhs.type == *rhs.type);
+}
+
+bool operator==(const resolved_state& lhs, const resolved_state& rhs) {
+    return (lhs.name == rhs.name) && (*lhs.type == *rhs.type);
+}
+
+bool operator==(const resolved_record_alias& lhs, const resolved_record_alias& rhs) {
+    return (lhs.name == rhs.name) && (*lhs.type == *rhs.type);
+}
+
+bool operator==(const resolved_function& lhs, const resolved_function& rhs) {
+    if (lhs.args.size() != rhs.args.size()) return false;
+    for (unsigned i = 0; i < lhs.args.size(); ++i) {
+        if (lhs.args[i] != rhs.args[i]) return false;
+    }
+    return (lhs.name == rhs.name) && (*lhs.body == *rhs.body) && (*lhs.type == *rhs.type);
+}
+
+bool operator==(const resolved_argument& lhs, const resolved_argument& rhs) {
+    return (lhs.name == rhs.name) && (*lhs.type == *rhs.type);
+}
+
+bool operator==(const resolved_bind& lhs, const resolved_bind& rhs) {
+    return (lhs.bind == rhs.bind) && (lhs.ion == rhs.ion) && (lhs.name == rhs.name) && (*lhs.type == *rhs.type);
+}
+
+bool operator==(const resolved_initial& lhs, const resolved_initial& rhs) {
+    return (*lhs.identifier == *rhs.identifier) && (*lhs.value == *rhs.value) && (*lhs.type == *rhs.type);
+}
+
+bool operator==(const resolved_evolve& lhs, const resolved_evolve& rhs) {
+    return (*lhs.identifier == *rhs.identifier) && (*lhs.value == *rhs.value) && (*lhs.type == *rhs.type);
+}
+
+bool operator==(const resolved_effect& lhs, const resolved_effect& rhs) {
+    return (lhs.effect == rhs.effect) && (lhs.ion == rhs.ion) && (*lhs.value == *rhs.value) && (*lhs.type == *rhs.type);
+}
+
+bool operator==(const resolved_export& lhs, const resolved_export& rhs) {
+    return (*lhs.identifier == *rhs.identifier) && (*lhs.type == *rhs.type);
+}
+
+bool operator==(const resolved_call& lhs, const resolved_call& rhs) {
+    if (lhs.call_args.size() != rhs.call_args.size()) return false;
+    for (unsigned i = 0; i < lhs.call_args.size(); ++i) {
+        if (lhs.call_args[i] != rhs.call_args[i]) return false;
+    }
+    return  (*lhs.f_identifier == *rhs.f_identifier) && (*lhs.type == *rhs.type);
+}
+
+bool operator==(const resolved_object& lhs, const resolved_object& rhs) {
+    if (lhs.record_fields.size() != rhs.record_fields.size()) return false;
+    if (lhs.record_values.size() != rhs.record_values.size()) return false;
+    for (unsigned i = 0; i < lhs.record_fields.size(); ++i) {
+        if (lhs.record_fields[i] != rhs.record_fields[i]) return false;
+    }
+    for (unsigned i = 0; i < lhs.record_values.size(); ++i) {
+        if (lhs.record_values[i] != rhs.record_values[i]) return false;
+    }
+    return  (*lhs.r_identifier == *rhs.r_identifier) && (*lhs.type == *rhs.type);
+}
+
+bool operator==(const resolved_let& lhs, const resolved_let& rhs) {
+    return (*lhs.identifier == *rhs.identifier) && (*lhs.value == *rhs.value) &&
+           (*lhs.body == *rhs.body) && (*lhs.type == *rhs.type);
+}
+
+bool operator==(const resolved_conditional& lhs, const resolved_conditional& rhs) {
+    return (*lhs.condition == *rhs.condition) && (*lhs.value_true == *rhs.value_true) &&
+           (*lhs.value_false == *rhs.value_false) && (*lhs.type == *rhs.type);
+}
+
+bool operator==(const resolved_float& lhs, const resolved_float& rhs) {
+    return (lhs.value == rhs.value) && (*lhs.type == *rhs.type);
+}
+
+bool operator==(const resolved_int& lhs, const resolved_int& rhs) {
+    return (lhs.value == rhs.value) && (*lhs.type == *rhs.type);
+}
+
+bool operator==(const resolved_unary& lhs, const resolved_unary& rhs) {
+    return (lhs.op == rhs.op) && (*lhs.arg == *rhs.arg) && (*lhs.type == *rhs.type);
+}
+
+bool operator==(const resolved_binary& lhs, const resolved_binary& rhs) {
+    return (lhs.op == rhs.op) && (*lhs.lhs == *rhs.lhs) && (*lhs.rhs == *rhs.rhs) && (*lhs.type == *rhs.type);
+}
+
+
 // common member getters
 r_type type_of(const r_expr& e) {
     return std::visit([](auto&& c){return c.type;}, *e);
