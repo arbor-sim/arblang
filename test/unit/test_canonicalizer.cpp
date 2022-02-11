@@ -274,6 +274,30 @@ TEST(canonicalizer, conditional) {
         std::cout << to_string(if_ssa) << std::endl;
         std::cout << std::endl;
     }
+    {
+        in_scope_map scope_map;
+        scope_map.func_map.insert({"foo", resolved_function("foo", {}, real_body, real_type, loc)});
+        scope_map.type_map.insert({"foo", foo_type});
+        scope_map.type_map.insert({"bar", bar_type});
+        scope_map.local_map.insert({"t", resolved_argument("t", real_type, loc)});
+        scope_map.local_map.insert({"a", resolved_argument("a", real_type, loc)});
+        scope_map.local_map.insert({"obar", resolved_argument("obar", bar_type, loc)});
+
+        std::string expr = "if (if t == 4 then a>3 else a<4)\n"
+                           "then (if obar.X == 5 then obar.Y else {a=3[V]; b=5[mA];})\n"
+                           "else {a=foo()*3[V]; b=7000[mA];});";
+
+        auto p = parser(expr);
+        auto ifstmt = p.parse_conditional();
+        auto if_normal = normalize(ifstmt);
+        auto if_resolved = resolve(if_normal, scope_map);
+        auto if_canon = canonicalize(if_resolved);
+        auto if_ssa = single_assign(if_canon);
+        std::cout << to_string(if_canon) << std::endl;
+        std::cout << std::endl;
+        std::cout << to_string(if_ssa) << std::endl;
+        std::cout << std::endl;
+    }
 }
 
 TEST(canonicalizer, object) {
