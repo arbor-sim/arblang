@@ -8,7 +8,8 @@ set(arblang-sources
     parser/normalizer.cpp
     resolver/resolved_expressions.cpp
     resolver/resolved_types.cpp
-    resolver/canonicalize.cpp)
+    resolver/canonicalize.cpp
+    resolver/single_assign.cpp)
 
 add_library(arblang ${arblang-sources})
 

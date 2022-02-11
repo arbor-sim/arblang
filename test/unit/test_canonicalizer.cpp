@@ -9,6 +9,7 @@
 #include <arblang/resolver/canonicalize.hpp>
 #include <arblang/resolver/resolved_expressions.hpp>
 #include <arblang/resolver/resolved_types.hpp>
+#include <arblang/resolver/single_assign.hpp>
 
 #include "../gtest.h"
 
