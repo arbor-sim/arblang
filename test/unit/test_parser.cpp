@@ -215,136 +215,136 @@ TEST(parse, type) {
     {
         std::string type = "time";
         auto p = parser(type);
-        auto q = std::get<quantity_type>(*p.parse_type());
+        auto q = std::get<parsed_quantity_type>(*p.parse_type());
         EXPECT_EQ(quantity::time, q.type);
     }
     {
         std::string type = "bar";
         auto p = parser(type);
-        auto q = std::get<record_alias_type>(*p.parse_type());
+        auto q = std::get<parsed_record_alias_type>(*p.parse_type());
         EXPECT_EQ("bar", q.name);
     }
     {
         std::string type = "voltage^2";
         auto p = parser(type);
-        auto q = std::get<quantity_binary_type>(*p.parse_type());
+        auto q = std::get<parsed_binary_quantity_type>(*p.parse_type());
         EXPECT_EQ(t_binary_op::pow, q.op);
 
-        auto q_lhs = std::get<quantity_type>(*q.lhs);
+        auto q_lhs = std::get<parsed_quantity_type>(*q.lhs);
         EXPECT_EQ(quantity::voltage, q_lhs.type);
 
-        auto q_rhs = std::get<integer_type>(*q.rhs);
+        auto q_rhs = std::get<parsed_integer_type>(*q.rhs);
         EXPECT_EQ(2, q_rhs.val);
     }
     {
         std::string type = "voltage/conductance";
         auto p = parser(type);
-        auto q = std::get<quantity_binary_type>(*p.parse_type());
+        auto q = std::get<parsed_binary_quantity_type>(*p.parse_type());
         EXPECT_EQ(t_binary_op::div, q.op);
 
-        auto q_lhs = std::get<quantity_type>(*q.lhs);
+        auto q_lhs = std::get<parsed_quantity_type>(*q.lhs);
         EXPECT_EQ(quantity::voltage, q_lhs.type);
 
-        auto q_rhs = std::get<quantity_type>(*q.rhs);
+        auto q_rhs = std::get<parsed_quantity_type>(*q.rhs);
         EXPECT_EQ(quantity::conductance, q_rhs.type);
     }
     {
         std::string type = "current*time/voltage";
         auto p = parser(type);
-        auto q = std::get<quantity_binary_type>(*p.parse_type());
+        auto q = std::get<parsed_binary_quantity_type>(*p.parse_type());
         EXPECT_EQ(t_binary_op::div, q.op);
 
-        auto q0 = std::get<quantity_binary_type>(*q.lhs);
+        auto q0 = std::get<parsed_binary_quantity_type>(*q.lhs);
         EXPECT_EQ(t_binary_op::mul, q0.op);
 
-        auto q0_lhs = std::get<quantity_type>(*q0.lhs);
+        auto q0_lhs = std::get<parsed_quantity_type>(*q0.lhs);
         EXPECT_EQ(quantity::current, q0_lhs.type);
 
-        auto q0_rhs = std::get<quantity_type>(*q0.rhs);
+        auto q0_rhs = std::get<parsed_quantity_type>(*q0.rhs);
         EXPECT_EQ(quantity::time, q0_rhs.type);
 
-        auto q_rhs = std::get<quantity_type>(*q.rhs);
+        auto q_rhs = std::get<parsed_quantity_type>(*q.rhs);
         EXPECT_EQ(quantity::voltage, q_rhs.type);
     }
     {
         std::string type = "current^-2/temperature*time^-1";
         auto p = parser(type);
-        auto q = std::get<quantity_binary_type>(*p.parse_type());
+        auto q = std::get<parsed_binary_quantity_type>(*p.parse_type());
         EXPECT_EQ(t_binary_op::mul, q.op);
 
-        auto q0 = std::get<quantity_binary_type>(*q.lhs); // current^-2/temperature
+        auto q0 = std::get<parsed_binary_quantity_type>(*q.lhs); // current^-2/temperature
         EXPECT_EQ(t_binary_op::div, q0.op);
 
-        auto q1 = std::get<quantity_binary_type>(*q0.lhs); // current^-2
+        auto q1 = std::get<parsed_binary_quantity_type>(*q0.lhs); // current^-2
         EXPECT_EQ(t_binary_op::pow, q1.op);
 
-        auto q1_lhs = std::get<quantity_type>(*q1.lhs); // current
+        auto q1_lhs = std::get<parsed_quantity_type>(*q1.lhs); // current
         EXPECT_EQ(quantity::current, q1_lhs.type);
 
-        auto q1_rhs = std::get<integer_type>(*q1.rhs); // -2
+        auto q1_rhs = std::get<parsed_integer_type>(*q1.rhs); // -2
         EXPECT_EQ(-2, q1_rhs.val);
 
-        auto q0_rhs = std::get<quantity_type>(*q0.rhs); // temperature
+        auto q0_rhs = std::get<parsed_quantity_type>(*q0.rhs); // temperature
         EXPECT_EQ(quantity::temperature, q0_rhs.type);
 
-        auto q2 = std::get<quantity_binary_type>(*q.rhs); // time^-1
+        auto q2 = std::get<parsed_binary_quantity_type>(*q.rhs); // time^-1
         EXPECT_EQ(t_binary_op::pow, q2.op);
 
-        auto q2_lhs = std::get<quantity_type>(*q2.lhs); // time
+        auto q2_lhs = std::get<parsed_quantity_type>(*q2.lhs); // time
         EXPECT_EQ(quantity::time, q2_lhs.type);
 
-        auto q2_rhs = std::get<integer_type>(*q2.rhs); // -1
+        auto q2_rhs = std::get<parsed_integer_type>(*q2.rhs); // -1
         EXPECT_EQ(-1, q2_rhs.val);
     }
     {
         std::string type = "current^-2/(temperature*time^-1)";
         auto p = parser(type);
-        auto q = std::get<quantity_binary_type>(*p.parse_type());
+        auto q = std::get<parsed_binary_quantity_type>(*p.parse_type());
         EXPECT_EQ(t_binary_op::div, q.op);
 
-        auto q0 = std::get<quantity_binary_type>(*q.lhs); // current^-2
+        auto q0 = std::get<parsed_binary_quantity_type>(*q.lhs); // current^-2
         EXPECT_EQ(t_binary_op::pow, q0.op);
 
-        auto q0_lhs = std::get<quantity_type>(*q0.lhs); // current
+        auto q0_lhs = std::get<parsed_quantity_type>(*q0.lhs); // current
         EXPECT_EQ(quantity::current, q0_lhs.type);
 
-        auto q0_rhs = std::get<integer_type>(*q0.rhs); // -2
+        auto q0_rhs = std::get<parsed_integer_type>(*q0.rhs); // -2
         EXPECT_EQ(-2, q0_rhs.val);
 
-        auto q1 = std::get<quantity_binary_type>(*q.rhs); // temperature*time^-1
+        auto q1 = std::get<parsed_binary_quantity_type>(*q.rhs); // temperature*time^-1
         EXPECT_EQ(t_binary_op::mul, q1.op);
 
-        auto q1_lhs = std::get<quantity_type>(*q1.lhs); // temperature
+        auto q1_lhs = std::get<parsed_quantity_type>(*q1.lhs); // temperature
         EXPECT_EQ(quantity::temperature, q1_lhs.type);
 
-        auto q2 = std::get<quantity_binary_type>(*q1.rhs); // time^-1
+        auto q2 = std::get<parsed_binary_quantity_type>(*q1.rhs); // time^-1
         EXPECT_EQ(t_binary_op::pow, q2.op);
 
-        auto q2_lhs = std::get<quantity_type>(*q2.lhs); // time
+        auto q2_lhs = std::get<parsed_quantity_type>(*q2.lhs); // time
         EXPECT_EQ(quantity::time, q2_lhs.type);
 
-        auto q2_rhs = std::get<integer_type>(*q2.rhs); // -1
+        auto q2_rhs = std::get<parsed_integer_type>(*q2.rhs); // -1
         EXPECT_EQ(-1, q2_rhs.val);
     }
     {
         std::string type = "{bar:voltage, baz:current^5}";
         auto p = parser(type);
-        auto q = std::get<record_type>(*p.parse_type());
+        auto q = std::get<parsed_record_type>(*p.parse_type());
         EXPECT_EQ(2, q.fields.size());
 
         EXPECT_EQ("bar", q.fields[0].first);
         EXPECT_EQ("baz", q.fields[1].first);
 
-        auto q0 = std::get<quantity_type>(*q.fields[0].second);
+        auto q0 = std::get<parsed_quantity_type>(*q.fields[0].second);
         EXPECT_EQ(quantity::voltage, q0.type);
 
-        auto q1 = std::get<quantity_binary_type>(*q.fields[1].second);
+        auto q1 = std::get<parsed_binary_quantity_type>(*q.fields[1].second);
         EXPECT_EQ(t_binary_op::pow, q1.op);
 
-        auto q1_lhs = std::get<quantity_type>(*q1.lhs);
+        auto q1_lhs = std::get<parsed_quantity_type>(*q1.lhs);
         EXPECT_EQ(quantity::current, q1_lhs.type);
 
-        auto q1_rhs = std::get<integer_type>(*q1.rhs);
+        auto q1_rhs = std::get<parsed_integer_type>(*q1.rhs);
         EXPECT_EQ(5, q1_rhs.val);
     }
     {
@@ -396,7 +396,7 @@ TEST(parser, typed_identifier) {
         EXPECT_TRUE(e_iden.type);
         EXPECT_EQ(src_location(1,1), e_iden.loc);
 
-        auto type = std::get<quantity_type>(*e_iden.type.value());
+        auto type = std::get<parsed_quantity_type>(*e_iden.type.value());
         EXPECT_EQ(quantity::time, type.type);
         EXPECT_EQ(src_location(1,5), type.loc);
     }
@@ -408,7 +408,7 @@ TEST(parser, typed_identifier) {
         EXPECT_TRUE(e_iden.type);
         EXPECT_EQ(src_location(1,1), e_iden.loc);
 
-        auto type = std::get<record_alias_type>(*e_iden.type.value());
+        auto type = std::get<parsed_record_alias_type>(*e_iden.type.value());
         EXPECT_EQ("bar", type.name);
         EXPECT_EQ(src_location(1,6), type.loc);
     }
@@ -420,25 +420,25 @@ TEST(parser, typed_identifier) {
         EXPECT_TRUE(e_iden.type);
         EXPECT_EQ(src_location(1,1), e_iden.loc);
 
-        auto type = std::get<record_type>(*e_iden.type.value());
+        auto type = std::get<parsed_record_type>(*e_iden.type.value());
         EXPECT_EQ(2, type.fields.size());
         EXPECT_EQ(src_location(1,6), type.loc);
 
         EXPECT_EQ("bar", type.fields[0].first);
         EXPECT_EQ("baz", type.fields[1].first);
 
-        auto t_0 = std::get<quantity_type>(*type.fields[0].second);
+        auto t_0 = std::get<parsed_quantity_type>(*type.fields[0].second);
         EXPECT_EQ(quantity::voltage, t_0.type);
         EXPECT_EQ(src_location(1, 11), t_0.loc);
 
-        auto t_1 = std::get<quantity_binary_type>(*type.fields[1].second);
+        auto t_1 = std::get<parsed_binary_quantity_type>(*type.fields[1].second);
         EXPECT_EQ(t_binary_op::div, t_1.op);
         EXPECT_EQ(src_location(1, 31), t_1.loc);
 
-        auto t_1_0 = std::get<quantity_type>(*t_1.lhs);
+        auto t_1_0 = std::get<parsed_quantity_type>(*t_1.lhs);
         EXPECT_EQ(quantity::current, t_1_0.type);
 
-        auto t_1_1 = std::get<quantity_type>(*t_1.rhs);
+        auto t_1_1 = std::get<parsed_quantity_type>(*t_1.rhs);
         EXPECT_EQ(quantity::time, t_1_1.type);
     }
     {
@@ -627,7 +627,7 @@ TEST(parser, call) {
         auto arg0_id = std::get<parsed_identifier>(*arg0.identifier);
         EXPECT_EQ("b", arg0_id.name);
         EXPECT_TRUE(arg0_id.type);
-        auto arg0_type = std::get<quantity_type>(*(arg0_id.type.value()));
+        auto arg0_type = std::get<parsed_quantity_type>(*(arg0_id.type.value()));
         EXPECT_EQ(quantity::voltage, arg0_type.type);
 
         auto arg0_v = std::get<parsed_int>(*arg0.value);
@@ -769,7 +769,7 @@ TEST(parser, let) {
         EXPECT_EQ("a", id.name);
         EXPECT_EQ(src_location(1,5), id.loc);
 
-        auto type = std::get<quantity_type>(*id.type.value());
+        auto type = std::get<parsed_quantity_type>(*id.type.value());
         EXPECT_EQ(quantity::voltage, type.type);
         EXPECT_EQ(src_location(1,7), type.loc);
 
@@ -1204,7 +1204,7 @@ TEST(parser, with) {
         EXPECT_EQ("b", e_val_lhs_arg1.name);
         EXPECT_TRUE(e_val_lhs_arg1.type);
 
-        auto type = std::get<quantity_type>(*e_val_lhs_arg1.type.value());
+        auto type = std::get<parsed_quantity_type>(*e_val_lhs_arg1.type.value());
         EXPECT_EQ(quantity::voltage, type.type);
 
         auto e_val_lhs_val1 = std::get<parsed_int>(*e_val_lhs.record_values[1]);
@@ -1746,7 +1746,7 @@ TEST(parser, function) {
         EXPECT_EQ("a", arg0.name);
         EXPECT_TRUE(arg0.type);
 
-        auto arg0_type = std::get<quantity_type>(*arg0.type.value());
+        auto arg0_type = std::get<parsed_quantity_type>(*arg0.type.value());
         EXPECT_EQ(quantity::voltage, arg0_type.type);
 
         auto body = std::get<parsed_identifier>(*e.body);
@@ -1754,7 +1754,7 @@ TEST(parser, function) {
         EXPECT_FALSE(body.type);
 
         EXPECT_TRUE(e.ret);
-        auto ret_type = std::get<quantity_type>(*e.ret.value());
+        auto ret_type = std::get<parsed_quantity_type>(*e.ret.value());
         EXPECT_EQ(quantity::voltage, ret_type.type);
     }
     {
@@ -1772,11 +1772,11 @@ TEST(parser, function) {
         EXPECT_EQ("a", arg0.name);
         EXPECT_TRUE(arg0.type);
 
-        auto arg0_type = std::get<quantity_binary_type>(*arg0.type.value());
+        auto arg0_type = std::get<parsed_binary_quantity_type>(*arg0.type.value());
         EXPECT_EQ(t_binary_op::div, arg0_type.op);
 
-        auto arg0_lhs = std::get<quantity_type>(*arg0_type.lhs);
-        auto arg0_rhs = std::get<quantity_type>(*arg0_type.rhs);
+        auto arg0_lhs = std::get<parsed_quantity_type>(*arg0_type.lhs);
+        auto arg0_rhs = std::get<parsed_quantity_type>(*arg0_type.rhs);
         EXPECT_EQ(quantity::resistance, arg0_lhs.type);
         EXPECT_EQ(quantity::time, arg0_rhs.type);
 
@@ -1784,18 +1784,18 @@ TEST(parser, function) {
         EXPECT_EQ("b", arg1.name);
         EXPECT_TRUE(arg1.type);
 
-        auto arg1_type = std::get<record_alias_type>(*arg1.type.value());
+        auto arg1_type = std::get<parsed_record_alias_type>(*arg1.type.value());
         EXPECT_EQ("rec0", arg1_type.name);
 
         auto arg2 = std::get<parsed_identifier>(*e.args[2]);
         EXPECT_EQ("c", arg2.name);
         EXPECT_TRUE(arg2.type);
 
-        auto arg2_type = std::get<record_type>(*arg2.type.value());
+        auto arg2_type = std::get<parsed_record_type>(*arg2.type.value());
         EXPECT_EQ(1u, arg2_type.fields.size());
 
         EXPECT_EQ("a", arg2_type.fields[0].first);
-        auto arg2_arg0 = std::get<quantity_type>(*arg2_type.fields[0].second);
+        auto arg2_arg0 = std::get<parsed_quantity_type>(*arg2_type.fields[0].second);
         EXPECT_EQ(quantity::voltage, arg2_arg0.type);
 
         auto body = std::get<parsed_let>(*e.body);
@@ -1861,7 +1861,7 @@ TEST(parser, record) {
         auto e = std::get<parsed_record_alias>(*p.parse_record_alias());
         EXPECT_EQ("rec", e.name);
 
-        auto body = std::get<record_type>(*e.type);
+        auto body = std::get<parsed_record_type>(*e.type);
         EXPECT_EQ(0u, body.fields.size());
     }
     {
@@ -1870,15 +1870,15 @@ TEST(parser, record) {
         auto e = std::get<parsed_record_alias>(*p.parse_record_alias());
         EXPECT_EQ("rec", e.name);
 
-        auto body = std::get<record_type>(*e.type);
+        auto body = std::get<parsed_record_type>(*e.type);
         EXPECT_EQ(2u, body.fields.size());
         EXPECT_EQ("a", body.fields[0].first);
         EXPECT_EQ("b", body.fields[1].first);
 
-        auto field0 = std::get<quantity_type>(*body.fields[0].second);
+        auto field0 = std::get<parsed_quantity_type>(*body.fields[0].second);
         EXPECT_EQ(quantity::voltage, field0.type);
 
-        auto field1 = std::get<quantity_type>(*body.fields[1].second);
+        auto field1 = std::get<parsed_quantity_type>(*body.fields[1].second);
         EXPECT_EQ(quantity::time, field1.type);
     }
     {
@@ -1923,7 +1923,7 @@ TEST(parser, parameter) {
         EXPECT_EQ("iconc", id.name);
         EXPECT_TRUE(id.type);
 
-        auto type = std::get<quantity_type>(*id.type.value());
+        auto type = std::get<parsed_quantity_type>(*id.type.value());
         EXPECT_EQ(quantity::concentration, type.type);
 
         auto val = std::get<parsed_call>(*e.value);
@@ -1982,13 +1982,13 @@ TEST(parser, state) {
         EXPECT_EQ("s", id.name);
         EXPECT_TRUE(id.type);
 
-        auto type = std::get<quantity_binary_type>(*id.type.value());
+        auto type = std::get<parsed_binary_quantity_type>(*id.type.value());
         EXPECT_EQ(t_binary_op::div, type.op);
 
-        auto lhs = std::get<quantity_type>(*type.lhs);
+        auto lhs = std::get<parsed_quantity_type>(*type.lhs);
         EXPECT_EQ(quantity::concentration, lhs.type);
 
-        auto rhs = std::get<quantity_type>(*type.rhs);
+        auto rhs = std::get<parsed_quantity_type>(*type.rhs);
         EXPECT_EQ(quantity::volume, rhs.type);
     }
     {
@@ -2012,7 +2012,7 @@ TEST(parser, bind) {
         EXPECT_EQ("a", id.name);
         EXPECT_TRUE(id.type);
 
-        auto type = std::get<quantity_type>(*id.type.value());
+        auto type = std::get<parsed_quantity_type>(*id.type.value());
         EXPECT_EQ(quantity::voltage, type.type);
 
         EXPECT_EQ(bindable::membrane_potential, e.bind);
@@ -2059,13 +2059,13 @@ TEST(parser, evolve) {
     EXPECT_EQ("st'", id.name);
     EXPECT_TRUE(id.type);
 
-    auto type = std::get<quantity_binary_type>(*id.type.value());
+    auto type = std::get<parsed_binary_quantity_type>(*id.type.value());
     EXPECT_EQ(t_binary_op::div, type.op);
 
-    auto t_lhs = std::get<quantity_type>(*type.lhs);
+    auto t_lhs = std::get<parsed_quantity_type>(*type.lhs);
     EXPECT_EQ(quantity::conductance, t_lhs.type);
 
-    auto t_rhs = std::get<quantity_type>(*type.rhs);
+    auto t_rhs = std::get<parsed_quantity_type>(*type.rhs);
     EXPECT_EQ(quantity::time, t_rhs.type);
 
     auto val = std::get<parsed_binary>(*e.value);

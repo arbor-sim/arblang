@@ -2,7 +2,7 @@ set(arblang-sources
     parser/lexer.cpp
     parser/parser.cpp
     parser/parsed_expressions.cpp
-    parser/type_expressions.cpp
+    parser/parsed_types.cpp
     parser/token.cpp
     parser/normalizer.cpp
     parser/unit_expressions.cpp

@@ -14,22 +14,22 @@
 namespace al {
 namespace parsed_type_ir {
 
-struct integer_type;
-struct quantity_type;
-struct quantity_binary_type;
-struct boolean_type;
-struct record_type;
-struct record_alias_type;
+struct parsed_integer_type;
+struct parsed_quantity_type;
+struct parsed_binary_quantity_type;
+struct parsed_bool_type;
+struct parsed_record_type;
+struct parsed_record_alias_type;
 
 using type_expr = std::variant<
-    integer_type,
-    quantity_type,
-    quantity_binary_type,
-    boolean_type,
-    record_type,
-    record_alias_type>;
+    parsed_integer_type,
+    parsed_quantity_type,
+    parsed_binary_quantity_type,
+    parsed_bool_type,
+    parsed_record_type,
+    parsed_record_alias_type>;
 
-using t_expr = std::shared_ptr<type_expr>;
+using p_type = std::shared_ptr<type_expr>;
 
 enum class quantity {
     real,
@@ -67,61 +67,61 @@ enum class t_binary_op {
 
 std::optional<quantity> gen_quantity(tok t);
 
-struct integer_type {
+struct parsed_integer_type {
     int val;
     src_location loc;
 
-    integer_type(int val, const src_location& loc): val(val), loc(loc) {};
+    parsed_integer_type(int val, const src_location& loc): val(val), loc(loc) {};
 };
 
-struct quantity_type {
+struct parsed_quantity_type {
     quantity type;
     src_location loc;
 
-    quantity_type(quantity q, src_location loc): type(q), loc(std::move(loc)) {};
-    quantity_type(tok t, src_location loc);
+    parsed_quantity_type(quantity q, src_location loc): type(q), loc(std::move(loc)) {};
+    parsed_quantity_type(tok t, src_location loc);
 };
 
-struct quantity_binary_type {
+struct parsed_binary_quantity_type {
     t_binary_op op;
-    t_expr lhs;
-    t_expr rhs;
+    p_type lhs;
+    p_type rhs;
     src_location loc;
 
-    quantity_binary_type(t_binary_op op, t_expr lhs, t_expr rhs, const src_location& loc);
-    quantity_binary_type(tok t, t_expr lhs, t_expr rhs, const src_location& loc);
+    parsed_binary_quantity_type(t_binary_op op, p_type lhs, p_type rhs, const src_location& loc);
+    parsed_binary_quantity_type(tok t, p_type lhs, p_type rhs, const src_location& loc);
 
 private:
     bool verify() const;
 };
 
-struct boolean_type {
+struct parsed_bool_type {
     src_location loc;
 
-    boolean_type(src_location loc): loc(loc) {};
+    parsed_bool_type(src_location loc): loc(loc) {};
 };
 
-struct record_type {
-    std::vector<std::pair<std::string, t_expr>> fields;
+struct parsed_record_type {
+    std::vector<std::pair<std::string, p_type>> fields;
     src_location loc;
 
-    record_type(std::vector<std::pair<std::string, t_expr>> fields, src_location loc): fields(std::move(fields)), loc(loc) {};
+    parsed_record_type(std::vector<std::pair<std::string, p_type>> fields, src_location loc): fields(std::move(fields)), loc(loc) {};
 };
 
-struct record_alias_type {
+struct parsed_record_alias_type {
     std::string name;
     src_location loc;
 
-    record_alias_type(std::string name, src_location loc): name(std::move(name)), loc(loc) {};
+    parsed_record_alias_type(std::string name, src_location loc): name(std::move(name)), loc(loc) {};
 };
 
 // Generate string representation of type expression
 std::string to_string(quantity);
-std::string to_string(const t_expr&, int indent = 0);
+std::string to_string(const p_type&, int indent = 0);
 
 template <typename T, typename... Args>
-t_expr make_t_expr(Args&&... args) {
-    return t_expr(new type_expr(T(std::forward<Args>(args)...)));
+p_type make_ptype(Args&&... args) {
+    return p_type(new type_expr(T(std::forward<Args>(args)...)));
 }
 } // namespace parsed_type_ir
 } // namespace al

@@ -6,7 +6,7 @@
 
 #include <arblang/parser/lexer.hpp>
 #include <arblang/parser/parsed_expressions.hpp>
-#include <arblang/parser/type_expressions.hpp>
+#include <arblang/parser/parsed_types.hpp>
 #include <arblang/parser/unit_expressions.hpp>
 
 namespace al {
@@ -48,11 +48,11 @@ public:
     p_expr parse_parsed_binary(p_expr&&, const token&);
     p_expr parse_expr(int prec=0);
 
-    t_expr parse_binary_type(t_expr&& lhs, const token& lop);
-    t_expr parse_type_element();
-    t_expr parse_quantity_type(int prec=0);
-    t_expr parse_record_type();
-    t_expr parse_type();
+    p_type parse_binary_type(p_type&& lhs, const token& lop);
+    p_type parse_type_element();
+    p_type parse_parsed_quantity_type(int prec=0);
+    p_type parse_parsed_record_type();
+    p_type parse_type();
 
     u_expr parse_binary_unit(u_expr&& lhs, const token& lop);
     u_expr parse_unit_element();

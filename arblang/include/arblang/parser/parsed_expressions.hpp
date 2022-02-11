@@ -8,7 +8,7 @@
 #include <variant>
 
 #include <arblang/parser/token.hpp>
-#include <arblang/parser/type_expressions.hpp>
+#include <arblang/parser/parsed_types.hpp>
 #include <arblang/parser/unit_expressions.hpp>
 #include <arblang/util/common.hpp>
 
@@ -37,7 +37,7 @@ struct parsed_int;
 struct parsed_unary;
 struct parsed_binary;
 
-using raw_expr = std::variant<
+using parsed_expr = std::variant<
     parsed_parameter,
     parsed_constant,
     parsed_state,
@@ -59,7 +59,7 @@ using raw_expr = std::variant<
     parsed_unary,
     parsed_binary>;
 
-using p_expr = std::shared_ptr<raw_expr>;
+using p_expr = std::shared_ptr<parsed_expr>;
 
 struct parsed_mechanism {
     parsed_mechanism() = default;;
@@ -110,10 +110,10 @@ struct parsed_state {
 // Top level record definitions
 struct parsed_record_alias {
     std::string name;
-    parsed_type_ir::t_expr type;
+    parsed_type_ir::p_type type;
     src_location loc;
 
-    parsed_record_alias(std::string name, parsed_type_ir::t_expr type, const src_location& loc):
+    parsed_record_alias(std::string name, parsed_type_ir::p_type type, const src_location& loc):
         name(std::move(name)), type(std::move(type)), loc(loc) {};
 };
 
@@ -121,11 +121,11 @@ struct parsed_record_alias {
 struct parsed_function {
     std::string name;
     std::vector<p_expr> args;   // expect parsed_identifier
-    std::optional<parsed_type_ir::t_expr> ret;
+    std::optional<parsed_type_ir::p_type> ret;
     p_expr body;
     src_location loc;
 
-    parsed_function(std::string name, std::vector<p_expr> args, std::optional<parsed_type_ir::t_expr> ret, p_expr body, const src_location& loc):
+    parsed_function(std::string name, std::vector<p_expr> args, std::optional<parsed_type_ir::p_type> ret, p_expr body, const src_location& loc):
         name(std::move(name)), args(std::move(args)), ret(std::move(ret)), body(std::move(body)), loc(loc) {};
 };
 
@@ -161,12 +161,12 @@ struct parsed_evolve {
 struct parsed_effect {
     affectable effect;
     std::optional<std::string> ion;
-    std::optional<parsed_type_ir::t_expr> type;
+    std::optional<parsed_type_ir::p_type> type;
     p_expr value;
     src_location loc;
 
-    parsed_effect(const token& t, const std::string& ion, std::optional<parsed_type_ir::t_expr> type, p_expr value, const src_location& loc);
-    parsed_effect(affectable effect, std::optional<std::string> ion, std::optional<parsed_type_ir::t_expr> type, p_expr value, const src_location& loc):
+    parsed_effect(const token& t, const std::string& ion, std::optional<parsed_type_ir::p_type> type, p_expr value, const src_location& loc);
+    parsed_effect(affectable effect, std::optional<std::string> ion, std::optional<parsed_type_ir::p_type> type, p_expr value, const src_location& loc):
         effect(std::move(effect)), ion(std::move(ion)), type(std::move(type)), value(std::move(value)), loc(loc) {};
 };
 
@@ -281,11 +281,11 @@ struct parsed_binary {
 
 // Identifier name and type expression
 struct parsed_identifier {
-    std::optional<parsed_type_ir::t_expr> type;
+    std::optional<parsed_type_ir::p_type> type;
     std::string name;
     src_location loc;
 
-    parsed_identifier(parsed_type_ir::t_expr type, std::string name, src_location loc): type(type), name(name), loc(loc) {};
+    parsed_identifier(parsed_type_ir::p_type type, std::string name, src_location loc): type(type), name(name), loc(loc) {};
     parsed_identifier(std::string name, src_location loc): type(std::nullopt), name(name), loc(loc) {};
 };
 
@@ -297,8 +297,8 @@ std::string to_string(const p_expr&, int indent=0);
 src_location location_of(const p_expr&);
 
 template <typename T, typename... Args>
-p_expr make_expr(Args&&... args) {
-    return p_expr(new raw_expr(T(std::forward<Args>(args)...)));
+p_expr make_pexpr(Args&&... args) {
+    return p_expr(new parsed_expr(T(std::forward<Args>(args)...)));
 }
 
 } // namespace parsed_ir

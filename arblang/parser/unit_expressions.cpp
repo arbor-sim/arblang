@@ -160,7 +160,7 @@ std::optional<unit> check_simple_unit(const std::string& s) {
 }
 
 // to_type
-parsed_type_ir::t_expr to_type(const binary_unit& u) {
+parsed_type_ir::p_type to_type(const binary_unit& u) {
     using namespace parsed_type_ir;
     t_binary_op op;
     switch (u.op) {
@@ -168,47 +168,47 @@ parsed_type_ir::t_expr to_type(const binary_unit& u) {
         case u_binary_op::div: op = parsed_type_ir::t_binary_op::div; break;
         case u_binary_op::pow: op = parsed_type_ir::t_binary_op::pow; break;
     }
-    return make_t_expr<quantity_binary_type>(op, to_type(u.lhs), to_type(u.rhs), u.loc);
+    return make_ptype<parsed_binary_quantity_type>(op, to_type(u.lhs), to_type(u.rhs), u.loc);
 }
 
-parsed_type_ir::t_expr to_type(const integer_unit& u) {
+parsed_type_ir::p_type to_type(const integer_unit& u) {
     using namespace parsed_type_ir;
-    return make_t_expr<integer_type>(u.val, u.loc);
+    return make_ptype<parsed_integer_type>(u.val, u.loc);
 }
 
-parsed_type_ir::t_expr to_type(const simple_unit& u) {
+parsed_type_ir::p_type to_type(const simple_unit& u) {
     using namespace parsed_type_ir;
     switch (u.val.symbol) {
-        case unit_sym::A:   return make_t_expr<quantity_type>(quantity::current, u.loc);
-        case unit_sym::m:   return make_t_expr<quantity_type>(quantity::length, u.loc);
-        case unit_sym::g:   return make_t_expr<quantity_type>(quantity::mass, u.loc);
-        case unit_sym::s:   return make_t_expr<quantity_type>(quantity::time, u.loc);
-        case unit_sym::K:   return make_t_expr<quantity_type>(quantity::temperature, u.loc);
-        case unit_sym::mol: return make_t_expr<quantity_type>(quantity::amount, u.loc);
-        case unit_sym::Hz:  return make_t_expr<quantity_type>(quantity::frequency, u.loc);
-        case unit_sym::L:   return make_t_expr<quantity_type>(quantity::volume, u.loc);
-        case unit_sym::l:   return make_t_expr<quantity_type>(quantity::volume, u.loc);
-        case unit_sym::N:   return make_t_expr<quantity_type>(quantity::force, u.loc);
-        case unit_sym::Pa:  return make_t_expr<quantity_type>(quantity::pressure, u.loc);
-        case unit_sym::W:   return make_t_expr<quantity_type>(quantity::power, u.loc);
-        case unit_sym::J:   return make_t_expr<quantity_type>(quantity::energy, u.loc);
-        case unit_sym::C:   return make_t_expr<quantity_type>(quantity::charge, u.loc);
-        case unit_sym::V:   return make_t_expr<quantity_type>(quantity::voltage, u.loc);
-        case unit_sym::F:   return make_t_expr<quantity_type>(quantity::capacitance, u.loc);
-        case unit_sym::H:   return make_t_expr<quantity_type>(quantity::inductance, u.loc);
-        case unit_sym::Ohm: return make_t_expr<quantity_type>(quantity::resistance, u.loc);
-        case unit_sym::S:   return make_t_expr<quantity_type>(quantity::conductance, u.loc);
-        case unit_sym::M:   return make_t_expr<quantity_type>(quantity::concentration, u.loc);
+        case unit_sym::A:   return make_ptype<parsed_quantity_type>(quantity::current, u.loc);
+        case unit_sym::m:   return make_ptype<parsed_quantity_type>(quantity::length, u.loc);
+        case unit_sym::g:   return make_ptype<parsed_quantity_type>(quantity::mass, u.loc);
+        case unit_sym::s:   return make_ptype<parsed_quantity_type>(quantity::time, u.loc);
+        case unit_sym::K:   return make_ptype<parsed_quantity_type>(quantity::temperature, u.loc);
+        case unit_sym::mol: return make_ptype<parsed_quantity_type>(quantity::amount, u.loc);
+        case unit_sym::Hz:  return make_ptype<parsed_quantity_type>(quantity::frequency, u.loc);
+        case unit_sym::L:   return make_ptype<parsed_quantity_type>(quantity::volume, u.loc);
+        case unit_sym::l:   return make_ptype<parsed_quantity_type>(quantity::volume, u.loc);
+        case unit_sym::N:   return make_ptype<parsed_quantity_type>(quantity::force, u.loc);
+        case unit_sym::Pa:  return make_ptype<parsed_quantity_type>(quantity::pressure, u.loc);
+        case unit_sym::W:   return make_ptype<parsed_quantity_type>(quantity::power, u.loc);
+        case unit_sym::J:   return make_ptype<parsed_quantity_type>(quantity::energy, u.loc);
+        case unit_sym::C:   return make_ptype<parsed_quantity_type>(quantity::charge, u.loc);
+        case unit_sym::V:   return make_ptype<parsed_quantity_type>(quantity::voltage, u.loc);
+        case unit_sym::F:   return make_ptype<parsed_quantity_type>(quantity::capacitance, u.loc);
+        case unit_sym::H:   return make_ptype<parsed_quantity_type>(quantity::inductance, u.loc);
+        case unit_sym::Ohm: return make_ptype<parsed_quantity_type>(quantity::resistance, u.loc);
+        case unit_sym::S:   return make_ptype<parsed_quantity_type>(quantity::conductance, u.loc);
+        case unit_sym::M:   return make_ptype<parsed_quantity_type>(quantity::concentration, u.loc);
     }
     return {};
 }
 
-parsed_type_ir::t_expr to_type(const no_unit& u) {
+parsed_type_ir::p_type to_type(const no_unit& u) {
     using namespace parsed_type_ir;
-    return make_t_expr<quantity_type>(quantity::real, src_location{});
+    return make_ptype<parsed_quantity_type>(quantity::real, src_location{});
 }
 
-parsed_type_ir::t_expr to_type(const u_expr& u) {
+parsed_type_ir::p_type to_type(const u_expr& u) {
     return std::visit([&](auto&& c){return to_type(c);}, *u);
 }
 

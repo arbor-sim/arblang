@@ -2,7 +2,7 @@
 
 #include <fmt/core.h>
 
-#include <arblang/parser/type_expressions.hpp>
+#include <arblang/parser/parsed_types.hpp>
 #include <arblang/resolver/resolved_types.hpp>
 
 namespace al {
@@ -128,10 +128,10 @@ r_type resolve_type(const affectable& a, const src_location& loc) {
     return make_rtype<resolved_quantity>(t, loc);
 }
 
-r_type resolve_type(const quantity_type& t, const std::unordered_map<std::string, r_type>&) {
+r_type resolve_type(const parsed_quantity_type& t, const std::unordered_map<std::string, r_type>&) {
     return make_rtype<resolved_quantity>(normalized_type(t.type), t.loc);
 }
-r_type resolve_type(const quantity_binary_type& t, const std::unordered_map<std::string, r_type>& rec_alias) {
+r_type resolve_type(const parsed_binary_quantity_type& t, const std::unordered_map<std::string, r_type>& rec_alias) {
     auto nlhs = resolve_type(t.lhs, rec_alias);;
     if (!std::get_if<resolved_quantity>(nlhs.get())) {
         throw std::runtime_error(fmt::format("Internal compiler error: expected resolved quantity type at lhs of {}",
@@ -141,11 +141,11 @@ r_type resolve_type(const quantity_binary_type& t, const std::unordered_map<std:
 
     normalized_type type;
     if (t.op == t_binary_op::pow) {
-        if (!std::get_if<integer_type>(t.rhs.get())) {
+        if (!std::get_if<parsed_integer_type>(t.rhs.get())) {
             throw std::runtime_error(fmt::format("Internal compiler error: expected integer type at rhs of {}",
                                                  to_string(t.loc)));
         }
-        auto nrhs_q = std::get<integer_type>(*t.rhs);
+        auto nrhs_q = std::get<parsed_integer_type>(*t.rhs);
         type = nlhs_q.type^nrhs_q.val;
     } else {
         auto nrhs = resolve_type(t.rhs, rec_alias);
@@ -162,27 +162,27 @@ r_type resolve_type(const quantity_binary_type& t, const std::unordered_map<std:
     }
     return make_rtype<resolved_quantity>(type, t.loc);
 }
-r_type resolve_type(const integer_type& t, const std::unordered_map<std::string, r_type>&) {
+r_type resolve_type(const parsed_integer_type& t, const std::unordered_map<std::string, r_type>&) {
     throw std::runtime_error(fmt::format("Internal compiler error: unexpected integer type at {}", to_string(t.loc)));
 }
-r_type resolve_type(const boolean_type& t, const std::unordered_map<std::string, r_type>&) {
+r_type resolve_type(const parsed_bool_type& t, const std::unordered_map<std::string, r_type>&) {
     return make_rtype<resolved_boolean>(t.loc);
 }
-r_type resolve_type(const record_type& t, const std::unordered_map<std::string, r_type>& rec_alias) {
+r_type resolve_type(const parsed_record_type& t, const std::unordered_map<std::string, r_type>& rec_alias) {
     std::vector<std::pair<std::string, r_type>> fields;
     for (const auto& f: t.fields) {
         fields.emplace_back(f.first, resolve_type(f.second, rec_alias));
     }
     return make_rtype<resolved_record>(fields, t.loc);
 }
-r_type resolve_type(const record_alias_type& t, const std::unordered_map<std::string, r_type>& rec_alias) {
+r_type resolve_type(const parsed_record_alias_type& t, const std::unordered_map<std::string, r_type>& rec_alias) {
     if (!rec_alias.count(t.name)) {
         throw std::runtime_error(fmt::format("Undefined record {} at {}", t.name, to_string(t.loc)));
     }
     return rec_alias.at(t.name);
 }
 
-r_type resolve_type(const t_expr& t, const std::unordered_map<std::string, r_type>& map) {
+r_type resolve_type(const p_type& t, const std::unordered_map<std::string, r_type>& map) {
     return std::visit([&](auto&& c){return resolve_type(c, map);}, *t);
 }
 
@@ -254,20 +254,20 @@ std::string to_string(const resolved_quantity& q, int indent) {
     auto single_indent = std::string(indent*2, ' ');
     auto double_indent = single_indent + "  ";
 
-    std::string str = single_indent + "(resolved_quantity_type\n";
+    std::string str = single_indent + "(resolved_parsed_quantity_type\n";
     return str += (to_string(q.type, indent+1) + ")");
 }
 std::string to_string(const resolved_boolean& q, int indent) {
     auto single_indent = std::string(indent*2, ' ');
     auto double_indent = single_indent + "  ";
 
-    return single_indent + "(resolved_boolean_type)";
+    return single_indent + "(resolved_parsed_bool_type)";
 }
 std::string to_string(const resolved_record& q, int indent) {
     auto single_indent = std::string(indent*2, ' ');
     auto double_indent = single_indent + "  ";
 
-    std::string str = single_indent +  "(resolved_record_type\n";
+    std::string str = single_indent +  "(resolved_parsed_record_type\n";
     for (const auto& f: q.fields) {
         str += double_indent + f.first + "\n";
         std::visit([&](auto&& c) {str += (to_string(c, indent+1) + "\n");}, *(f.second));

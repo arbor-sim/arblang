@@ -109,7 +109,7 @@ p_expr parser::parse_parameter() {
     next(); // consume 'parameter'
 
     auto assign = parse_assignment();
-    return make_expr<parsed_parameter>(std::move(assign.first), std::move(assign.second), loc);
+    return make_pexpr<parsed_parameter>(std::move(assign.first), std::move(assign.second), loc);
 };
 
 // A constant declaration of the form:
@@ -123,7 +123,7 @@ p_expr parser::parse_constant()  {
     next(); // consume 'constant'
 
     auto assign = parse_assignment();
-    return make_expr<parsed_constant>(std::move(assign.first), std::move(assign.second), loc);
+    return make_pexpr<parsed_constant>(std::move(assign.first), std::move(assign.second), loc);
 };
 
 // A state declaration of the form:
@@ -146,7 +146,7 @@ p_expr parser::parse_state()  {
         throw std::runtime_error(fmt::format("Expected ;, got {} at {}", current().spelling, to_string(t.loc)));
     }
     next(); // consume ';'
-    return make_expr<parsed_state>(std::move(iden), loc);
+    return make_pexpr<parsed_state>(std::move(iden), loc);
 };
 
 // A record definition (type alias) of the form:
@@ -165,13 +165,13 @@ p_expr parser::parse_record_alias()    {
     auto iden = t.spelling;
     next(); // consume identifier
 
-    auto type = parse_record_type();
+    auto type = parse_parsed_record_type();
 
     if (t.type == tok::semicolon) {
         next(); // consume ;
     }
 
-    return make_expr<parsed_record_alias>(iden, type, loc);
+    return make_pexpr<parsed_record_alias>(iden, type, loc);
 };
 
 // A function definition of the form:
@@ -214,7 +214,7 @@ p_expr parser::parse_function() {
     }
     t = next(); // consume ')'
 
-    std::optional<t_expr> ret_quantity = {};
+    std::optional<p_type> ret_quantity = {};
     if (t.type == tok::colon) {
         next(); // consume :
         ret_quantity = parse_type();
@@ -245,7 +245,7 @@ p_expr parser::parse_function() {
         next(); // consume ;
     }
 
-    return make_expr<parsed_function>(name, args, ret_quantity, ret_value, loc);
+    return make_pexpr<parsed_function>(name, args, ret_quantity, ret_value, loc);
 };
 
 // A binding of the form
@@ -295,7 +295,7 @@ p_expr parser::parse_binding() {
     if (t.type == tok::semicolon) {
         next(); // consume ';'
     }
-    return make_expr<parsed_bind>(std::move(iden), bindable, ion_name, loc);
+    return make_pexpr<parsed_bind>(std::move(iden), bindable, ion_name, loc);
 }
 
 // An initialization of the form
@@ -309,7 +309,7 @@ p_expr parser::parse_initial() {
     next(); // consume 'initial'
 
     auto assign = parse_assignment();
-    return make_expr<parsed_initial>(std::move(assign.first), std::move(assign.second), loc);
+    return make_pexpr<parsed_initial>(std::move(assign.first), std::move(assign.second), loc);
 }
 
 // An effect of the form
@@ -345,7 +345,7 @@ p_expr parser::parse_effect() {
     }
 
     // Get type if it exists
-    std::optional<t_expr> type = {};
+    std::optional<p_type> type = {};
     if (t.type == tok::colon) {
         next(); // consume colon;
         type = parse_type();
@@ -365,7 +365,7 @@ p_expr parser::parse_effect() {
     }
     next(); // consume ';'
 
-    return make_expr<parsed_effect>(affectable, ion_name, type, value, loc);
+    return make_pexpr<parsed_effect>(affectable, ion_name, type, value, loc);
 }
 
 // An evolution of the form
@@ -379,7 +379,7 @@ p_expr parser::parse_evolve() {
     next(); // consume 'evolve'
 
     auto assign = parse_assignment();
-    return make_expr<parsed_evolve>(std::move(assign.first), std::move(assign.second), loc);
+    return make_pexpr<parsed_evolve>(std::move(assign.first), std::move(assign.second), loc);
 }
 
 // An export of the form
@@ -398,7 +398,7 @@ p_expr parser::parse_export() {
     if (current().type == tok::semicolon) {
         next(); // consume ';'
     }
-    return make_expr<parsed_export>(std::move(iden), loc);
+    return make_pexpr<parsed_export>(std::move(iden), loc);
 }
 
 // A function call of the form:
@@ -436,7 +436,7 @@ p_expr parser::parse_call() {
     }
     next(); // consume ')'
 
-    return make_expr<parsed_call>(iden, std::move(args), loc);
+    return make_pexpr<parsed_call>(iden, std::move(args), loc);
 }
 
 // An object of the form:
@@ -478,7 +478,7 @@ p_expr parser::parse_object() {
     }
     next(); // consume '}'
 
-    return make_expr<parsed_object>(record_name, std::move(fields), std::move(values), loc);
+    return make_pexpr<parsed_object>(record_name, std::move(fields), std::move(values), loc);
 }
 
 // A let expression of the form:
@@ -507,7 +507,7 @@ p_expr parser::parse_let() {
     }
     next(); // consume ';'
     auto body = parse_expr();
-    return make_expr<parsed_let>(std::move(iden), std::move(value), std::move(body), let.loc);
+    return make_pexpr<parsed_let>(std::move(iden), std::move(value), std::move(body), let.loc);
 }
 
 // A with expression of the form:
@@ -530,7 +530,7 @@ p_expr parser::parse_with() {
 
     auto body = parse_expr();
 
-    return make_expr<parsed_with>(std::move(val), std::move(body), with.loc);
+    return make_pexpr<parsed_with>(std::move(val), std::move(body), with.loc);
 }
 
 // A conditional expression of the form:
@@ -561,7 +561,7 @@ p_expr parser::parse_conditional() {
 
     auto if_false = parse_expr();
 
-    return make_expr<parsed_conditional>(std::move(condition), std::move(if_true), std::move(if_false), if_stmt.loc);
+    return make_pexpr<parsed_conditional>(std::move(condition), std::move(if_true), std::move(if_false), if_stmt.loc);
 }
 
 // Floating point expression of the form:
@@ -574,7 +574,7 @@ p_expr parser::parse_float() {
     auto num = current();
     t = next(); // consume float
 
-    return make_expr<parsed_float>(std::stold(num.spelling), try_parse_unit(), num.loc);
+    return make_pexpr<parsed_float>(std::stold(num.spelling), try_parse_unit(), num.loc);
 }
 
 // Integer expression of the form:
@@ -587,7 +587,7 @@ p_expr parser::parse_int() {
     auto num = current();
     t = next(); // consume int
 
-    return make_expr<parsed_int>(std::stoll(num.spelling), try_parse_unit(), num.loc);
+    return make_pexpr<parsed_int>(std::stoll(num.spelling), try_parse_unit(), num.loc);
 }
 
 // Identifier expression of the form:
@@ -599,7 +599,7 @@ p_expr parser::parse_identifier() {
     }
     t = current();
     next(); // consume identifier;
-    return make_expr<parsed_identifier>(t.spelling, t.loc);
+    return make_pexpr<parsed_identifier>(t.spelling, t.loc);
 }
 
 // Identifier expression of the form:
@@ -614,9 +614,9 @@ p_expr parser::parse_typed_identifier() {
     if (t.type == tok::colon) {
         next(); // consume colon;
         auto type = parse_type();
-        return make_expr<parsed_identifier>(type, iden.spelling, iden.loc);
+        return make_pexpr<parsed_identifier>(type, iden.spelling, iden.loc);
     }
-    return make_expr<parsed_identifier>(iden.spelling, iden.loc);
+    return make_pexpr<parsed_identifier>(iden.spelling, iden.loc);
 }
 
 // Prefixed operations: exp, exprelr, log, cos, sin, abs, !, -, +, max, min.
@@ -640,12 +640,12 @@ p_expr parser::parse_prefix_expr() {
                 throw std::runtime_error(fmt::format("Expected ')' expression, got {} at {}", t.spelling, to_string(t.loc)));
             }
             next(); // consume ')'
-            return make_expr<parsed_unary>(prefix_op.type, std::move(e), prefix_op.loc);
+            return make_pexpr<parsed_unary>(prefix_op.type, std::move(e), prefix_op.loc);
         }
         case tok::lnot:
         case tok::minus:
             next(); // consume '-'
-            return make_expr<parsed_unary>(prefix_op.type, parse_expr(), prefix_op.loc);
+            return make_pexpr<parsed_unary>(prefix_op.type, parse_expr(), prefix_op.loc);
         case tok::plus:
             next(); // consume '+'
             return parse_expr();
@@ -668,7 +668,7 @@ p_expr parser::parse_prefix_expr() {
                 throw std::runtime_error(fmt::format("Expected ')' expression, got {} at {}", t.spelling, to_string(t.loc)));
             }
             next(); // consume ')'
-            return make_expr<parsed_binary>(prefix_op.type, std::move(lhs), std::move(rhs), prefix_op.loc);
+            return make_pexpr<parsed_binary>(prefix_op.type, std::move(lhs), std::move(rhs), prefix_op.loc);
         }
         default: throw std::runtime_error(fmt::format("Expected prefix operator, got {} at {}", prefix_op.spelling, to_string(prefix_op.loc)));
     }
@@ -736,15 +736,15 @@ p_expr parser::parse_parsed_binary(p_expr&& lhs, const token& lop) {
         throw std::runtime_error("parse_parsed_binary() : encountered operator of higher precedence");
     }
     if (rop_prec < lop_prec) {
-        return make_expr<parsed_binary>(lop.type, std::move(lhs), std::move(rhs), lop.loc);
+        return make_pexpr<parsed_binary>(lop.type, std::move(lhs), std::move(rhs), lop.loc);
     }
     next(); // consume rop
     if (rop.right_associative()) {
         rhs = parse_parsed_binary(std::move(rhs), rop);
-        return make_expr<parsed_binary>(lop.type, std::move(lhs), std::move(rhs), lop.loc);
+        return make_pexpr<parsed_binary>(lop.type, std::move(lhs), std::move(rhs), lop.loc);
     }
     else {
-        lhs = make_expr<parsed_binary>(lop.type, std::move(lhs), std::move(rhs), lop.loc);
+        lhs = make_pexpr<parsed_binary>(lop.type, std::move(lhs), std::move(rhs), lop.loc);
         return parse_parsed_binary(std::move(lhs), rop);
     }
 }
@@ -770,9 +770,9 @@ p_expr parser::parse_expr(int prec) {
 
 // Type expressions
 // Handles infix type operations
-t_expr parser::parse_binary_type(t_expr&& lhs, const token& lop) {
+p_type parser::parse_binary_type(p_type&& lhs, const token& lop) {
     auto lop_prec = lop.precedence();
-    auto rhs = parse_quantity_type(lop_prec);
+    auto rhs = parse_parsed_quantity_type(lop_prec);
 
     auto rop = current();
     auto rop_prec = rop.precedence();
@@ -781,30 +781,30 @@ t_expr parser::parse_binary_type(t_expr&& lhs, const token& lop) {
         throw std::runtime_error("parse_binary_type() : encountered operator of higher precedence");
     }
     if (rop_prec < lop_prec) {
-        return make_t_expr<quantity_binary_type>(lop.type, std::move(lhs), std::move(rhs), lop.loc);
+        return make_ptype<parsed_binary_quantity_type>(lop.type, std::move(lhs), std::move(rhs), lop.loc);
     }
     next(); // consume rop
     if (rop.right_associative()) {
         rhs = parse_binary_type(std::move(rhs), rop);
-        return make_t_expr<quantity_binary_type>(lop.type, std::move(lhs), std::move(rhs), lop.loc);
+        return make_ptype<parsed_binary_quantity_type>(lop.type, std::move(lhs), std::move(rhs), lop.loc);
     }
     else {
-        lhs = make_t_expr<quantity_binary_type>(lop.type, std::move(lhs), std::move(rhs), lop.loc);
+        lhs = make_ptype<parsed_binary_quantity_type>(lop.type, std::move(lhs), std::move(rhs), lop.loc);
         return parse_binary_type(std::move(lhs), rop);
     }
 }
 
 // Handles parenthesis and integer signs
-t_expr parser::parse_type_element() {
+p_type parser::parse_type_element() {
     auto t = current();
     if (t.quantity()) {
         next(); // consume identifier
-        return make_t_expr<quantity_type>(t.type, t.loc);
+        return make_ptype<parsed_quantity_type>(t.type, t.loc);
     }
     switch (t.type) {
         case tok::lparen: {
             next(); // consume '('
-            auto type = parse_quantity_type();
+            auto type = parse_parsed_quantity_type();
             t = current();
             if (t.type != tok::rparen) {
                 throw std::runtime_error(fmt::format("Expected ')' expression, got {} at {}", t.spelling, to_string(t.loc)));
@@ -816,7 +816,7 @@ t_expr parser::parse_type_element() {
             auto t = next();
             if (t.type == tok::integer) {
                 next(); // consume integer
-                return make_t_expr<integer_type>(-1*std::stoll(t.spelling), t.loc);
+                return make_ptype<parsed_integer_type>(-1*std::stoll(t.spelling), t.loc);
             }
             throw std::runtime_error(fmt::format("Expected integer after '-' token in type expression, got {} at {}", t.spelling, to_string(t.loc)));
         }
@@ -824,19 +824,19 @@ t_expr parser::parse_type_element() {
             auto t = next();
             if (t.type == tok::integer) {
                 next(); // consume integer
-                return make_t_expr<integer_type>(std::stoll(t.spelling), t.loc);
+                return make_ptype<parsed_integer_type>(std::stoll(t.spelling), t.loc);
             }
             throw std::runtime_error(fmt::format("Expected integer after '+' token in type expression, got {} at {}", t.spelling, to_string(t.loc)));
         }
         case tok::integer: {
             next(); // consume integer
-            return make_t_expr<integer_type>(std::stoll(t.spelling), t.loc);
+            return make_ptype<parsed_integer_type>(std::stoll(t.spelling), t.loc);
         }
         default: throw std::runtime_error(fmt::format("Uexpected token in type expression {} at {}", t.spelling, to_string(t.loc)));
     }
 }
 
-t_expr parser::parse_quantity_type(int prec) {
+p_type parser::parse_parsed_quantity_type(int prec) {
     auto type = parse_type_element();
 
     // Combine all sub-expressions with precedence greater than prec.
@@ -854,7 +854,7 @@ t_expr parser::parse_quantity_type(int prec) {
     }
 }
 
-t_expr parser::parse_record_type() {
+p_type parser::parse_parsed_record_type() {
     auto t = current();
     if (t.type != tok::lbrace) {
         throw std::runtime_error(fmt::format("Expected '{', got {} at {}", t.spelling, to_string(t.loc)));
@@ -862,7 +862,7 @@ t_expr parser::parse_record_type() {
     auto loc = t.loc;
     t = next(); // consume {
 
-    std::vector<std::pair<std::string,t_expr>> field_types;
+    std::vector<std::pair<std::string,p_type>> field_types;
     while (t.type != tok::rbrace) {
         if (t.type != tok::identifier) {
             throw std::runtime_error(fmt::format("Expected identifier, got {} at {}", t.spelling, to_string(t.loc)));
@@ -891,20 +891,20 @@ t_expr parser::parse_record_type() {
     if (t.type == tok::semicolon) {
         next(); // consume ';'
     }
-    return make_t_expr<record_type>(field_types, loc);
+    return make_ptype<parsed_record_type>(field_types, loc);
 }
 
-t_expr parser::parse_type() {
+p_type parser::parse_type() {
     auto t = current();
     if (t.type == tok::identifier) {
         next(); // consume identifier
-        return make_t_expr<record_alias_type>(t.spelling, t.loc);
+        return make_ptype<parsed_record_alias_type>(t.spelling, t.loc);
     }
     if (t.type == tok::lbrace) {
-        return parse_record_type();
+        return parse_parsed_record_type();
     }
-    auto type = parse_quantity_type();
-    if (std::get_if<integer_type>(type.get())) {
+    auto type = parse_parsed_quantity_type();
+    if (std::get_if<parsed_integer_type>(type.get())) {
         throw std::runtime_error("Invalid type.");
     }
     return std::move(type);

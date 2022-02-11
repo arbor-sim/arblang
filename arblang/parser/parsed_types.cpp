@@ -6,7 +6,7 @@
 #include <fmt/core.h>
 
 #include <arblang/parser/token.hpp>
-#include <arblang/parser/type_expressions.hpp>
+#include <arblang/parser/parsed_types.hpp>
 
 namespace al {
 namespace parsed_type_ir {
@@ -49,8 +49,8 @@ std::optional<t_binary_op> gen_binary_op(tok t) {
     }
 }
 
-//quantity_type;
-quantity_type::quantity_type(tok t, src_location loc): loc(loc) {
+//parsed_quantity_type;
+parsed_quantity_type::parsed_quantity_type(tok t, src_location loc): loc(loc) {
     if (auto q = gen_quantity(t)) {
         type = q.value();
     } else {
@@ -58,8 +58,8 @@ quantity_type::quantity_type(tok t, src_location loc): loc(loc) {
     };
 };
 
-//quantity_binary_type;
-quantity_binary_type::quantity_binary_type(t_binary_op op, t_expr l, t_expr r, const src_location& location):
+//parsed_binary_quantity_type;
+parsed_binary_quantity_type::parsed_binary_quantity_type(t_binary_op op, p_type l, p_type r, const src_location& location):
     op(op), lhs(std::move(l)), rhs(std::move(r)), loc(location)
 {
     if (!verify()) {
@@ -67,7 +67,7 @@ quantity_binary_type::quantity_binary_type(t_binary_op op, t_expr l, t_expr r, c
     }
 }
 
-quantity_binary_type::quantity_binary_type(tok t, t_expr l, t_expr r, const src_location& location):
+parsed_binary_quantity_type::parsed_binary_quantity_type(tok t, p_type l, p_type r, const src_location& location):
     lhs(std::move(l)), rhs(std::move(r)), loc(location)
 {
     if (auto t_op = gen_binary_op(t)) {
@@ -80,21 +80,21 @@ quantity_binary_type::quantity_binary_type(tok t, t_expr l, t_expr r, const src_
     }
 }
 
-bool quantity_binary_type::verify() const {
-    auto is_int  = [](const t_expr& t) {return std::get_if<integer_type>(t.get());};
+bool parsed_binary_quantity_type::verify() const {
+    auto is_int  = [](const p_type& t) {return std::get_if<parsed_integer_type>(t.get());};
     auto is_pow = (op == t_binary_op::pow);
 
     if (is_int(lhs)) return false;
     if ((is_pow && !is_int(rhs)) || (!is_pow && is_int(rhs))) return false;
 
-    auto is_allowed = [](const t_expr& t) {
+    auto is_allowed = [](const p_type& t) {
         return std::visit(al::util::overloaded {
-                [&](const boolean_type& t)         {return false;},
-                [&](const record_type& t)          {return false;},
-                [&](const record_alias_type& t)    {return false;},
-                [&](const quantity_type& t)        {return true;},
-                [&](const integer_type& t)         {return true;},
-                [&](const quantity_binary_type& t) {return true;}
+                [&](const parsed_bool_type& t)         {return false;},
+                [&](const parsed_record_type& t)          {return false;},
+                [&](const parsed_record_alias_type& t)    {return false;},
+                [&](const parsed_quantity_type& t)        {return true;},
+                [&](const parsed_integer_type& t)         {return true;},
+                [&](const parsed_binary_quantity_type& t) {return true;}
         }, *t);
     };
     if (!is_allowed(lhs) || !is_allowed(rhs)) return false;
@@ -138,46 +138,46 @@ std::string to_string(quantity q) {
     }
 }
 
-std::string to_string(const integer_type& q, int indent) {
+std::string to_string(const parsed_integer_type& q, int indent) {
     auto single_indent = std::string(indent*2, ' ');
     auto double_indent = single_indent + "  ";
 
-    std::string str = single_indent +  "(integer_type\n";
+    std::string str = single_indent +  "(parsed_integer_type\n";
     str += (double_indent + std::to_string(q.val) + "\n");
     return str + double_indent + to_string(q.loc) + ")";
 }
 
-std::string to_string(const quantity_type& q, int indent) {
+std::string to_string(const parsed_quantity_type& q, int indent) {
     auto single_indent = std::string(indent*2, ' ');
     auto double_indent = single_indent + "  ";
 
-    std::string str = single_indent + "(quantity_type\n";
+    std::string str = single_indent + "(parsed_quantity_type\n";
     str += double_indent + to_string(q.type) + "\n";
     str += double_indent + to_string(q.loc) + ")";
     return str;
 }
 
-std::string to_string(const quantity_binary_type& q, int indent) {
+std::string to_string(const parsed_binary_quantity_type& q, int indent) {
     auto single_indent = std::string(indent*2, ' ');
     auto double_indent = single_indent + "  ";
 
-    std::string str = single_indent + "(quantity_binary_type " + to_string(q.op) + "\n";
+    std::string str = single_indent + "(parsed_binary_quantity_type " + to_string(q.op) + "\n";
     str += to_string(q.lhs, indent+1) + "\n";
     str += to_string(q.rhs, indent+1) + "\n";
     str += double_indent + to_string(q.loc) + ")";
     return str;
 }
 
-std::string to_string(const boolean_type& q, int indent) {
+std::string to_string(const parsed_bool_type& q, int indent) {
     auto single_indent = std::string(indent*2, ' ');
-    return single_indent + "(boolean_type " + to_string(q.loc) + ")";
+    return single_indent + "(parsed_bool_type " + to_string(q.loc) + ")";
 }
 
-std::string to_string(const record_type& q, int indent) {
+std::string to_string(const parsed_record_type& q, int indent) {
     auto single_indent = std::string(indent*2, ' ');
     auto double_indent = single_indent + "  ";
 
-    std::string str = single_indent +  "(record_type\n";
+    std::string str = single_indent +  "(parsed_record_type\n";
     for (const auto& f: q.fields) {
         str += to_string(f.second, indent+1) + "\n";
     }
@@ -185,17 +185,17 @@ std::string to_string(const record_type& q, int indent) {
     return str;
 }
 
-std::string to_string(const record_alias_type& q, int indent) {
+std::string to_string(const parsed_record_alias_type& q, int indent) {
     auto single_indent = std::string(indent*2, ' ');
     auto double_indent = single_indent + "  ";
 
-    std::string str = single_indent + "(record_alias_type\n";
+    std::string str = single_indent + "(parsed_record_alias_type\n";
     str += (double_indent + q.name + "\n");
     str += double_indent + to_string(q.loc) + ")";
     return str;
 }
 
-std::string to_string(const t_expr& t, int indent) {
+std::string to_string(const p_type& t, int indent) {
     return std::visit([&](auto&& c) {return to_string(c, indent);}, *t);
 }
 

@@ -7,7 +7,7 @@
 #include <variant>
 
 #include <arblang/parser/token.hpp>
-#include <arblang/parser/type_expressions.hpp>
+#include <arblang/parser/parsed_types.hpp>
 #include <arblang/util/visitor.hpp>
 
 namespace al {
@@ -115,7 +115,7 @@ std::optional<unit> check_simple_unit(const std::string& s);
 std::string to_string(const u_expr&, int indent=0);
 
 // Generate the equivalent type expression of a unit expression
-parsed_type_ir::t_expr to_type(const u_expr &);
+parsed_type_ir::p_type to_type(const u_expr &);
 
 // Normalize the unit into the base units and factor
 // example: mV    -> {V, -3}

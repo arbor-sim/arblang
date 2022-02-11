@@ -3,7 +3,7 @@
 #include <vector>
 #include <unordered_map>
 
-#include <arblang/parser/type_expressions.hpp>
+#include <arblang/parser/parsed_types.hpp>
 
 namespace al {
 namespace resolved_type_ir {
@@ -67,7 +67,7 @@ r_type make_rtype(Args&&... args) {
 
 r_type resolve_type(const bindable& b, const src_location& loc);
 r_type resolve_type(const affectable& a, const src_location& loc);
-r_type resolve_type(const t_expr&, const std::unordered_map<std::string, r_type>&);
+r_type resolve_type(const p_type&, const std::unordered_map<std::string, r_type>&);
 
 std::optional<r_type> derive(const r_type&);
 

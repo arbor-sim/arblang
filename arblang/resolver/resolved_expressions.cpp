@@ -318,8 +318,8 @@ r_expr resolve(const parsed_with& e, const in_scope_map& map) {
     if (auto v_rec = std::get_if<resolved_record>(v_type.get())) {
         for (const auto& v_field: v_rec->fields) {
             auto let = parsed_let();
-            auto iden = make_expr<parsed_identifier>(v_field.first, e.loc);
-            let_vars.push_back(parsed_let(iden, make_expr<parsed_binary>(binary_op::dot, e.value, iden, e.loc), {}, e.loc));
+            auto iden = make_pexpr<parsed_identifier>(v_field.first, e.loc);
+            let_vars.push_back(parsed_let(iden, make_pexpr<parsed_binary>(binary_op::dot, e.value, iden, e.loc), {}, e.loc));
         }
     }
     else {
@@ -329,9 +329,9 @@ r_expr resolve(const parsed_with& e, const in_scope_map& map) {
 
     let_vars.back().body = e.body;
     for (int i = let_vars.size()-2; i >=0; i--) {
-        let_vars[i].body = make_expr<parsed_let>(let_vars[i+1]);
+        let_vars[i].body = make_pexpr<parsed_let>(let_vars[i+1]);
     }
-    auto equivalent_let = make_expr<parsed_let>(let_vars.front());
+    auto equivalent_let = make_pexpr<parsed_let>(let_vars.front());
 
     return resolve(equivalent_let, map);
 }
@@ -618,9 +618,9 @@ resolved_mechanism resolve(const parsed_mechanism& e, const in_scope_map& map) {
         available_map.type_map.insert({resolved_record_val->name, resolved_record_val->type});
 
         // prime
-        auto derived_record_type = derive(resolved_record_val->type);
-        if (derived_record_type) {
-            available_map.type_map.insert({resolved_record_val->name+"'", derived_record_type.value()});
+        auto derived_parsed_record_type = derive(resolved_record_val->type);
+        if (derived_parsed_record_type) {
+            available_map.type_map.insert({resolved_record_val->name+"'", derived_parsed_record_type.value()});
         }
     }
     for (const auto& c: e.states) {

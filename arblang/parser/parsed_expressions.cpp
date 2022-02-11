@@ -111,7 +111,7 @@ parsed_bind::parsed_bind(p_expr iden, const token& t, const std::string& ion_nam
 };
 
 // parsed_effect
-parsed_effect::parsed_effect(const token& t, const std::string& ion_name, std::optional<parsed_type_ir::t_expr> type, p_expr value, const src_location& loc):
+parsed_effect::parsed_effect(const token& t, const std::string& ion_name, std::optional<parsed_type_ir::p_type> type, p_expr value, const src_location& loc):
         value(std::move(value)), type(std::move(type)), loc(loc)
 {
     if (auto b = gen_affectable(t.type)) {
