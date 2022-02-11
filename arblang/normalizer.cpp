@@ -1,14 +1,8 @@
-#include <optional>
-#include <stdexcept>
-#include <string>
-
-#define FMT_HEADER_ONLY YES
-#include <fmt/core.h>
 #include <fmt/format.h>
 
-#include <arblang/normalizer.hpp>
-#include <arblang/unit_expressions.hpp>
-#include <arblang/raw_expressions.hpp>
+#include <arblang/parser/normalizer.hpp>
+#include <arblang/parser/unit_expressions.hpp>
+#include <arblang/parser/raw_expressions.hpp>
 
 namespace al {
 namespace raw_ir {

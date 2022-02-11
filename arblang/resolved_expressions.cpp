@@ -4,13 +4,11 @@
 #include <unordered_map>
 #include <variant>
 
-#define FMT_HEADER_ONLY YES
 #include <fmt/core.h>
 #include <fmt/format.h>
-#include <fmt/compile.h>
 
 #include <arblang/common.hpp>
-#include <arblang/raw_expressions.hpp>
+#include <arblang/parser/raw_expressions.hpp>
 #include <arblang/resolved_expressions.hpp>
 #include <arblang/resolved_types.hpp>
 

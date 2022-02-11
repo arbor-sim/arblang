@@ -1,12 +1,9 @@
 #include <stdexcept>
 
-#include <arblang/type_expressions.hpp>
-#include <arblang/resolved_types.hpp>
-
-#define FMT_HEADER_ONLY YES
 #include <fmt/core.h>
-#include <fmt/format.h>
-#include <fmt/compile.h>
+
+#include <arblang/parser/type_expressions.hpp>
+#include <arblang/resolved_types.hpp>
 
 namespace al {
 namespace t_resolved_ir {

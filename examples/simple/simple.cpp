@@ -1,7 +1,7 @@
 #include <iostream>
 
-#include <arblang/lexer.hpp>
-#include <arblang/parser.hpp>
+#include "arblang/parser/lexer.hpp"
+#include "arblang/parser/parser.hpp"
 
 int main() {
     using namespace al;

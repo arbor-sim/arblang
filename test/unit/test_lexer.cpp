@@ -1,7 +1,7 @@
 #include <string>
 
-#include <arblang/token.hpp>
-#include <arblang/lexer.hpp>
+#include <arblang/parser/token.hpp>
+#include <arblang/parser/lexer.hpp>
 
 #include "../gtest.h"
 

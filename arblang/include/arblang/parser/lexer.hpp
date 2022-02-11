@@ -5,7 +5,7 @@
 #include <unordered_map>
 #include <vector>
 
-#include <arblang/token.hpp>
+#include <arblang/parser/token.hpp>
 
 namespace al{
 class lexer_impl;

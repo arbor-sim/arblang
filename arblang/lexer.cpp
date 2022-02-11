@@ -1,9 +1,7 @@
-#include <cstdio>
-#include <iostream>
 #include <string>
 
-#include <arblang/lexer.hpp>
-#include <arblang/token.hpp>
+#include <arblang/parser/lexer.hpp>
+#include <arblang/parser/token.hpp>
 
 namespace al{
 // helpers for identifying character types

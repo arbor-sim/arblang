@@ -3,7 +3,7 @@
 #include <vector>
 #include <unordered_map>
 
-#include <arblang/type_expressions.hpp>
+#include "arblang/parser/type_expressions.hpp"
 
 namespace al {
 namespace t_resolved_ir {

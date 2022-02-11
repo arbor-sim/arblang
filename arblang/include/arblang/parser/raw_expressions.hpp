@@ -8,9 +8,9 @@
 #include <variant>
 
 #include <arblang/common.hpp>
-#include <arblang/token.hpp>
-#include <arblang/type_expressions.hpp>
-#include <arblang/unit_expressions.hpp>
+#include <arblang/parser/token.hpp>
+#include <arblang/parser/type_expressions.hpp>
+#include <arblang/parser/unit_expressions.hpp>
 
 namespace al {
 namespace raw_ir {

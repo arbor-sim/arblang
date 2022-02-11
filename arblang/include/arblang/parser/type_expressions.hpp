@@ -7,7 +7,7 @@
 #include <variant>
 #include <vector>
 
-#include <arblang/token.hpp>
+#include <arblang/parser/token.hpp>
 #include <arblang/common.hpp>
 #include <arblang/visitor.hpp>
 

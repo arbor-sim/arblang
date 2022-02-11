@@ -1,14 +1,11 @@
 #include <optional>
 #include <stdexcept>
 #include <string>
-#include <iostream>
 
 #include <fmt/core.h>
-#include <fmt/format.h>
-#include <fmt/compile.h>
 
-#include <arblang/parser.hpp>
-#include <arblang/token.hpp>
+#include <arblang/parser/parser.hpp>
+#include <arblang/parser/token.hpp>
 
 namespace al {
 

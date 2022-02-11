@@ -1,6 +1,6 @@
 #pragma once
 
-#include <arblang/token.hpp>
+#include <string>
 
 namespace al {
 

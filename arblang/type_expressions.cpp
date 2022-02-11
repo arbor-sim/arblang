@@ -4,13 +4,10 @@
 #include <variant>
 #include <vector>
 
-#include <arblang/common.hpp>
-#include <arblang/token.hpp>
-#include <arblang/type_expressions.hpp>
+#include <arblang/parser/token.hpp>
+#include <arblang/parser/type_expressions.hpp>
 
 #include <fmt/core.h>
-#include <fmt/format.h>
-#include <fmt/compile.h>
 
 namespace al {
 namespace t_raw_ir {

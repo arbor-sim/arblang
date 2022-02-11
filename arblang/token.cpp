@@ -1,10 +1,9 @@
 #include <algorithm>
 #include <optional>
 #include <ostream>
-#include <sstream>
 #include <unordered_map>
 
-#include <arblang/token.hpp>
+#include <arblang/parser/token.hpp>
 
 namespace al {
 std::string src_location::to_string() const {

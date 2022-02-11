@@ -6,8 +6,8 @@
 #include <string>
 #include <variant>
 
-#include <arblang/token.hpp>
-#include <arblang/type_expressions.hpp>
+#include <arblang/parser/token.hpp>
+#include <arblang/parser/type_expressions.hpp>
 #include <arblang/visitor.hpp>
 
 namespace al {

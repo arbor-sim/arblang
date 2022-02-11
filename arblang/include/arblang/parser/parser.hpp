@@ -4,10 +4,10 @@
 #include <string>
 #include <vector>
 
-#include <arblang/lexer.hpp>
-#include <arblang/raw_expressions.hpp>
-#include <arblang/type_expressions.hpp>
-#include <arblang/unit_expressions.hpp>
+#include <arblang/parser/lexer.hpp>
+#include <arblang/parser/raw_expressions.hpp>
+#include <arblang/parser/type_expressions.hpp>
+#include <arblang/parser/unit_expressions.hpp>
 
 namespace al {
 using namespace raw_ir;

@@ -4,7 +4,7 @@
 #include <string>
 #include <vector>
 
-#include <arblang/raw_expressions.hpp>
+#include <arblang/parser/raw_expressions.hpp>
 
 namespace al {
 namespace raw_ir {

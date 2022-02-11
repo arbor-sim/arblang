@@ -8,8 +8,8 @@
 #include <variant>
 
 #include <arblang/common.hpp>
-#include <arblang/token.hpp>
-#include <arblang/raw_expressions.hpp>
+#include "arblang/parser/token.hpp"
+#include "arblang/parser/raw_expressions.hpp"
 #include <arblang/resolved_types.hpp>
 
 namespace al {

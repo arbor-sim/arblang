@@ -3,9 +3,9 @@
 #include <variant>
 #include <vector>
 
-#include <arblang/token.hpp>
-#include <arblang/parser.hpp>
-#include <arblang/normalizer.hpp>
+#include <arblang/parser/token.hpp>
+#include <arblang/parser/parser.hpp>
+#include <arblang/parser/normalizer.hpp>
 #include <arblang/resolved_expressions.hpp>
 
 #include "../gtest.h"

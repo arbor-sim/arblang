@@ -1,11 +1,9 @@
 #include <cmath>
 #include <string>
 #include <variant>
-#include <vector>
 
-#include <arblang/token.hpp>
-#include <arblang/parser.hpp>
-#include <arblang/normalizer.hpp>
+#include <arblang/parser/parser.hpp>
+#include <arblang/parser/normalizer.hpp>
 
 #include "../gtest.h"
 
