@@ -13,18 +13,18 @@
 namespace al {
 namespace parsed_unit_ir {
 
-struct integer_unit;
-struct simple_unit;
-struct binary_unit;
-struct no_unit;
+struct parsed_integer_unit;
+struct parsed_simple_unit;
+struct parsed_binary_unit;
+struct parsed_no_unit;
 
-using unit_expr = std::variant<
-        integer_unit,
-        simple_unit,
-        binary_unit,
-        no_unit>;
+using parsed_unit = std::variant<
+        parsed_integer_unit,
+        parsed_simple_unit,
+        parsed_binary_unit,
+        parsed_no_unit>;
 
-using u_expr = std::shared_ptr<unit_expr>;
+using p_unit = std::shared_ptr<parsed_unit>;
 
 enum class unit_sym {
     m,   // meter;   length
@@ -82,49 +82,49 @@ enum class u_binary_op {
     mul, div, pow,
 };
 
-struct integer_unit {
+struct parsed_integer_unit {
     int val;
     src_location loc;
-    integer_unit(int val, const src_location& loc): val(val), loc(loc) {};
+    parsed_integer_unit(int val, const src_location& loc): val(val), loc(loc) {};
 };
 
-struct simple_unit {
+struct parsed_simple_unit {
     unit val;
     src_location loc;
-    simple_unit(unit val, const src_location& loc): val(std::move(val)), loc(loc) {};
+    parsed_simple_unit(unit val, const src_location& loc): val(std::move(val)), loc(loc) {};
 };
 
-struct binary_unit {
+struct parsed_binary_unit {
     u_binary_op op;
-    u_expr lhs;
-    u_expr rhs;
+    p_unit lhs;
+    p_unit rhs;
     src_location loc;
 
-    binary_unit(tok t, u_expr lhs, u_expr rhs, const src_location& loc);
-    binary_unit(u_binary_op op, u_expr lhs, u_expr rhs, const src_location& loc);
+    parsed_binary_unit(tok t, p_unit lhs, p_unit rhs, const src_location& loc);
+    parsed_binary_unit(u_binary_op op, p_unit lhs, p_unit rhs, const src_location& loc);
 private:
     bool verify() const;
 };
 
-struct no_unit{};
+struct parsed_no_unit{};
 
 // Checks if a string is a simple unit
-std::optional<unit> check_simple_unit(const std::string& s);
+std::optional<unit> check_parsed_simple_unit(const std::string& s);
 
 // Generate string representation of unit expression
-std::string to_string(const u_expr&, int indent=0);
+std::string to_string(const p_unit&, int indent=0);
 
 // Generate the equivalent type expression of a unit expression
-parsed_type_ir::p_type to_type(const u_expr &);
+parsed_type_ir::p_type to_type(const p_unit &);
 
 // Normalize the unit into the base units and factor
 // example: mV    -> {V, -3}
 //          mV/mA -> {V/A, 0}
-std::pair<u_expr, int> normalize_unit(const u_expr&);
+std::pair<p_unit, int> normalize_unit(const p_unit&);
 
 template <typename T, typename... Args>
-u_expr make_u_expr(Args&&... args) {
-    return u_expr(new unit_expr(T(std::forward<Args>(args)...)));
+p_unit make_punit(Args&&... args) {
+    return p_unit(new parsed_unit(T(std::forward<Args>(args)...)));
 }
 
 } // namespace parsed_unit_ir

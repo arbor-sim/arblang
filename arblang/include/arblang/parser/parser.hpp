@@ -7,7 +7,7 @@
 #include <arblang/parser/lexer.hpp>
 #include <arblang/parser/parsed_expressions.hpp>
 #include <arblang/parser/parsed_types.hpp>
-#include <arblang/parser/unit_expressions.hpp>
+#include <arblang/parser/parsed_units.hpp>
 
 namespace al {
 using namespace parsed_ir;
@@ -54,10 +54,10 @@ public:
     p_type parse_parsed_record_type();
     p_type parse_type();
 
-    u_expr parse_binary_unit(u_expr&& lhs, const token& lop);
-    u_expr parse_unit_element();
-    u_expr parse_unit_expr(int prec=0);
-    u_expr try_parse_unit(int prec=0);
+    p_unit parse_parsed_binary_unit(p_unit&& lhs, const token& lop);
+    p_unit parse_unit_element();
+    p_unit parse_unit_expr(int prec=0);
+    p_unit try_parse_unit(int prec=0);
 
 private:
     std::pair<p_expr, p_expr> parse_assignment();

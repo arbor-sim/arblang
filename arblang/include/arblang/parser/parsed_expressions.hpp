@@ -9,7 +9,7 @@
 
 #include <arblang/parser/token.hpp>
 #include <arblang/parser/parsed_types.hpp>
-#include <arblang/parser/unit_expressions.hpp>
+#include <arblang/parser/parsed_units.hpp>
 #include <arblang/util/common.hpp>
 
 namespace al {
@@ -236,10 +236,10 @@ struct parsed_conditional {
 // Number expression
 struct parsed_float {
     double value;
-    parsed_unit_ir::u_expr unit;
+    parsed_unit_ir::p_unit unit;
     src_location loc;
 
-    parsed_float(double value, parsed_unit_ir::u_expr unit, const src_location& loc):
+    parsed_float(double value, parsed_unit_ir::p_unit unit, const src_location& loc):
         value(value), unit(std::move(unit)), loc(loc) {};
 };
 
@@ -247,10 +247,10 @@ struct parsed_float {
 // Number expression
 struct parsed_int {
     long int value;
-    parsed_unit_ir::u_expr unit;
+    parsed_unit_ir::p_unit unit;
     src_location loc;
 
-    parsed_int(int value,  parsed_unit_ir::u_expr unit, const src_location& loc):
+    parsed_int(int value,  parsed_unit_ir::p_unit unit, const src_location& loc):
         value(value), unit(std::move(unit)), loc(loc) {};
 };
 

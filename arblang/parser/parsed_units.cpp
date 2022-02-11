@@ -5,7 +5,7 @@
 
 #include <fmt/core.h>
 
-#include <arblang/parser/unit_expressions.hpp>
+#include <arblang/parser/parsed_units.hpp>
 
 namespace al {
 namespace parsed_unit_ir {
@@ -98,8 +98,8 @@ std::optional<u_binary_op> to_binary_op(tok t) {
     }
 }
 
-//binary_unit
-binary_unit::binary_unit(u_binary_op op, u_expr l, u_expr r, const src_location& location):
+//parsed_binary_unit
+parsed_binary_unit::parsed_binary_unit(u_binary_op op, p_unit l, p_unit r, const src_location& location):
     op(op), lhs(std::move(l)), rhs(std::move(r)), loc(location)
 {
     if (!verify()) {
@@ -107,7 +107,7 @@ binary_unit::binary_unit(u_binary_op op, u_expr l, u_expr r, const src_location&
     }
 }
 
-binary_unit::binary_unit(tok t, u_expr l, u_expr r, const src_location& location):
+parsed_binary_unit::parsed_binary_unit(tok t, p_unit l, p_unit r, const src_location& location):
     lhs(std::move(l)), rhs(std::move(r)), loc(location)
 {
     if (auto b_op = to_binary_op(t)) {
@@ -121,27 +121,27 @@ binary_unit::binary_unit(tok t, u_expr l, u_expr r, const src_location& location
 }
 
 
-bool binary_unit::verify() const {
-    auto is_int  = [](const u_expr& u) {return std::get_if<integer_unit>(u.get());};
+bool parsed_binary_unit::verify() const {
+    auto is_int  = [](const p_unit& u) {return std::get_if<parsed_integer_unit>(u.get());};
     auto is_pow = (op == u_binary_op::pow);
 
     if (is_int(lhs)) return false;
     if ((is_pow && !is_int(rhs)) || (!is_pow && is_int(rhs))) return false;
 
-    auto is_allowed = [](const u_expr& u) {
+    auto is_allowed = [](const p_unit& u) {
         return std::visit(al::util::overloaded {
-                [&](const simple_unit& t)  {return true;},
-                [&](const integer_unit& t) {return true;},
-                [&](const no_unit& t)      {return false;},
-                [&](const binary_unit& t)  {return true;},
+                [&](const parsed_simple_unit& t)  {return true;},
+                [&](const parsed_integer_unit& t) {return true;},
+                [&](const parsed_no_unit& t)      {return false;},
+                [&](const parsed_binary_unit& t)  {return true;},
         }, *u);
     };
     if (!is_allowed(lhs) || !is_allowed(rhs)) return false;
     return true;
 }
 
-// check_simple_unit
-std::optional<unit> check_simple_unit(const std::string& s) {
+// check_parsed_simple_unit
+std::optional<unit> check_parsed_simple_unit(const std::string& s) {
     // If the string is a unit symbol, return with no prefix.
     if (auto sym = to_unit_symbol(s)) return unit{unit_pref::none, sym.value()};
 
@@ -160,7 +160,7 @@ std::optional<unit> check_simple_unit(const std::string& s) {
 }
 
 // to_type
-parsed_type_ir::p_type to_type(const binary_unit& u) {
+parsed_type_ir::p_type to_type(const parsed_binary_unit& u) {
     using namespace parsed_type_ir;
     t_binary_op op;
     switch (u.op) {
@@ -171,12 +171,12 @@ parsed_type_ir::p_type to_type(const binary_unit& u) {
     return make_ptype<parsed_binary_quantity_type>(op, to_type(u.lhs), to_type(u.rhs), u.loc);
 }
 
-parsed_type_ir::p_type to_type(const integer_unit& u) {
+parsed_type_ir::p_type to_type(const parsed_integer_unit& u) {
     using namespace parsed_type_ir;
     return make_ptype<parsed_integer_type>(u.val, u.loc);
 }
 
-parsed_type_ir::p_type to_type(const simple_unit& u) {
+parsed_type_ir::p_type to_type(const parsed_simple_unit& u) {
     using namespace parsed_type_ir;
     switch (u.val.symbol) {
         case unit_sym::A:   return make_ptype<parsed_quantity_type>(quantity::current, u.loc);
@@ -203,17 +203,17 @@ parsed_type_ir::p_type to_type(const simple_unit& u) {
     return {};
 }
 
-parsed_type_ir::p_type to_type(const no_unit& u) {
+parsed_type_ir::p_type to_type(const parsed_no_unit& u) {
     using namespace parsed_type_ir;
     return make_ptype<parsed_quantity_type>(quantity::real, src_location{});
 }
 
-parsed_type_ir::p_type to_type(const u_expr& u) {
+parsed_type_ir::p_type to_type(const p_unit& u) {
     return std::visit([&](auto&& c){return to_type(c);}, *u);
 }
 
 // normalize
-std::pair<u_expr, int> normalize_unit(const binary_unit& u) {
+std::pair<p_unit, int> normalize_unit(const parsed_binary_unit& u) {
     auto lhs = normalize_unit(u.lhs);
     auto rhs = normalize_unit(u.rhs);
     int factor;
@@ -222,25 +222,25 @@ std::pair<u_expr, int> normalize_unit(const binary_unit& u) {
         case u_binary_op::div: factor = lhs.second - rhs.second; break;
         case u_binary_op::pow: factor = lhs.second * rhs.second; break;
     }
-    return {make_u_expr<binary_unit>(u.op, lhs.first, rhs.first, u.loc), factor};
+    return {make_punit<parsed_binary_unit>(u.op, lhs.first, rhs.first, u.loc), factor};
 }
 
-std::pair<u_expr, int> normalize_unit(const integer_unit& u) {
-    return {make_u_expr<integer_unit>(u), u.val};
+std::pair<p_unit, int> normalize_unit(const parsed_integer_unit& u) {
+    return {make_punit<parsed_integer_unit>(u), u.val};
 }
 
-std::pair<u_expr, int> normalize_unit(const simple_unit& u) {
+std::pair<p_unit, int> normalize_unit(const parsed_simple_unit& u) {
     auto base_unit = u.val;
     auto factor = to_prefix_factor(base_unit.prefix).value();
     base_unit.prefix = unit_pref::none;
-    return {make_u_expr<simple_unit>(base_unit, u.loc), factor};
+    return {make_punit<parsed_simple_unit>(base_unit, u.loc), factor};
 }
 
-std::pair<u_expr, int> normalize_unit(const no_unit& u) {
-    return {make_u_expr<no_unit>(), 0};
+std::pair<p_unit, int> normalize_unit(const parsed_no_unit& u) {
+    return {make_punit<parsed_no_unit>(), 0};
 }
 
-std::pair<u_expr, int> normalize_unit(const u_expr& u) {
+std::pair<p_unit, int> normalize_unit(const p_unit& u) {
     return std::visit([&](auto&& c){return normalize_unit(c);}, *u);
 }
 
@@ -306,37 +306,37 @@ std::string to_string(const u_binary_op& op) {
     }
 }
 
-std::string to_string(const binary_unit& u, int indent) {
+std::string to_string(const parsed_binary_unit& u, int indent) {
     auto single_indent = std::string(indent*2, ' ');
     auto double_indent = single_indent + "  ";
 
-    std::string str = single_indent + "(binary_unit " + to_string(u.op) + "\n";
+    std::string str = single_indent + "(parsed_binary_unit " + to_string(u.op) + "\n";
     str += to_string(u.lhs, indent+1) + "\n";
     str += to_string(u.rhs, indent+1) + "\n";
     str += double_indent + to_string(u.loc) + ")";
     return str;
 }
 
-std::string to_string(const integer_unit& u, int indent) {
+std::string to_string(const parsed_integer_unit& u, int indent) {
     auto single_indent = std::string(indent*2, ' ');
     auto double_indent = single_indent + "  ";
 
-    std::string str = single_indent + "(integer_unit\n";
+    std::string str = single_indent + "(parsed_integer_unit\n";
     str += (double_indent + std::to_string(u.val) + "\n");
     str += double_indent + to_string(u.loc) + ")";
     return str;
 }
 
-std::string to_string(const simple_unit& u, int indent) {
+std::string to_string(const parsed_simple_unit& u, int indent) {
     auto single_indent = std::string(indent*2, ' ');
-    return single_indent + "(simple_unit " + to_string(u.val.prefix) + to_string(u.val.symbol) + " " + to_string(u.loc) + ")";
+    return single_indent + "(parsed_simple_unit " + to_string(u.val.prefix) + to_string(u.val.symbol) + " " + to_string(u.loc) + ")";
 }
 
-std::string to_string(const no_unit& u, int indent) {
+std::string to_string(const parsed_no_unit& u, int indent) {
     return {};
 }
 
-std::string to_string(const u_expr& u , int indent) {
+std::string to_string(const p_unit& u , int indent) {
     return std::visit([&](auto&& c){return to_string(c, indent);}, *u);
 }
 

@@ -3,9 +3,9 @@ set(arblang-sources
     parser/parser.cpp
     parser/parsed_expressions.cpp
     parser/parsed_types.cpp
+    parser/parsed_units.cpp
     parser/token.cpp
     parser/normalizer.cpp
-    parser/unit_expressions.cpp
     resolver/resolved_expressions.cpp
     resolver/resolved_types.cpp
     resolver/canonicalize.cpp)

@@ -912,7 +912,7 @@ p_type parser::parse_type() {
 
 // Unit expressions
 // Handles infix unit operations
-u_expr parser::parse_binary_unit(u_expr&& lhs, const token& lop) {
+p_unit parser::parse_parsed_binary_unit(p_unit&& lhs, const token& lop) {
     auto lop_prec = lop.precedence();
     auto rhs = parse_unit_expr(lop_prec);
 
@@ -920,24 +920,24 @@ u_expr parser::parse_binary_unit(u_expr&& lhs, const token& lop) {
     auto rop_prec = rop.precedence();
 
     if (rop_prec > lop_prec) {
-        throw std::runtime_error("parse_binary_unit() : encountered operator of higher precedence");
+        throw std::runtime_error("parse_parsed_binary_unit() : encountered operator of higher precedence");
     }
     if (rop_prec < lop_prec) {
-        return make_u_expr<binary_unit>(lop.type, std::move(lhs), std::move(rhs), lop.loc);
+        return make_punit<parsed_binary_unit>(lop.type, std::move(lhs), std::move(rhs), lop.loc);
     }
 
     next(); // consume rop
     if (rop.right_associative()) {
-        rhs = parse_binary_unit(std::move(rhs), rop);
-        return make_u_expr<binary_unit>(lop.type, std::move(lhs), std::move(rhs), lop.loc);
+        rhs = parse_parsed_binary_unit(std::move(rhs), rop);
+        return make_punit<parsed_binary_unit>(lop.type, std::move(lhs), std::move(rhs), lop.loc);
     }
     else {
-        auto bin_unit = make_u_expr<binary_unit>(lop.type, std::move(lhs), std::move(rhs), lop.loc);
-        return parse_binary_unit(std::move(bin_unit), rop);
+        auto bin_unit = make_punit<parsed_binary_unit>(lop.type, std::move(lhs), std::move(rhs), lop.loc);
+        return parse_parsed_binary_unit(std::move(bin_unit), rop);
     }
 }
 
-u_expr parser::parse_unit_element() {
+p_unit parser::parse_unit_element() {
     auto t = current();
     switch (t.type) {
         case tok::lparen: {
@@ -954,7 +954,7 @@ u_expr parser::parse_unit_element() {
             auto t = next();
             if (t.type == tok::integer) {
                 next(); // consume integer
-                return make_u_expr<integer_unit>(-1*std::stoll(t.spelling), t.loc);
+                return make_punit<parsed_integer_unit>(-1*std::stoll(t.spelling), t.loc);
             }
             throw std::runtime_error(fmt::format("Expected integer after '-' token in type expression, got {} at {}", t.spelling, to_string(t.loc)));
         }
@@ -962,25 +962,25 @@ u_expr parser::parse_unit_element() {
             auto t = next();
             if (t.type == tok::integer) {
                 next(); // consume integer
-                return make_u_expr<integer_unit>(std::stoll(t.spelling), t.loc);
+                return make_punit<parsed_integer_unit>(std::stoll(t.spelling), t.loc);
             }
             throw std::runtime_error(fmt::format("Expected integer after '+' token in type expression, got {} at {}", t.spelling, to_string(t.loc)));
         }
         case tok::integer: {
             next(); // consume integer
-            return make_u_expr<integer_unit>(std::stoll(t.spelling), t.loc);
+            return make_punit<parsed_integer_unit>(std::stoll(t.spelling), t.loc);
         }
         case tok::identifier: {
-            if (auto u = check_simple_unit(t.spelling)) {
+            if (auto u = check_parsed_simple_unit(t.spelling)) {
                 next(); // consume identifier
-                return make_u_expr<simple_unit>(u.value(), t.loc);
+                return make_punit<parsed_simple_unit>(u.value(), t.loc);
             }
         }
         default: throw std::runtime_error("Uexpected token in unit expression: " + t.spelling);
     }
 }
 
-u_expr parser::parse_unit_expr(int prec) {
+p_unit parser::parse_unit_expr(int prec) {
     auto unit = parse_unit_element();
 
     // Combine all sub-expressions with precedence greater than prec.
@@ -994,14 +994,14 @@ u_expr parser::parse_unit_expr(int prec) {
 
         next(); // consume the infix binary operator
 
-        unit = parse_binary_unit(std::move(unit), op);
+        unit = parse_parsed_binary_unit(std::move(unit), op);
     }
 }
 
-u_expr parser::try_parse_unit(int prec) {
+p_unit parser::try_parse_unit(int prec) {
     auto t = current();
     if (t.type != tok::lbracket) {
-        return make_u_expr<no_unit>();
+        return make_punit<parsed_no_unit>();
     }
     next(); // consume [
     auto u = parse_unit_expr(prec);
@@ -1011,7 +1011,7 @@ u_expr parser::try_parse_unit(int prec) {
     }
     next();
 
-    if (std::get_if<integer_unit>(u.get())) {
+    if (std::get_if<parsed_integer_unit>(u.get())) {
         throw std::runtime_error("Invalid unit.");
     }
     return std::move(u);

@@ -20,16 +20,16 @@ TEST(parser, unit) {
     {
         std::string unit = "[mV]";
         auto p = parser(unit);
-        auto u = std::get<simple_unit>(*p.try_parse_unit());
+        auto u = std::get<parsed_simple_unit>(*p.try_parse_unit());
         EXPECT_EQ(unit_pref::m, u.val.prefix);
         EXPECT_EQ(unit_sym::V, u.val.symbol);
     }
     {
         std::string unit = "[mmol/kA]";
         auto p = parser(unit);
-        auto u = std::get<binary_unit>(*p.try_parse_unit());
-        auto lhs = std::get<simple_unit>(*u.lhs);
-        auto rhs = std::get<simple_unit>(*u.rhs);
+        auto u = std::get<parsed_binary_unit>(*p.try_parse_unit());
+        auto lhs = std::get<parsed_simple_unit>(*u.lhs);
+        auto rhs = std::get<parsed_simple_unit>(*u.rhs);
 
         EXPECT_EQ(unit_pref::m, lhs.val.prefix);
         EXPECT_EQ(unit_sym::mol, lhs.val.symbol);
@@ -42,9 +42,9 @@ TEST(parser, unit) {
     {
         std::string unit = "[K^-2]";
         auto p = parser(unit);
-        auto u = std::get<binary_unit>(*p.try_parse_unit());
-        auto lhs = std::get<simple_unit>(*u.lhs);
-        auto rhs = std::get<integer_unit>(*u.rhs);
+        auto u = std::get<parsed_binary_unit>(*p.try_parse_unit());
+        auto lhs = std::get<parsed_simple_unit>(*u.lhs);
+        auto rhs = std::get<parsed_integer_unit>(*u.rhs);
 
         EXPECT_EQ(unit_pref::none, lhs.val.prefix);
         EXPECT_EQ(unit_sym::K, lhs.val.symbol);
@@ -56,15 +56,15 @@ TEST(parser, unit) {
     {
         std::string unit = "[Ohm*uV/YS]";
         auto p = parser(unit);
-        auto u = std::get<binary_unit>(*p.try_parse_unit());
+        auto u = std::get<parsed_binary_unit>(*p.try_parse_unit());
 
         EXPECT_EQ(u_binary_op::div, u.op);
-        auto lhs_0 = std::get<binary_unit>(*u.lhs); // Ohm*uV
-        auto rhs_0 = std::get<simple_unit>(*u.rhs); // YS
+        auto lhs_0 = std::get<parsed_binary_unit>(*u.lhs); // Ohm*uV
+        auto rhs_0 = std::get<parsed_simple_unit>(*u.rhs); // YS
 
         EXPECT_EQ(u_binary_op::mul, lhs_0.op);
-        auto lhs_1 = std::get<simple_unit>(*lhs_0.lhs); // Ohm
-        auto rhs_1 = std::get<simple_unit>(*lhs_0.rhs); // uV
+        auto lhs_1 = std::get<parsed_simple_unit>(*lhs_0.lhs); // Ohm
+        auto rhs_1 = std::get<parsed_simple_unit>(*lhs_0.rhs); // uV
 
         EXPECT_EQ(unit_pref::none, lhs_1.val.prefix);
         EXPECT_EQ(unit_sym::Ohm, lhs_1.val.symbol);
@@ -78,23 +78,23 @@ TEST(parser, unit) {
     {
         std::string unit = "[Ohm^2/daC/K^-3]";
         auto p = parser(unit);
-        auto u = std::get<binary_unit>(*p.try_parse_unit());
+        auto u = std::get<parsed_binary_unit>(*p.try_parse_unit());
 
         EXPECT_EQ(u_binary_op::div, u.op);
-        auto lhs_0 = std::get<binary_unit>(*u.lhs); // Ohm^2/daC
-        auto rhs_0 = std::get<binary_unit>(*u.rhs); // K^-3
+        auto lhs_0 = std::get<parsed_binary_unit>(*u.lhs); // Ohm^2/daC
+        auto rhs_0 = std::get<parsed_binary_unit>(*u.rhs); // K^-3
 
         EXPECT_EQ(u_binary_op::div, lhs_0.op);
-        auto lhs_1 = std::get<binary_unit>(*lhs_0.lhs); // Ohm^2
-        auto rhs_1 = std::get<simple_unit>(*lhs_0.rhs); // daC
+        auto lhs_1 = std::get<parsed_binary_unit>(*lhs_0.lhs); // Ohm^2
+        auto rhs_1 = std::get<parsed_simple_unit>(*lhs_0.rhs); // daC
 
         EXPECT_EQ(u_binary_op::pow, lhs_1.op);
-        auto lhs_2 = std::get<simple_unit>(*lhs_1.lhs);  // Ohm
-        auto rhs_2 = std::get<integer_unit>(*lhs_1.rhs); // 2
+        auto lhs_2 = std::get<parsed_simple_unit>(*lhs_1.lhs);  // Ohm
+        auto rhs_2 = std::get<parsed_integer_unit>(*lhs_1.rhs); // 2
 
         EXPECT_EQ(u_binary_op::pow, rhs_0.op);
-        auto lhs_3 = std::get<simple_unit>(*rhs_0.lhs);  // K
-        auto rhs_3 = std::get<integer_unit>(*rhs_0.rhs); // -3
+        auto lhs_3 = std::get<parsed_simple_unit>(*rhs_0.lhs);  // K
+        auto rhs_3 = std::get<parsed_integer_unit>(*rhs_0.rhs); // -3
 
         EXPECT_EQ(unit_pref::da, rhs_1.val.prefix);
         EXPECT_EQ(unit_sym::C, rhs_1.val.symbol);
@@ -112,23 +112,23 @@ TEST(parser, unit) {
     {
         std::string unit = "[Ohm^2/daC*mK^-1]";
         auto p = parser(unit);
-        auto u = std::get<binary_unit>(*p.try_parse_unit());
+        auto u = std::get<parsed_binary_unit>(*p.try_parse_unit());
 
         EXPECT_EQ(u_binary_op::mul, u.op);
-        auto lhs_0 = std::get<binary_unit>(*u.lhs); // Ohm^2/daC
-        auto rhs_0 = std::get<binary_unit>(*u.rhs); // K^-3
+        auto lhs_0 = std::get<parsed_binary_unit>(*u.lhs); // Ohm^2/daC
+        auto rhs_0 = std::get<parsed_binary_unit>(*u.rhs); // K^-3
 
         EXPECT_EQ(u_binary_op::div, lhs_0.op);
-        auto lhs_1 = std::get<binary_unit>(*lhs_0.lhs); // Ohm^2
-        auto rhs_1 = std::get<simple_unit>(*lhs_0.rhs); // daC
+        auto lhs_1 = std::get<parsed_binary_unit>(*lhs_0.lhs); // Ohm^2
+        auto rhs_1 = std::get<parsed_simple_unit>(*lhs_0.rhs); // daC
 
         EXPECT_EQ(u_binary_op::pow, lhs_1.op);
-        auto lhs_2 = std::get<simple_unit>(*lhs_1.lhs);  // Ohm
-        auto rhs_2 = std::get<integer_unit>(*lhs_1.rhs); // 2
+        auto lhs_2 = std::get<parsed_simple_unit>(*lhs_1.lhs);  // Ohm
+        auto rhs_2 = std::get<parsed_integer_unit>(*lhs_1.rhs); // 2
 
         EXPECT_EQ(u_binary_op::pow, rhs_0.op);
-        auto lhs_3 = std::get<simple_unit>(*rhs_0.lhs);  // K
-        auto rhs_3 = std::get<integer_unit>(*rhs_0.rhs); // -3
+        auto lhs_3 = std::get<parsed_simple_unit>(*rhs_0.lhs);  // K
+        auto rhs_3 = std::get<parsed_integer_unit>(*rhs_0.rhs); // -3
 
         EXPECT_EQ(unit_pref::da, rhs_1.val.prefix);
         EXPECT_EQ(unit_sym::C, rhs_1.val.symbol);
@@ -146,15 +146,15 @@ TEST(parser, unit) {
     {
         std::string unit = "[(Ohm/V)*A]";
         auto p = parser(unit);
-        auto u = std::get<binary_unit>(*p.try_parse_unit());
+        auto u = std::get<parsed_binary_unit>(*p.try_parse_unit());
 
         EXPECT_EQ(u_binary_op::mul, u.op);
-        auto lhs_0 = std::get<binary_unit>(*u.lhs); // Ohm/V
-        auto rhs_0 = std::get<simple_unit>(*u.rhs); // A
+        auto lhs_0 = std::get<parsed_binary_unit>(*u.lhs); // Ohm/V
+        auto rhs_0 = std::get<parsed_simple_unit>(*u.rhs); // A
 
         EXPECT_EQ(u_binary_op::div, lhs_0.op);
-        auto lhs_1 = std::get<simple_unit>(*lhs_0.lhs); // Ohm
-        auto rhs_1 = std::get<simple_unit>(*lhs_0.rhs); // V
+        auto lhs_1 = std::get<parsed_simple_unit>(*lhs_0.lhs); // Ohm
+        auto rhs_1 = std::get<parsed_simple_unit>(*lhs_0.rhs); // V
 
         EXPECT_EQ(unit_pref::none, lhs_1.val.prefix);
         EXPECT_EQ(unit_sym::Ohm, lhs_1.val.symbol);
@@ -168,15 +168,15 @@ TEST(parser, unit) {
     {
         std::string unit = "[Ohm/(V*A)]";
         auto p = parser(unit);
-        auto u = std::get<binary_unit>(*p.try_parse_unit());
+        auto u = std::get<parsed_binary_unit>(*p.try_parse_unit());
 
         EXPECT_EQ(u_binary_op::div, u.op);
-        auto lhs_0 = std::get<simple_unit>(*u.lhs); // Ohm
-        auto rhs_0 = std::get<binary_unit>(*u.rhs); // V*A
+        auto lhs_0 = std::get<parsed_simple_unit>(*u.lhs); // Ohm
+        auto rhs_0 = std::get<parsed_binary_unit>(*u.rhs); // V*A
 
         EXPECT_EQ(u_binary_op::mul, rhs_0.op);
-        auto lhs_1 = std::get<simple_unit>(*rhs_0.lhs); // V
-        auto rhs_1 = std::get<simple_unit>(*rhs_0.rhs); // A
+        auto lhs_1 = std::get<parsed_simple_unit>(*rhs_0.lhs); // V
+        auto rhs_1 = std::get<parsed_simple_unit>(*rhs_0.rhs); // A
 
         EXPECT_EQ(unit_pref::none, lhs_0.val.prefix);
         EXPECT_EQ(unit_sym::Ohm, lhs_0.val.symbol);
@@ -207,7 +207,7 @@ TEST(parser, unit) {
         std::string iden = "identifier";
         auto p = parser(iden);
         auto unit = p.try_parse_unit();
-        EXPECT_TRUE(std::get_if<no_unit>(unit.get()));
+        EXPECT_TRUE(std::get_if<parsed_no_unit>(unit.get()));
     }
 }
 
@@ -461,7 +461,7 @@ TEST(parser, float_pt) {
         auto p = parser(fpt);
         auto v = std::get<parsed_float>(*p.parse_float());
         EXPECT_EQ(4.2, v.value);
-        EXPECT_TRUE(std::get_if<no_unit>(v.unit.get()));
+        EXPECT_TRUE(std::get_if<parsed_no_unit>(v.unit.get()));
     }
     {
         std::string fpt = "2.22 [mV]";
@@ -469,7 +469,7 @@ TEST(parser, float_pt) {
         auto v = std::get<parsed_float>(*p.parse_float());
         EXPECT_EQ(2.22, v.value);
 
-        auto u = std::get<simple_unit>(*v.unit);
+        auto u = std::get<parsed_simple_unit>(*v.unit);
         EXPECT_EQ(unit_pref::m, u.val.prefix);
         EXPECT_EQ(unit_sym::V, u.val.symbol);
     }
@@ -479,14 +479,14 @@ TEST(parser, float_pt) {
         auto v = std::get<parsed_float>(*p.parse_float());
         EXPECT_EQ(2e-4, v.value);
 
-        auto u = std::get<binary_unit>(*v.unit);
+        auto u = std::get<parsed_binary_unit>(*v.unit);
         EXPECT_EQ(u_binary_op::div, u.op);
 
-        auto u_lhs = std::get<simple_unit>(*u.lhs);
+        auto u_lhs = std::get<parsed_simple_unit>(*u.lhs);
         EXPECT_EQ(unit_pref::none, u_lhs.val.prefix);
         EXPECT_EQ(unit_sym::A, u_lhs.val.symbol);
 
-        auto u_rhs = std::get<simple_unit>(*u.rhs);
+        auto u_rhs = std::get<parsed_simple_unit>(*u.rhs);
         EXPECT_EQ(unit_pref::none, u_rhs.val.prefix);
         EXPECT_EQ(unit_sym::s, u_rhs.val.symbol);
     }
@@ -496,14 +496,14 @@ TEST(parser, float_pt) {
         auto v = std::get<parsed_float>(*p.parse_float());
         EXPECT_EQ(2e2, v.value);
 
-        auto u = std::get<binary_unit>(*v.unit);
+        auto u = std::get<parsed_binary_unit>(*v.unit);
         EXPECT_EQ(u_binary_op::pow, u.op);
 
-        auto u_lhs = std::get<simple_unit>(*u.lhs);
+        auto u_lhs = std::get<parsed_simple_unit>(*u.lhs);
         EXPECT_EQ(unit_pref::none, u_lhs.val.prefix);
         EXPECT_EQ(unit_sym::Ohm, u_lhs.val.symbol);
 
-        auto u_rhs = std::get<integer_unit>(*u.rhs);
+        auto u_rhs = std::get<parsed_integer_unit>(*u.rhs);
         EXPECT_EQ(2, u_rhs.val);
     }
 }
@@ -514,7 +514,7 @@ TEST(parser, integer) {
         auto p = parser(fpt);
         auto v = std::get<parsed_int>(*p.parse_int());
         EXPECT_EQ(4, v.value);
-        EXPECT_TRUE(std::get_if<no_unit>(v.unit.get()));
+        EXPECT_TRUE(std::get_if<parsed_no_unit>(v.unit.get()));
     }
     {
         std::string fpt = "11 [mV]";
@@ -522,7 +522,7 @@ TEST(parser, integer) {
         auto v = std::get<parsed_int>(*p.parse_int());
         EXPECT_EQ(11, v.value);
 
-        auto u = std::get<simple_unit>(*v.unit);
+        auto u = std::get<parsed_simple_unit>(*v.unit);
         EXPECT_EQ(unit_pref::m, u.val.prefix);
         EXPECT_EQ(unit_sym::V, u.val.symbol);
     }
@@ -549,12 +549,12 @@ TEST(parser, call) {
 
         auto arg_0 = std::get<parsed_int>(*c.call_args[0]);
         EXPECT_EQ(2, arg_0.value);
-        EXPECT_TRUE(std::get_if<no_unit>(arg_0.unit.get()));
+        EXPECT_TRUE(std::get_if<parsed_no_unit>(arg_0.unit.get()));
         EXPECT_EQ(src_location(1, 5), arg_0.loc);
 
         auto arg_1 = std::get<parsed_int>(*c.call_args[1]);
         EXPECT_EQ(1, arg_1.value);
-        EXPECT_TRUE(std::get_if<no_unit>(arg_1.unit.get()));
+        EXPECT_TRUE(std::get_if<parsed_no_unit>(arg_1.unit.get()));
         EXPECT_EQ(src_location(1, 8), arg_1.loc);
     }
     {
@@ -568,7 +568,7 @@ TEST(parser, call) {
 
         auto arg_0 = std::get<parsed_float>(*c.call_args[0]);
         EXPECT_EQ(2.5, arg_0.value);
-        EXPECT_TRUE(std::get_if<no_unit>(arg_0.unit.get()));
+        EXPECT_TRUE(std::get_if<parsed_no_unit>(arg_0.unit.get()));
         EXPECT_EQ(src_location(1, 9), arg_0.loc);
 
         auto arg_1 = std::get<parsed_identifier>(*c.call_args[1]);
@@ -582,7 +582,7 @@ TEST(parser, call) {
 
         auto arg_2_v = std::get<parsed_int>(*arg_2.value);
         EXPECT_EQ(1, arg_2_v.value);
-        auto unit = std::get<simple_unit>(*arg_2_v.unit);
+        auto unit = std::get<parsed_simple_unit>(*arg_2_v.unit);
         EXPECT_EQ(unit_pref::none, unit.val.prefix);
         EXPECT_EQ(unit_sym::A, unit.val.symbol);
     }
@@ -601,11 +601,11 @@ TEST(parser, call) {
 
         auto arg0_lhs = std::get<parsed_int>(*arg0.lhs);
         EXPECT_EQ(1, arg0_lhs.value);
-        EXPECT_TRUE(std::get_if<no_unit>(arg0_lhs.unit.get()));
+        EXPECT_TRUE(std::get_if<parsed_no_unit>(arg0_lhs.unit.get()));
 
         auto arg0_rhs = std::get<parsed_int>(*arg0.rhs);
         EXPECT_EQ(4, arg0_rhs.value);
-        EXPECT_TRUE(std::get_if<no_unit>(arg0_rhs.unit.get()));
+        EXPECT_TRUE(std::get_if<parsed_no_unit>(arg0_rhs.unit.get()));
 
         auto arg1 = std::get<parsed_call>(*c.call_args[1]);
         EXPECT_EQ("bar", arg1.function_name);
@@ -632,7 +632,7 @@ TEST(parser, call) {
 
         auto arg0_v = std::get<parsed_int>(*arg0.value);
         EXPECT_EQ(6, arg0_v.value);
-        auto arg0_unit = std::get<simple_unit>(*arg0_v.unit);
+        auto arg0_unit = std::get<parsed_simple_unit>(*arg0_v.unit);
         EXPECT_EQ(unit_pref::m, arg0_unit.val.prefix);
         EXPECT_EQ(unit_sym::V, arg0_unit.val.symbol);
 
@@ -671,14 +671,14 @@ TEST(parser, object) {
         EXPECT_FALSE(arg_0.type);
         auto val_0 = std::get<parsed_int>(*c.record_values[0]);
         EXPECT_EQ(0, val_0.value);
-        EXPECT_TRUE(std::get_if<no_unit>(val_0.unit.get()));
+        EXPECT_TRUE(std::get_if<parsed_no_unit>(val_0.unit.get()));
 
         auto arg_1 = std::get<parsed_identifier>(*c.record_fields[1]);
         EXPECT_EQ("b", arg_1.name);
         EXPECT_FALSE(arg_1.type);
         auto val_1 = std::get<parsed_int>(*c.record_values[1]);
         EXPECT_EQ(0, val_1.value);
-        EXPECT_TRUE(std::get_if<no_unit>(val_1.unit.get()));
+        EXPECT_TRUE(std::get_if<parsed_no_unit>(val_1.unit.get()));
     }
     {
         std::string obj = "{a = 1; b = 2e-5;}";
@@ -695,14 +695,14 @@ TEST(parser, object) {
         EXPECT_FALSE(arg_0.type);
         auto val_0 = std::get<parsed_int>(*c.record_values[0]);
         EXPECT_EQ(1, val_0.value);
-        EXPECT_TRUE(std::get_if<no_unit>(val_0.unit.get()));
+        EXPECT_TRUE(std::get_if<parsed_no_unit>(val_0.unit.get()));
 
         auto arg_1 = std::get<parsed_identifier>(*c.record_fields[1]);
         EXPECT_EQ("b", arg_1.name);
         EXPECT_FALSE(arg_1.type);
         auto val_1 = std::get<parsed_float>(*c.record_values[1]);
         EXPECT_EQ(2e-5, val_1.value);
-        EXPECT_TRUE(std::get_if<no_unit>(val_1.unit.get()));
+        EXPECT_TRUE(std::get_if<parsed_no_unit>(val_1.unit.get()));
     }
 }
 
@@ -720,12 +720,12 @@ TEST(parser, let) {
 
         auto val = std::get<parsed_int>(*e_let.value);
         EXPECT_EQ(9, val.value);
-        EXPECT_TRUE(std::get_if<no_unit>(val.unit.get()));
+        EXPECT_TRUE(std::get_if<parsed_no_unit>(val.unit.get()));
         EXPECT_EQ(src_location(1,11), val.loc);
 
         auto body = std::get<parsed_float>(*e_let.body);
         EXPECT_EQ(12.62, body.value);
-        EXPECT_TRUE(std::get_if<no_unit>(body.unit.get()));
+        EXPECT_TRUE(std::get_if<parsed_no_unit>(body.unit.get()));
         EXPECT_EQ(src_location(1,14), body.loc);
     }
     {
@@ -780,7 +780,7 @@ TEST(parser, let) {
 
         auto intval = std::get<parsed_int>(*val.value);
         EXPECT_EQ(5, intval.value);
-        EXPECT_TRUE(std::get_if<no_unit>(intval.unit.get()));
+        EXPECT_TRUE(std::get_if<parsed_no_unit>(intval.unit.get()));
         EXPECT_EQ(src_location(1,18), intval.loc);
 
         auto body = std::get<parsed_binary>(*e_let.body);
@@ -794,7 +794,7 @@ TEST(parser, let) {
 
         auto rhs = std::get<parsed_float>(*body.rhs);
         EXPECT_EQ(3e5, rhs.value);
-        EXPECT_TRUE(std::get_if<no_unit>(rhs.unit.get()));
+        EXPECT_TRUE(std::get_if<parsed_no_unit>(rhs.unit.get()));
         EXPECT_EQ(src_location(1,25), rhs.loc);
     }
     {
@@ -824,7 +824,7 @@ TEST(parser, let) {
 
         auto e_val_lhs_val = std::get<parsed_int>(*e_val_lhs.record_values.front());
         EXPECT_EQ(4, e_val_lhs_val.value);
-        EXPECT_TRUE(std::get_if<no_unit>(e_val_lhs_val.unit.get()));
+        EXPECT_TRUE(std::get_if<parsed_no_unit>(e_val_lhs_val.unit.get()));
 
         auto e_val_rhs = std::get<parsed_identifier>(*e_val.rhs);
         EXPECT_EQ("a", e_val_rhs.name);
@@ -885,7 +885,7 @@ TEST(parser, let) {
         auto e_body_rhs = std::get<parsed_int>(*e_body.rhs);
         EXPECT_EQ(20, e_body_rhs.value);
 
-        auto unit = std::get<simple_unit>(*e_body_rhs.unit);
+        auto unit = std::get<parsed_simple_unit>(*e_body_rhs.unit);
         EXPECT_EQ(unit_pref::none, unit.val.prefix);
         EXPECT_EQ(unit_sym::s, unit.val.symbol);
     }
@@ -906,7 +906,7 @@ TEST(parser, let) {
         auto e_val = std::get<parsed_int>(*e.value);
         EXPECT_EQ(src_location(1,9), e_val.loc);
         EXPECT_EQ(3, e_val.value);
-        auto unit = std::get<simple_unit>(*e_val.unit);
+        auto unit = std::get<parsed_simple_unit>(*e_val.unit);
         EXPECT_EQ(unit_pref::none, unit.val.prefix);
         EXPECT_EQ(unit_sym::m, unit.val.symbol);
 
@@ -928,7 +928,7 @@ TEST(parser, let) {
 
         auto e_body_val_val0 = std::get<parsed_int>(*e_body_val.record_values[0]);
         EXPECT_EQ(4, e_body_val_val0.value);
-        EXPECT_TRUE(std::get_if<no_unit>(e_body_val_val0.unit.get()));
+        EXPECT_TRUE(std::get_if<parsed_no_unit>(e_body_val_val0.unit.get()));
 
         auto e_body_val_arg1 = std::get<parsed_identifier>(*e_body_val.record_fields[1]);
         EXPECT_EQ("b", e_body_val_arg1.name);
@@ -975,7 +975,7 @@ TEST(parser, let) {
 
         auto e_val_val0 = std::get<parsed_float>(*e_val.record_values[0]);
         EXPECT_EQ(3.2, e_val_val0.value);
-        EXPECT_TRUE(std::get_if<no_unit>(e_val_val0.unit.get()));
+        EXPECT_TRUE(std::get_if<parsed_no_unit>(e_val_val0.unit.get()));
 
         auto e_val_arg1 = std::get<parsed_identifier>(*e_val.record_fields[1]);
         EXPECT_EQ("pos", e_val_arg1.name);
@@ -992,7 +992,7 @@ TEST(parser, let) {
 
         auto e_val_val1_val0 = std::get<parsed_int>(*e_val_val1.record_values[0]);
         EXPECT_EQ(3, e_val_val1_val0.value);
-        auto unit0 = std::get<simple_unit>(*e_val_val1_val0.unit);
+        auto unit0 = std::get<parsed_simple_unit>(*e_val_val1_val0.unit);
         EXPECT_EQ(unit_pref::none, unit0.val.prefix);
         EXPECT_EQ(unit_sym::m, unit0.val.symbol);
 
@@ -1002,7 +1002,7 @@ TEST(parser, let) {
 
         auto e_val_val1_val1 = std::get<parsed_int>(*e_val_val1.record_values[1]);
         EXPECT_EQ(4, e_val_val1_val1.value);
-        auto unit1 = std::get<simple_unit>(*e_val_val1_val1.unit);
+        auto unit1 = std::get<parsed_simple_unit>(*e_val_val1_val1.unit);
         EXPECT_EQ(unit_pref::none, unit1.val.prefix);
         EXPECT_EQ(unit_sym::m, unit1.val.symbol);
 
@@ -1097,7 +1097,7 @@ TEST(parser, let) {
 
         auto e_body_rhs = std::get<parsed_int>(*e_body.rhs);
         EXPECT_EQ(3, e_body_rhs.value);
-        EXPECT_TRUE(std::get_if<no_unit>(e_body_rhs.unit.get()));
+        EXPECT_TRUE(std::get_if<parsed_no_unit>(e_body_rhs.unit.get()));
     }
     {
         std::vector<std::string> invalid = {
@@ -1161,7 +1161,7 @@ TEST(parser, with) {
         auto e_body_rhs = std::get<parsed_int>(*e_body.rhs);
         EXPECT_EQ(1, e_body_rhs.value);
 
-        auto unit = std::get<simple_unit>(*e_body_rhs.unit);
+        auto unit = std::get<parsed_simple_unit>(*e_body_rhs.unit);
         EXPECT_EQ(unit_pref::none, unit.val.prefix);
         EXPECT_EQ(unit_sym::s, unit.val.symbol);
     }
@@ -1196,7 +1196,7 @@ TEST(parser, with) {
         auto e_val_lhs_val0_val0 = std::get<parsed_int>(*e_val_lhs_val0.record_values[0]);
         EXPECT_EQ(1, e_val_lhs_val0_val0.value);
 
-        auto unit = std::get<simple_unit>(*e_val_lhs_val0_val0.unit);
+        auto unit = std::get<parsed_simple_unit>(*e_val_lhs_val0_val0.unit);
         EXPECT_EQ(unit_pref::m, unit.val.prefix);
         EXPECT_EQ(unit_sym::s, unit.val.symbol);
 
@@ -1210,7 +1210,7 @@ TEST(parser, with) {
         auto e_val_lhs_val1 = std::get<parsed_int>(*e_val_lhs.record_values[1]);
         EXPECT_EQ(4, e_val_lhs_val1.value);
 
-        auto unit1 = std::get<simple_unit>(*e_val_lhs_val1.unit);
+        auto unit1 = std::get<parsed_simple_unit>(*e_val_lhs_val1.unit);
         EXPECT_EQ(unit_pref::none, unit1.val.prefix);
         EXPECT_EQ(unit_sym::V, unit1.val.symbol);
 
@@ -1238,7 +1238,7 @@ TEST(parser, with) {
 
         auto e_val_val = std::get<parsed_int>(*e_val.value);
         EXPECT_EQ(1, e_val_val.value);
-        EXPECT_TRUE(std::get_if<no_unit>(e_val_val.unit.get()));
+        EXPECT_TRUE(std::get_if<parsed_no_unit>(e_val_val.unit.get()));
 
         auto e_val_body = std::get<parsed_object>(*e_val.body);
         EXPECT_FALSE(e_val_body.record_name);
@@ -1258,7 +1258,7 @@ TEST(parser, with) {
 
         auto e_val_body_val0_rhs = std::get<parsed_int>(*e_val_body_val0.rhs);
         EXPECT_EQ(3, e_val_body_val0_rhs.value);
-        EXPECT_TRUE(std::get_if<no_unit>(e_val_body_val0_rhs.unit.get()));
+        EXPECT_TRUE(std::get_if<parsed_no_unit>(e_val_body_val0_rhs.unit.get()));
 
         auto e_val_body_arg1 = std::get<parsed_identifier>(*e_val_body.record_fields[1]);
         EXPECT_EQ("c", e_val_body_arg1.name);
@@ -1267,7 +1267,7 @@ TEST(parser, with) {
         auto e_val_body_val1 = std::get<parsed_int>(*e_val_body.record_values[1]);
         EXPECT_EQ(5, e_val_body_val1.value);
 
-        auto unit = std::get<simple_unit>(*e_val_body_val1.unit);
+        auto unit = std::get<parsed_simple_unit>(*e_val_body_val1.unit);
         EXPECT_EQ(unit_pref::none, unit.val.prefix);
         EXPECT_EQ(unit_sym::Ohm, unit.val.symbol);
 
@@ -1299,7 +1299,7 @@ TEST(parser, with) {
 
         auto e_val_rhs = std::get<parsed_int>(*e_val.rhs);
         EXPECT_EQ(2, e_val_rhs.value);
-        EXPECT_TRUE(std::get_if<no_unit>(e_val_rhs.unit.get()));
+        EXPECT_TRUE(std::get_if<parsed_no_unit>(e_val_rhs.unit.get()));
 
         auto e_body = std::get<parsed_identifier>(*e.body);
         EXPECT_EQ(src_location(1,13), e_body.loc);
@@ -1323,12 +1323,12 @@ TEST(parser, conditional) {
         auto e_true = std::get<parsed_int>(*e.value_true);
         EXPECT_EQ(src_location(1,11), e_true.loc);
         EXPECT_EQ(1, e_true.value);
-        EXPECT_TRUE(std::get_if<no_unit>(e_true.unit.get()));
+        EXPECT_TRUE(std::get_if<parsed_no_unit>(e_true.unit.get()));
 
         auto e_false = std::get<parsed_int>(*e.value_false);
         EXPECT_EQ(src_location(1,18), e_false.loc);
         EXPECT_EQ(0, e_false.value);
-        EXPECT_TRUE(std::get_if<no_unit>(e_false.unit.get()));
+        EXPECT_TRUE(std::get_if<parsed_no_unit>(e_false.unit.get()));
     }
     {
         std::string cond = "if a&&b then x*y else x/y";
@@ -1396,7 +1396,7 @@ TEST(parser, conditional) {
 
         auto e_true_val = std::get<parsed_int>(*e_true.value);
         EXPECT_EQ(2, e_true_val.value);
-        EXPECT_TRUE(std::get_if<no_unit>(e_true_val.unit.get()));
+        EXPECT_TRUE(std::get_if<parsed_no_unit>(e_true_val.unit.get()));
 
         auto e_true_body = std::get<parsed_binary>(*e_true.body);
         EXPECT_EQ(binary_op::add, e_true_body.op);
@@ -1407,7 +1407,7 @@ TEST(parser, conditional) {
 
         auto e_true_body_rhs = std::get<parsed_int>(*e_true_body.rhs);
         EXPECT_EQ(5, e_true_body_rhs.value);
-        EXPECT_TRUE(std::get_if<no_unit>(e_true_body_rhs.unit.get()));
+        EXPECT_TRUE(std::get_if<parsed_no_unit>(e_true_body_rhs.unit.get()));
 
         auto e_false = std::get<parsed_let>(*e.value_false);
         EXPECT_EQ(src_location(1,39), e_false.loc);
@@ -1418,11 +1418,11 @@ TEST(parser, conditional) {
 
         auto e_false_val = std::get<parsed_int>(*e_false.value);
         EXPECT_EQ(0, e_false_val.value);
-        EXPECT_TRUE(std::get_if<no_unit>(e_false_val.unit.get()));
+        EXPECT_TRUE(std::get_if<parsed_no_unit>(e_false_val.unit.get()));
 
         auto e_false_body = std::get<parsed_int>(*e_false.body);
         EXPECT_EQ(0, e_false_body.value);
-        EXPECT_TRUE(std::get_if<no_unit>(e_false_body.unit.get()));
+        EXPECT_TRUE(std::get_if<parsed_no_unit>(e_false_body.unit.get()));
     }
     {
         std::string cond = "if X.y then 0 else 1";
@@ -1443,11 +1443,11 @@ TEST(parser, conditional) {
 
         auto e_true = std::get<parsed_int>(*e.value_true);
         EXPECT_EQ(0, e_true.value);
-        EXPECT_TRUE(std::get_if<no_unit>(e_true.unit.get()));
+        EXPECT_TRUE(std::get_if<parsed_no_unit>(e_true.unit.get()));
 
         auto e_false = std::get<parsed_int>(*e.value_false);
         EXPECT_EQ(1, e_false.value);
-        EXPECT_TRUE(std::get_if<no_unit>(e_false.unit.get()));
+        EXPECT_TRUE(std::get_if<parsed_no_unit>(e_false.unit.get()));
     }
 }
 
@@ -1467,7 +1467,7 @@ TEST(parser, prefix_expr) {
         auto e_arg_arg = std::get<parsed_int>(*e_arg.value);
         EXPECT_EQ(src_location(1,6), e_arg_arg.loc);
         EXPECT_EQ(3, e_arg_arg.value);
-        EXPECT_TRUE(std::get_if<no_unit>(e_arg_arg.unit.get()));
+        EXPECT_TRUE(std::get_if<parsed_no_unit>(e_arg_arg.unit.get()));
     }
     {
         std::string val = "exprelr(-exp(3))";
@@ -1487,7 +1487,7 @@ TEST(parser, prefix_expr) {
         auto e_arg_arg_arg = std::get<parsed_int>(*e_arg_arg.value);
         EXPECT_EQ(src_location(1,14), e_arg_arg_arg.loc);
         EXPECT_EQ(3, e_arg_arg_arg.value);
-        EXPECT_TRUE(std::get_if<no_unit>(e_arg_arg_arg.unit.get()));
+        EXPECT_TRUE(std::get_if<parsed_no_unit>(e_arg_arg_arg.unit.get()));
     }
     {
         std::string val = "log(foo(+3.2e3))";
@@ -1504,7 +1504,7 @@ TEST(parser, prefix_expr) {
         auto e_arg_arg = std::get<parsed_float>(*e_arg.call_args[0]);
         EXPECT_EQ(src_location(1,10), e_arg_arg.loc);
         EXPECT_EQ(3.2e3, e_arg_arg.value);
-        EXPECT_TRUE(std::get_if<no_unit>(e_arg_arg.unit.get()));
+        EXPECT_TRUE(std::get_if<parsed_no_unit>(e_arg_arg.unit.get()));
     }
     {
         std::string val = "cos({a = -3.14159;}.a)";
@@ -1532,7 +1532,7 @@ TEST(parser, prefix_expr) {
 
         auto e_arg_lhs_val_val = std::get<parsed_float>(*e_arg_lhs_val.value);
         EXPECT_EQ(3.14159, e_arg_lhs_val_val.value);
-        EXPECT_TRUE(std::get_if<no_unit>(e_arg_lhs_val_val.unit.get()));
+        EXPECT_TRUE(std::get_if<parsed_no_unit>(e_arg_lhs_val_val.unit.get()));
 
         auto e_arg_rhs = std::get<parsed_identifier>(*e_arg.rhs);
         EXPECT_EQ("a", e_arg_rhs.name);
@@ -1552,7 +1552,7 @@ TEST(parser, prefix_expr) {
         auto e_val = std::get<parsed_int>(*e.value);
         EXPECT_EQ(src_location(1,9), e_val.loc);
         EXPECT_EQ(2, e_val.value);
-        EXPECT_TRUE(std::get_if<no_unit>(e_val.unit.get()));
+        EXPECT_TRUE(std::get_if<parsed_no_unit>(e_val.unit.get()));
 
         auto e_body = std::get<parsed_unary>(*e.body);
         EXPECT_EQ(src_location(1,12), e_body.loc);
@@ -1582,7 +1582,7 @@ TEST(parser, prefix_expr) {
 
         auto e_val_cond_rhs = std::get<parsed_int>(*e_val_cond.rhs);
         EXPECT_EQ(3, e_val_cond_rhs.value);
-        EXPECT_TRUE(std::get_if<no_unit>(e_val_cond_rhs.unit.get()));
+        EXPECT_TRUE(std::get_if<parsed_no_unit>(e_val_cond_rhs.unit.get()));
 
         auto e_val_true = std::get<parsed_identifier>(*e_val.value_true);
         EXPECT_EQ("a", e_val_true.name);
@@ -1602,7 +1602,7 @@ TEST(parser, prefix_expr) {
         auto e_lhs = std::get<parsed_int>(*e.lhs);
         EXPECT_EQ(3, e_lhs.value);
 
-        auto unit = std::get<simple_unit>(*e_lhs.unit);
+        auto unit = std::get<parsed_simple_unit>(*e_lhs.unit);
         EXPECT_EQ(unit_pref::m, unit.val.prefix);
         EXPECT_EQ(unit_sym::V, unit.val.symbol);
 
@@ -1731,7 +1731,7 @@ TEST(parser, function) {
 
         auto body = std::get<parsed_int>(*e.body);
         EXPECT_EQ(0, body.value);
-        EXPECT_TRUE(std::get_if<no_unit>(body.unit.get()));
+        EXPECT_TRUE(std::get_if<parsed_no_unit>(body.unit.get()));
 
         EXPECT_FALSE(e.ret);
     }
@@ -1910,7 +1910,7 @@ TEST(parser, parameter) {
         auto val = std::get<parsed_int>(*e.value);
         EXPECT_EQ(3, val.value);
 
-        auto unit = std::get<simple_unit>(*val.unit);
+        auto unit = std::get<parsed_simple_unit>(*val.unit);
         EXPECT_EQ(unit_pref::m, unit.val.prefix);
         EXPECT_EQ(unit_sym::V, unit.val.symbol);
     }
@@ -1953,7 +1953,7 @@ TEST(parser, constant) {
 
         auto v_val = std::get<parsed_int>(*val.value);
         EXPECT_EQ(2, v_val.value);
-        EXPECT_TRUE(std::get_if<no_unit>(v_val.unit.get()));
+        EXPECT_TRUE(std::get_if<parsed_no_unit>(v_val.unit.get()));
 
         auto v_body = std::get<parsed_binary>(*val.body);
         EXPECT_EQ(binary_op::mul, v_body.op);
@@ -2045,7 +2045,7 @@ TEST(parser, initial) {
     auto val = std::get<parsed_int>(*e.value);
     EXPECT_EQ(0, val.value);
 
-    auto unit = std::get<simple_unit>(*val.unit);
+    auto unit = std::get<parsed_simple_unit>(*val.unit);
     EXPECT_EQ(unit_pref::none, unit.val.prefix);
     EXPECT_EQ(unit_sym::S, unit.val.symbol);
 }
