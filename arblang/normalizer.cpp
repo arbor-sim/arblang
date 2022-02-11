@@ -6,7 +6,7 @@
 #include <fmt/core.h>
 #include <fmt/format.h>
 
-#include <arblang/unit_normalizer.hpp>
+#include <arblang/normalizer.hpp>
 #include <arblang/unit_expressions.hpp>
 #include <arblang/raw_expressions.hpp>
 

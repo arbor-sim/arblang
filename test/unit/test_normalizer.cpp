@@ -5,7 +5,7 @@
 
 #include <arblang/token.hpp>
 #include <arblang/parser.hpp>
-#include <arblang/unit_normalizer.hpp>
+#include <arblang/normalizer.hpp>
 
 #include "../gtest.h"
 
