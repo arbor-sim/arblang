@@ -7,10 +7,10 @@
 #include <vector>
 #include <variant>
 
-#include <arblang/common.hpp>
-#include "arblang/parser/token.hpp"
-#include "arblang/parser/raw_expressions.hpp"
-#include <arblang/resolved_types.hpp>
+#include <arblang/parser/token.hpp>
+#include <arblang/parser/raw_expressions.hpp>
+#include <arblang/resolver/resolved_types.hpp>
+#include <arblang/util/common.hpp>
 
 namespace al {
 namespace resolved_ir {

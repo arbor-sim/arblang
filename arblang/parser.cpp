@@ -3,6 +3,7 @@
 #include <string>
 
 #include <fmt/core.h>
+#include <fmt/format.h>
 
 #include <arblang/parser/parser.hpp>
 #include <arblang/parser/token.hpp>

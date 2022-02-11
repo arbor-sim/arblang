@@ -3,7 +3,7 @@
 #include <fmt/core.h>
 
 #include <arblang/parser/type_expressions.hpp>
-#include <arblang/resolved_types.hpp>
+#include <arblang/resolver/resolved_types.hpp>
 
 namespace al {
 namespace t_resolved_ir {

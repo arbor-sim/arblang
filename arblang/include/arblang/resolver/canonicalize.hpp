@@ -3,7 +3,7 @@
 #include <string>
 #include <unordered_set>
 
-#include <arblang/resolved_expressions.hpp>
+#include <arblang/resolver/resolved_expressions.hpp>
 
 namespace al {
 namespace resolved_ir {

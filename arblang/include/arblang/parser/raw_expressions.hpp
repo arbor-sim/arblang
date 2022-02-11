@@ -7,10 +7,10 @@
 #include <vector>
 #include <variant>
 
-#include <arblang/common.hpp>
 #include <arblang/parser/token.hpp>
 #include <arblang/parser/type_expressions.hpp>
 #include <arblang/parser/unit_expressions.hpp>
+#include <arblang/util/common.hpp>
 
 namespace al {
 namespace raw_ir {

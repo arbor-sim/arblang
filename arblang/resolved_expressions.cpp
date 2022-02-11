@@ -5,12 +5,11 @@
 #include <variant>
 
 #include <fmt/core.h>
-#include <fmt/format.h>
 
-#include <arblang/common.hpp>
 #include <arblang/parser/raw_expressions.hpp>
-#include <arblang/resolved_expressions.hpp>
-#include <arblang/resolved_types.hpp>
+#include <arblang/resolver/resolved_expressions.hpp>
+#include <arblang/resolver/resolved_types.hpp>
+#include <arblang/util/common.hpp>
 
 namespace al {
 namespace resolved_ir {

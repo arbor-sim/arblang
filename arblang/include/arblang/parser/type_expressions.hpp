@@ -8,8 +8,8 @@
 #include <vector>
 
 #include <arblang/parser/token.hpp>
-#include <arblang/common.hpp>
-#include <arblang/visitor.hpp>
+#include <arblang/util/common.hpp>
+#include <arblang/util/visitor.hpp>
 
 namespace al {
 namespace t_raw_ir {

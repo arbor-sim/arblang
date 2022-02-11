@@ -6,7 +6,7 @@
 #include <arblang/parser/token.hpp>
 #include <arblang/parser/parser.hpp>
 #include <arblang/parser/normalizer.hpp>
-#include <arblang/resolved_expressions.hpp>
+#include <arblang/resolver/resolved_expressions.hpp>
 
 #include "../gtest.h"
 

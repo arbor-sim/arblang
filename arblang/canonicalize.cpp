@@ -1,7 +1,7 @@
 #include <string>
 #include <unordered_set>
 
-#include <arblang/canonicalize.hpp>
+#include <arblang/resolver/canonicalize.hpp>
 
 namespace al {
 namespace resolved_ir {

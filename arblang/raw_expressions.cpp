@@ -4,8 +4,8 @@
 #include <string>
 #include <utility>
 
-#include <arblang/common.hpp>
 #include <arblang/parser/raw_expressions.hpp>
+#include <arblang/util/common.hpp>
 
 namespace al {
 namespace raw_ir {

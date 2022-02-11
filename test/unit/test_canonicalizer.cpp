@@ -6,9 +6,9 @@
 #include <arblang/parser/token.hpp>
 #include <arblang/parser/parser.hpp>
 #include <arblang/parser/normalizer.hpp>
-#include <arblang/canonicalize.hpp>
-#include <arblang/resolved_expressions.hpp>
-#include <arblang/resolved_types.hpp>
+#include <arblang/resolver/canonicalize.hpp>
+#include <arblang/resolver/resolved_expressions.hpp>
+#include <arblang/resolver/resolved_types.hpp>
 
 #include "../gtest.h"
 

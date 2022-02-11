@@ -8,7 +8,7 @@
 
 #include <arblang/parser/token.hpp>
 #include <arblang/parser/type_expressions.hpp>
-#include <arblang/visitor.hpp>
+#include <arblang/util/visitor.hpp>
 
 namespace al {
 namespace u_raw_ir {

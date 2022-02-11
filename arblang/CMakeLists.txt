@@ -28,6 +28,8 @@ target_include_directories(arblang PUBLIC)
 target_link_libraries(arblang PUBLIC arblang-public-headers)
 target_link_libraries(arblang PRIVATE arblang-private-deps)
 
+target_compile_definitions(arblang PRIVATE FMT_HEADER_ONLY)
+
 #find_package(fmt)
 #target_link_libraries(arblang PRIVATE fmt::fmt-header-only)
 
