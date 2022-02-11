@@ -3,9 +3,9 @@
 #include <variant>
 #include <unordered_map>
 
-#include <arblang/parser/unit_expressions.hpp>
-
 #include <fmt/core.h>
+
+#include <arblang/parser/unit_expressions.hpp>
 
 namespace al {
 namespace u_raw_ir {

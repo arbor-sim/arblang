@@ -2,12 +2,11 @@
 #include <memory>
 #include <string>
 #include <variant>
-#include <vector>
+
+#include <fmt/core.h>
 
 #include <arblang/parser/token.hpp>
 #include <arblang/parser/type_expressions.hpp>
-
-#include <fmt/core.h>
 
 namespace al {
 namespace t_raw_ir {
