@@ -3,6 +3,7 @@
 #include <variant>
 #include <vector>
 
+#include <arblang/optimizer/cse.hpp>
 #include <arblang/parser/token.hpp>
 #include <arblang/parser/parser.hpp>
 #include <arblang/parser/normalizer.hpp>
@@ -10,7 +11,7 @@
 #include <arblang/resolver/resolved_expressions.hpp>
 #include <arblang/resolver/resolved_types.hpp>
 #include <arblang/resolver/single_assign.hpp>
-#include <arblang/resolver/custom_hash.hpp>
+#include "arblang/util/custom_hash.hpp"
 
 #include "../gtest.h"
 
@@ -181,10 +182,10 @@ TEST(canonicalizer, with) {
         scope_map.type_map.insert({"bar", bar_type});
 
         std::string p_expr = "let B:bar = {X = t + (5 - q); Y = {a = 2[V]; b = foo()*1[A];};};\n"
-                           "with B.Y;\n"
-                           "let r = a/b;\n"
-                           "with B;\n"
-                           "X*r/3;\n";
+                             "with B.Y;\n"
+                             "let r = a/b;\n"
+                             "with B;\n"
+                             "X*r/3;\n";
 
         auto p = parser(p_expr);
         auto let = p.parse_let();
@@ -206,11 +207,11 @@ TEST(canonicalizer, with) {
         scope_map.type_map.insert({"bar", bar_type});
 
         std::string p_expr = "let B:bar = {X = t + (5 - q); Y = {a = 2[V]; b = foo()*1[A];};};\n"
-                           "with B.Y;\n"
-                           "let r = a/b;\n"
-                           "let B:foo = {a = 3[V]; b=-2[A];};\n"
-                           "with B;\n"
-                           "X*r/3;\n";
+                             "with B.Y;\n"
+                             "let r = a/b;\n"
+                             "let B:foo = {a = 3[V]; b=-2[A];};\n"
+                             "with B;\n"
+                             "X*r/3;\n";
 
         auto p = parser(p_expr);
         auto let = p.parse_let();
@@ -228,10 +229,10 @@ TEST(canonicalizer, with) {
         scope_map.type_map.insert({"foo", foo_type});
 
         std::string p_expr = "let A:foo = {a = 2[V]; b = 1[A];};\n"
-                           "with A;\n"
-                           "let a = a/b;\n"
-                           "with A;\n"
-                           "a;\n";
+                             "with A;\n"
+                             "let a = a/b;\n"
+                             "with A;\n"
+                             "a;\n";
 
         auto p = parser(p_expr);
         auto let = p.parse_let();
@@ -286,8 +287,8 @@ TEST(canonicalizer, conditional) {
         scope_map.local_map.insert({"obar", resolved_argument("obar", bar_type, loc)});
 
         std::string p_expr = "if (if t == 4 then a>3 else a<4)\n"
-                           "then (if obar.X == 5 then obar.Y else {a=3[V]; b=5[mA];})\n"
-                           "else {a=foo()*3[V]; b=7000[mA];});";
+                             "then (if obar.X == 5 then obar.Y else {a=3[V]; b=5[mA];})\n"
+                             "else {a=foo()*3[V]; b=7000[mA];});";
 
         auto p = parser(p_expr);
         auto ifstmt = p.parse_conditional();
@@ -302,17 +303,93 @@ TEST(canonicalizer, conditional) {
     }
 }
 
-TEST(tester, conditional) {
+TEST(custom_hash, map) {
     auto loc = src_location{};
     auto real_type    = make_rtype<resolved_quantity>(normalized_type(quantity::real), loc);
+    auto real_body    = make_rexpr<resolved_float>(0, real_type, loc);
 
     auto t0 = resolved_argument("t", real_type, loc);
     auto t1 = resolved_argument("t", real_type, loc);
     auto t2 = resolved_argument("a", real_type, loc);
+    auto t3 = resolved_binary(binary_op::add, make_rexpr<resolved_argument>(t0), make_rexpr<resolved_argument>(t2), real_type, loc);
+    auto t4 = resolved_binary(binary_op::add, make_rexpr<resolved_argument>(t0), make_rexpr<resolved_argument>(t2), real_type, loc);
+    auto t5 = resolved_function("foo", {make_rexpr<resolved_argument>(t0)}, real_body, real_type, loc);
+    auto t6 = resolved_function("foo", {make_rexpr<resolved_argument>(t0)}, real_body, real_type, loc);
     std::unordered_map<resolved_expr, int> map;
 
     map.insert({t0, 0});
     map.insert({t1, 1});
     map.insert({t2, 2});
-    std::cout << "hello" << std::endl;
+    map.insert({t3, 3});
+    map.insert({t4, 4});
+    map.insert({t5, 5});
+    map.insert({t6, 6});
+
+    std::cout << std::endl;
+}
+
+TEST(cse, let) {
+    auto loc = src_location{};
+    auto real_type    = make_rtype<resolved_quantity>(normalized_type(quantity::real), loc);
+    auto current_type = make_rtype<resolved_quantity>(normalized_type(quantity::current), loc);
+    auto voltage_type = make_rtype<resolved_quantity>(normalized_type(quantity::voltage), loc);
+    auto conductance_type = make_rtype<resolved_quantity>(normalized_type(quantity::conductance), loc);
+    auto real_body    = make_rexpr<resolved_float>(0, real_type, loc);
+
+    {
+        in_scope_map scope_map;
+        scope_map.local_map.insert({"a", resolved_argument("a", voltage_type, loc)});
+        scope_map.local_map.insert({"s", resolved_argument("s", conductance_type, loc)});
+
+        std::string p_expr = "let b:voltage = a + a*5; let c:current = b*s; c*(a*5))";
+        auto p = parser(p_expr);
+        auto let = p.parse_let();
+        auto let_normal = normalize(let);
+        auto let_resolved = resolve(let_normal, scope_map);
+        auto let_canon = canonicalize(let_resolved);
+        auto let_ssa = single_assign(let_canon);
+        auto let_cse = cse(let_ssa);
+        std::cout << to_string(let_ssa) << std::endl;
+        std::cout << std::endl;
+        std::cout << to_string(let_cse) << std::endl;
+        std::cout << std::endl;
+    }
+    {
+        in_scope_map scope_map;
+        scope_map.local_map.insert({"a",  resolved_argument("a", voltage_type, loc)});
+        scope_map.local_map.insert({"s",  resolved_argument("s", conductance_type, loc)});
+        scope_map.func_map.insert({"foo", resolved_function("foo",
+                                                            {make_rexpr<resolved_argument>("a", current_type, loc)},
+                                                            real_body, real_type, loc)});
+
+        std::string p_expr = "let b = let x = a+5 [mV] /2; x*s; let c = foo(b)*foo(a*s); c/(foo(b) * 1 [A]);";
+        auto p = parser(p_expr);
+        auto let = p.parse_let();
+        auto let_normal = normalize(let);
+        auto let_resolved = resolve(let_normal, scope_map);
+        auto let_canon = canonicalize(let_resolved);
+        auto let_ssa = single_assign(let_canon);
+        auto let_cse = cse(let_ssa);
+        std::cout << to_string(let_ssa) << std::endl;
+        std::cout << std::endl;
+        std::cout << to_string(let_cse) << std::endl;
+        std::cout << std::endl;
+    }
+    {
+        in_scope_map scope_map;
+
+        std::string p_expr = "let a = 1; let b = a + 5; let c = a + 5; c;";
+
+        auto p = parser(p_expr);
+        auto let = p.parse_let();
+        auto let_normal = normalize(let);
+        auto let_resolved = resolve(let_normal, scope_map);
+        auto let_canon = canonicalize(let_resolved);
+        auto let_ssa = single_assign(let_canon);
+        auto let_cse = cse(let_ssa);
+        std::cout << to_string(let_ssa) << std::endl;
+        std::cout << std::endl;
+        std::cout << to_string(let_cse) << std::endl;
+        std::cout << std::endl;
+    }
 }

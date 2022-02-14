@@ -1,4 +1,6 @@
 set(arblang-sources
+    optimizer/constant_fold.cpp
+    optimizer/cse.cpp
     parser/lexer.cpp
     parser/parser.cpp
     parser/parsed_expressions.cpp

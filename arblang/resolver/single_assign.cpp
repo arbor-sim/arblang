@@ -8,7 +8,60 @@ namespace al {
 namespace resolved_ir {
 
 // TODO make sure that canonicalize is called before single_assign
-resolved_mechanism single_assign(const resolved_mechanism&);
+resolved_mechanism single_assign(const resolved_mechanism& e) {
+    std::unordered_set<std::string> reserved;
+    std::unordered_map<std::string, std::string> rewrites;
+    resolved_mechanism mech;
+    for (const auto& c: e.constants) {
+        reserved.clear();
+        rewrites.clear();
+        mech.constants.push_back(single_assign(c, reserved, rewrites));
+    }
+    for (const auto& c: e.parameters) {
+        reserved.clear();
+        rewrites.clear();
+        mech.parameters.push_back(single_assign(c, reserved, rewrites));
+    }
+    for (const auto& c: e.bindings) {
+        reserved.clear();
+        rewrites.clear();
+        mech.bindings.push_back(single_assign(c, reserved, rewrites));
+    }
+    for (const auto& c: e.states) {
+        reserved.clear();
+        rewrites.clear();
+        mech.states.push_back(single_assign(c, reserved, rewrites));
+    }
+    for (const auto& c: e.functions) {
+        reserved.clear();
+        rewrites.clear();
+        mech.functions.push_back(single_assign(c, reserved, rewrites));
+    }
+    for (const auto& c: e.initializations) {
+        reserved.clear();
+        rewrites.clear();
+        mech.initializations.push_back(single_assign(c, reserved, rewrites));
+    }
+    for (const auto& c: e.evolutions) {
+        reserved.clear();
+        rewrites.clear();
+        mech.evolutions.push_back(single_assign(c, reserved, rewrites));
+    }
+    for (const auto& c: e.effects) {
+        reserved.clear();
+        rewrites.clear();
+        mech.effects.push_back(single_assign(c, reserved, rewrites));
+    }
+    for (const auto& c: e.exports) {
+        reserved.clear();
+        rewrites.clear();
+        mech.exports.push_back(single_assign(c, reserved, rewrites));
+    }
+    mech.name = e.name;
+    mech.loc = e.loc;
+    mech.kind = e.kind;
+    return mech;
+}
 
 r_expr single_assign(const resolved_parameter& e,
                      std::unordered_set<std::string>& reserved,
@@ -58,7 +111,7 @@ r_expr single_assign(const resolved_function& e,
                      std::unordered_map<std::string, std::string>& rewrites)
 {
     // TODO check there are no duplicate function names?
-    auto body_ssa = single_assign(e, reserved, rewrites);
+    auto body_ssa = single_assign(e.body, reserved, rewrites);
     return make_rexpr<resolved_function>(e.name, e.args, body_ssa, e.type, e.loc);
 }
 

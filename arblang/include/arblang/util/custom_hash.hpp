@@ -3,7 +3,7 @@
 #include <cstddef>
 #include <typeindex>
 
-#include <arblang/resolver/resolved_expressions.hpp>
+#include "arblang/resolver/resolved_expressions.hpp"
 
 template <class T>
 inline void hash_combine(std::size_t& s, const T& v)
@@ -246,7 +246,7 @@ struct hash<resolved_unary> {
     inline size_t operator()(const resolved_unary& e) const {
         std::size_t res = 0;
         hash_combine(res, e.op);
-        hash_combine(res, e.arg);
+        hash_combine(res, *e.arg);
         hash_combine(res, *e.type);
         return res;
     }
@@ -257,8 +257,8 @@ struct hash<resolved_binary> {
     inline size_t operator()(const resolved_binary& e) const {
         std::size_t res = 0;
         hash_combine(res, e.op);
-        hash_combine(res, e.lhs);
-        hash_combine(res, e.rhs);
+        hash_combine(res, *e.lhs);
+        hash_combine(res, *e.rhs);
         hash_combine(res, *e.type);
         return res;
     }

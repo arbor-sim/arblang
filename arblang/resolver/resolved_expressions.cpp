@@ -17,29 +17,29 @@ using namespace parsed_ir;
 using namespace resolved_type_ir;
 
 // Resolver
-void check_duplicate(const std::string& name, const in_scope_map& map) {
+void check_duplicate(const std::string& name, const src_location& loc, const in_scope_map& map) {
     if (map.param_map.count(name)) {
-        throw std::runtime_error(fmt::format("duplicate parameter name, also found at {}",
-                                             to_string(map.param_map.at(name).loc)));
+        throw std::runtime_error(fmt::format("duplicate definition, found at {} and {}",
+                                             to_string(map.param_map.at(name).loc), to_string(loc)));
     }
     if (map.const_map.count(name)) {
-        throw std::runtime_error(fmt::format("duplicate parameter name, also found at {}",
-                                             to_string(map.const_map.at(name).loc)));
+        throw std::runtime_error(fmt::format("duplicate constant name, also found at {}",
+                                             to_string(map.const_map.at(name).loc), to_string(loc)));
     }
     if (map.bind_map.count(name)) {
-        throw std::runtime_error(fmt::format("duplicate parameter name, also found at {}",
-                                             to_string(map.bind_map.at(name).loc)));
+        throw std::runtime_error(fmt::format("duplicate binding name, also found at {}",
+                                             to_string(map.bind_map.at(name).loc), to_string(loc)));
     }
     if (map.state_map.count(name)) {
-        throw std::runtime_error(fmt::format("duplicate parameter name, also found at {}",
-                                             to_string(map.state_map.at(name).loc)));
+        throw std::runtime_error(fmt::format("duplicate state name, also found at {}",
+                                             to_string(map.state_map.at(name).loc), to_string(loc)));
     }
 }
 
 r_expr resolve(const parsed_parameter& e, const in_scope_map& map) {
     auto id = std::get<parsed_identifier>(*e.identifier);
     auto p_name = id.name;
-    check_duplicate(p_name, map);
+    check_duplicate(p_name, id.loc, map);
 
     auto available_map = map;
     available_map.bind_map.clear();
@@ -61,7 +61,7 @@ r_expr resolve(const parsed_parameter& e, const in_scope_map& map) {
 r_expr resolve(const parsed_constant& e, const in_scope_map& map) {
     auto id = std::get<parsed_identifier>(*e.identifier);
     auto c_name = id.name;
-    check_duplicate(c_name, map);
+    check_duplicate(c_name, id.loc, map);
 
     auto available_map = map;
     available_map.param_map.clear();
@@ -85,7 +85,7 @@ r_expr resolve(const parsed_constant& e, const in_scope_map& map) {
 r_expr resolve(const parsed_state& e, const in_scope_map& map) {
     auto id = std::get<parsed_identifier>(*e.identifier);
     auto s_name = id.name;
-    check_duplicate(s_name, map);
+    check_duplicate(s_name, id.loc, map);
 
     auto s_type = resolve_type(id.type.value(), map.type_map);
 
@@ -99,7 +99,7 @@ r_expr resolve(const parsed_state& e, const in_scope_map& map) {
 r_expr resolve(const parsed_bind& e, const in_scope_map& map) {
     auto id = std::get<parsed_identifier>(*e.identifier);
     auto b_name = id.name;
-    check_duplicate(b_name, map);
+    check_duplicate(b_name, id.loc, map);
 
     auto b_type = resolve_type(e.bind, e.loc);
 
@@ -290,6 +290,8 @@ r_expr resolve(const parsed_object& e, const in_scope_map& map) {
 r_expr resolve(const parsed_let& e, const in_scope_map& map) {
     auto v_expr = resolve(e.value, map);
     auto id = std::get<parsed_identifier>(*e.identifier);
+    check_duplicate(id.name, id.loc, map);
+
     auto i_type = type_of(v_expr);
     if (id.type) {
         auto id_type = resolve_type(id.type.value(), map.type_map);
@@ -969,7 +971,7 @@ bool operator==(const resolved_record_alias& lhs, const resolved_record_alias& r
 bool operator==(const resolved_function& lhs, const resolved_function& rhs) {
     if (lhs.args.size() != rhs.args.size()) return false;
     for (unsigned i = 0; i < lhs.args.size(); ++i) {
-        if (lhs.args[i] != rhs.args[i]) return false;
+        if (*lhs.args[i] != *rhs.args[i]) return false;
     }
     return (lhs.name == rhs.name) && (*lhs.body == *rhs.body) && (*lhs.type == *rhs.type);
 }
@@ -1001,7 +1003,7 @@ bool operator==(const resolved_export& lhs, const resolved_export& rhs) {
 bool operator==(const resolved_call& lhs, const resolved_call& rhs) {
     if (lhs.call_args.size() != rhs.call_args.size()) return false;
     for (unsigned i = 0; i < lhs.call_args.size(); ++i) {
-        if (lhs.call_args[i] != rhs.call_args[i]) return false;
+        if (*lhs.call_args[i] != *rhs.call_args[i]) return false;
     }
     return  (*lhs.f_identifier == *rhs.f_identifier) && (*lhs.type == *rhs.type);
 }
@@ -1010,10 +1012,10 @@ bool operator==(const resolved_object& lhs, const resolved_object& rhs) {
     if (lhs.record_fields.size() != rhs.record_fields.size()) return false;
     if (lhs.record_values.size() != rhs.record_values.size()) return false;
     for (unsigned i = 0; i < lhs.record_fields.size(); ++i) {
-        if (lhs.record_fields[i] != rhs.record_fields[i]) return false;
+        if (*lhs.record_fields[i] != *rhs.record_fields[i]) return false;
     }
     for (unsigned i = 0; i < lhs.record_values.size(); ++i) {
-        if (lhs.record_values[i] != rhs.record_values[i]) return false;
+        if (*lhs.record_values[i] != *rhs.record_values[i]) return false;
     }
     return  (*lhs.r_identifier == *rhs.r_identifier) && (*lhs.type == *rhs.type);
 }
@@ -1043,6 +1045,26 @@ bool operator==(const resolved_unary& lhs, const resolved_unary& rhs) {
 bool operator==(const resolved_binary& lhs, const resolved_binary& rhs) {
     return (lhs.op == rhs.op) && (*lhs.lhs == *rhs.lhs) && (*lhs.rhs == *rhs.rhs) && (*lhs.type == *rhs.type);
 }
+
+bool operator!=(const resolved_parameter& lhs, const resolved_parameter& rhs) {return !(lhs == rhs);}
+bool operator!=(const resolved_constant& lhs, const resolved_constant& rhs) {return !(lhs == rhs);}
+bool operator!=(const resolved_state& lhs, const resolved_state& rhs) {return !(lhs == rhs);}
+bool operator!=(const resolved_record_alias& lhs, const resolved_record_alias& rhs) {return !(lhs == rhs);}
+bool operator!=(const resolved_function& lhs, const resolved_function& rhs) {return !(lhs == rhs);}
+bool operator!=(const resolved_argument& lhs, const resolved_argument& rhs) {return !(lhs == rhs);}
+bool operator!=(const resolved_bind& lhs, const resolved_bind& rhs) {return !(lhs == rhs);}
+bool operator!=(const resolved_initial& lhs, const resolved_initial& rhs) {return !(lhs == rhs);}
+bool operator!=(const resolved_evolve& lhs, const resolved_evolve& rhs) {return !(lhs == rhs);}
+bool operator!=(const resolved_effect& lhs, const resolved_effect& rhs) {return !(lhs == rhs);}
+bool operator!=(const resolved_export& lhs, const resolved_export& rhs) {return !(lhs == rhs);}
+bool operator!=(const resolved_call& lhs, const resolved_call& rhs) {return !(lhs == rhs);}
+bool operator!=(const resolved_object& lhs, const resolved_object& rhs) {return !(lhs == rhs);}
+bool operator!=(const resolved_let& lhs, const resolved_let& rhs) {return !(lhs == rhs);}
+bool operator!=(const resolved_conditional& lhs, const resolved_conditional& rhs) {return !(lhs == rhs);}
+bool operator!=(const resolved_float& lhs, const resolved_float& rhs) {return !(lhs == rhs);}
+bool operator!=(const resolved_int& lhs, const resolved_int& rhs) {return !(lhs == rhs);}
+bool operator!=(const resolved_unary& lhs, const resolved_unary& rhs) {return !(lhs == rhs);}
+bool operator!=(const resolved_binary& lhs, const resolved_binary& rhs) {return !(lhs == rhs);}
 
 
 // common member getters

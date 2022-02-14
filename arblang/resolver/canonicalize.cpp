@@ -1,6 +1,8 @@
 #include <string>
 #include <unordered_set>
 
+#include <fmt/core.h>
+
 #include <arblang/resolver/canonicalize.hpp>
 #include <arblang/util/unique_name.hpp>
 
@@ -27,7 +29,50 @@ void set_innermost_body(resolved_let* let, const r_expr& body) {
 }
 
 // Canonicalize
-resolved_mechanism canonicalize(const resolved_mechanism&);
+resolved_mechanism canonicalize(const resolved_mechanism& e) {
+        std::unordered_set<std::string> reserved;
+        resolved_mechanism mech;
+        for (const auto& c: e.constants) {
+            reserved.clear();
+            mech.constants.push_back(canonicalize(c, reserved));
+        }
+        for (const auto& c: e.parameters) {
+            reserved.clear();
+            mech.parameters.push_back(canonicalize(c, reserved));
+        }
+        for (const auto& c: e.bindings) {
+            reserved.clear();
+            mech.bindings.push_back(canonicalize(c, reserved));
+        }
+        for (const auto& c: e.states) {
+            reserved.clear();
+            mech.states.push_back(canonicalize(c, reserved));
+        }
+        for (const auto& c: e.functions) {
+            reserved.clear();
+            mech.functions.push_back(canonicalize(c, reserved));
+        }
+        for (const auto& c: e.initializations) {
+            reserved.clear();
+            mech.initializations.push_back(canonicalize(c, reserved));
+        }
+        for (const auto& c: e.evolutions) {
+            reserved.clear();
+            mech.evolutions.push_back(canonicalize(c, reserved));
+        }
+        for (const auto& c: e.effects) {
+            reserved.clear();
+            mech.effects.push_back(canonicalize(c, reserved));
+        }
+        for (const auto& c: e.exports) {
+            reserved.clear();
+            mech.exports.push_back(canonicalize(c, reserved));
+        }
+        mech.name = e.name;
+        mech.loc = e.loc;
+        mech.kind = e.kind;
+        return mech;
+}
 
 r_expr canonicalize(const resolved_parameter& e, std::unordered_set<std::string>& reserved) {
     auto val_canon = canonicalize(e.value, reserved);
