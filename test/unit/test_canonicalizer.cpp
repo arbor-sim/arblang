@@ -4,6 +4,7 @@
 #include <vector>
 
 #include <arblang/optimizer/cse.hpp>
+#include <arblang/optimizer/constant_fold.hpp>
 #include <arblang/parser/token.hpp>
 #include <arblang/parser/parser.hpp>
 #include <arblang/parser/normalizer.hpp>
@@ -336,7 +337,7 @@ TEST(cse, let) {
     auto conductance_type = make_rtype<resolved_quantity>(normalized_type(quantity::conductance), loc);
     auto real_body    = make_rexpr<resolved_float>(0, real_type, loc);
 
-    {
+/*    {
         in_scope_map scope_map;
         scope_map.local_map.insert({"a", resolved_argument("a", voltage_type, loc)});
         scope_map.local_map.insert({"s", resolved_argument("s", conductance_type, loc)});
@@ -387,9 +388,38 @@ TEST(cse, let) {
         auto let_canon = canonicalize(let_resolved);
         auto let_ssa = single_assign(let_canon);
         auto let_cse = cse(let_ssa);
+        auto let_cst = constant_fold(let_cse);
         std::cout << to_string(let_ssa) << std::endl;
         std::cout << std::endl;
         std::cout << to_string(let_cse) << std::endl;
+        std::cout << std::endl;
+        std::cout << to_string(let_cst) << std::endl;
+        std::cout << std::endl;
+    }*/
+    {
+        in_scope_map scope_map;
+
+        std::string p_expr =
+                "let a = 1;\n"
+                "let b = min(a, 2);\n"
+                "let c = a + b * 5;\n"
+                "let d = if (a == 1) then c else b;\n"
+                "d;";
+
+        auto p = parser(p_expr);
+        auto let = p.parse_let();
+        auto let_normal = normalize(let);
+        auto let_resolved = resolve(let_normal, scope_map);
+        auto let_canon = canonicalize(let_resolved);
+        auto let_ssa = single_assign(let_canon);
+        auto let_cse = cse(let_ssa);
+        auto let_cst0 = constant_fold(let_cse);
+        auto let_cst1 = constant_fold(let_cst0);
+        auto let_cst2 = constant_fold(let_cst1);
+        auto let_cst3 = constant_fold(let_cst2);
+        auto let_cst4 = constant_fold(let_cst3);
+        auto let_cst5 = constant_fold(let_cst4);
+        std::cout << to_string(let_cst5) << std::endl;
         std::cout << std::endl;
     }
 }

@@ -123,11 +123,19 @@ r_expr constant_fold(const resolved_export& e, std::unordered_map<std::string, r
 }
 
 r_expr constant_fold(const resolved_call& e, std::unordered_map<std::string, r_expr>& constant_map) {
-    return make_rexpr<resolved_call>(e);
+    std::vector<r_expr> args;
+    for (const auto& a: e.call_args) {
+        args.push_back(constant_fold(a, constant_map));
+    }
+    return make_rexpr<resolved_call>(e.f_identifier, args, e.type, e.loc);
 }
 
 r_expr constant_fold(const resolved_object& e, std::unordered_map<std::string, r_expr>& constant_map) {
-    return make_rexpr<resolved_object>(e);
+    std::vector<r_expr> values;
+    for (const auto& a: e.record_values) {
+        values.push_back(constant_fold(a, constant_map));
+    }
+    return make_rexpr<resolved_object>(e.r_identifier, e.record_fields, values, e.type, e.loc);
 }
 
 r_expr constant_fold(const resolved_let& e, std::unordered_map<std::string, r_expr>& constant_map) {
@@ -140,7 +148,17 @@ r_expr constant_fold(const resolved_let& e, std::unordered_map<std::string, r_ex
 }
 
 r_expr constant_fold(const resolved_conditional& e,std::unordered_map<std::string, r_expr>& constant_map) {
-    return make_rexpr<resolved_conditional>(e);
+    auto cond = constant_fold(e.condition, constant_map);
+    auto tval = constant_fold(e.value_true, constant_map);
+    auto fval = constant_fold(e.value_false, constant_map);
+
+    if (auto val = as_number(cond)) {
+        if (val.value()) {
+            return tval;
+        }
+        return fval;
+    }
+    return make_rexpr<resolved_conditional>(e.condition, tval, fval, e.type, e.loc);
 }
 
 r_expr constant_fold(const resolved_float& e, std::unordered_map<std::string, r_expr>& constant_map) {
@@ -152,7 +170,7 @@ r_expr constant_fold(const resolved_int& e, std::unordered_map<std::string, r_ex
 }
 
 r_expr constant_fold(const resolved_unary& e, std::unordered_map<std::string, r_expr>& constant_map) {
-    if (auto val_opt = as_number(e.arg)) {
+    if (auto val_opt = as_number(constant_fold(e.arg, constant_map))) {
         auto val = val_opt.value();
         switch (e.op) {
             case unary_op::exp:
@@ -181,8 +199,8 @@ r_expr constant_fold(const resolved_unary& e, std::unordered_map<std::string, r_
 }
 
 r_expr constant_fold(const resolved_binary& e, std::unordered_map<std::string, r_expr>& constant_map) {
-    auto lhs_opt = as_number(e.lhs);
-    auto rhs_opt = as_number(e.rhs);
+    auto lhs_opt = as_number(constant_fold(e.lhs, constant_map));
+    auto rhs_opt = as_number(constant_fold(e.rhs, constant_map));
     if (lhs_opt && rhs_opt) {
         auto lhs = lhs_opt.value();
         auto rhs = rhs_opt.value();
