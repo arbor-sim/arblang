@@ -8,9 +8,9 @@
 namespace al {
 namespace resolved_ir {
 
-resolved_mechanism cse(const resolved_mechanism&);
-r_expr cse(const r_expr&, std::unordered_map<resolved_expr, r_expr>& expr_map);
-r_expr cse(const r_expr&);
+std::pair<resolved_mechanism, bool> cse(const resolved_mechanism&);
+std::pair<r_expr, bool> cse(const r_expr&, std::unordered_map<resolved_expr, r_expr>& expr_map);
+std::pair<r_expr, bool> cse(const r_expr&);
 
 } // namespace resolved_ir
 } // namespace al
