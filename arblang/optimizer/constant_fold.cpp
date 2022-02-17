@@ -278,6 +278,29 @@ std::pair<r_expr, bool> constant_fold(const resolved_binary& e, std::unordered_m
         }
         return {make_rexpr<resolved_float>(val, e.type, e.loc), true};
     }
+    if (e.op == binary_op::dot) {
+        std::string field;
+        if (auto f_ptr = std::get_if<resolved_argument>(rhs_arg.first.get())) {
+            field = f_ptr->name;
+        }
+        else {
+            throw std::runtime_error("internal compiler error, expected argument name after `.` operator.");
+        }
+
+        if (auto o_ptr = std::get_if<resolved_object>(lhs_arg.first.get())) {
+            int idx = -1;
+            for (unsigned i = 0; i < o_ptr->record_fields.size(); ++i) {
+                if (std::get<resolved_argument>(*(o_ptr->record_fields[i])).name == field) {
+                    idx = (int)i;
+                    break;
+                }
+            }
+            if (idx < 0) {
+                throw std::runtime_error("internal compiler error, expected to find field of object but failed.");
+            }
+            return {o_ptr->record_values[idx], true};
+        }
+    }
     return {make_rexpr<resolved_binary>(e.op, lhs_arg.first, rhs_arg.first, e.type, e.loc), lhs_arg.second||rhs_arg.second};
 }
 

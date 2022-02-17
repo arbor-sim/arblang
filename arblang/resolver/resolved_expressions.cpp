@@ -139,7 +139,7 @@ r_expr resolve(const parsed_function& e, const in_scope_map& map) {
         auto a_type = resolve_type(a_id.type.value(), map.type_map);
         auto f_a = resolved_argument(a_id.name, a_type, a_id.loc);
         f_args.push_back(make_rexpr<resolved_argument>(f_a));
-        available_map.local_map.insert({a_id.name, f_a});
+        available_map.local_map.insert_or_assign(a_id.name, f_a);
     }
     auto f_body = resolve(e.body, available_map);
     auto f_type = type_of(f_body);
@@ -303,7 +303,7 @@ r_expr resolve(const parsed_let& e, const in_scope_map& map) {
     auto i_expr = resolved_argument(id.name, i_type, id.loc);
 
     auto available_map = map;
-    available_map.local_map.insert({id.name, i_expr});
+    available_map.local_map.insert_or_assign(id.name, i_expr);
 
     auto b_expr = resolve(e.body, available_map);
     auto b_type = type_of(b_expr);
@@ -419,7 +419,7 @@ r_expr resolve(const parsed_binary& e, const in_scope_map& map) {
             // Add fields to the local map
             auto available_map = map;
             for (auto [f_id, f_type]: r.fields) {
-                available_map.local_map.insert({f_id, resolved_argument(f_id, f_type, r.loc)});
+                available_map.local_map.insert_or_assign(f_id, resolved_argument(f_id, f_type, r.loc));
             }
             auto rhs_v = resolve(e.rhs, available_map);
 

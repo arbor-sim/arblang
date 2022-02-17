@@ -10,6 +10,9 @@ namespace resolved_ir {
 bool is_identifier(const r_expr& e) {
     return std::get_if<resolved_argument>(e.get());
 }
+bool is_object(const r_expr& e) {
+    return std::get_if<resolved_object>(e.get());
+}
 
 std::pair<resolved_mechanism, bool> copy_propagate(const resolved_mechanism& e) {
     std::unordered_map<std::string, r_expr> local_copy_map;
@@ -148,7 +151,7 @@ std::pair<r_expr, bool> copy_propagate(const resolved_object& e, std::unordered_
 }
 
 std::pair<r_expr, bool> copy_propagate(const resolved_let& e, std::unordered_map<std::string, r_expr>& copy_map) {
-    if (is_identifier(e.value)) {
+    if (is_identifier(e.value) || is_object(e.value)) {
         copy_map.insert({std::get<resolved_argument>(*e.identifier).name, e.value});
     }
     auto val  = copy_propagate(e.value, copy_map);
