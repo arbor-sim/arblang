@@ -42,7 +42,7 @@ using resolved_expr = std::variant<
     resolved_parameter,
     resolved_constant,
     resolved_state,
-    resolved_record_alias,
+    resolved_record_alias,  // after resolution, shouldn't show up
     resolved_function,
     resolved_argument,
     resolved_bind,
