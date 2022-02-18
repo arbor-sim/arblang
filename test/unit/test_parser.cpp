@@ -2257,7 +2257,7 @@ TEST(parser, mechanism) {
 //        EXPECT_NO_THROW(p.parse_mechanism());
         auto m = p.parse_mechanism();
         auto m_normal = normalize(m);
-        auto m_resolved = resolved_ir::resolve(m_normal, {});
+        auto m_resolved = resolved_ir::resolve(m_normal);
 
         std::cout << to_string(m) << std::endl;
         std::cout << to_string(m_normal) << std::endl;

@@ -12,54 +12,86 @@
 namespace al {
 namespace resolved_ir {
 
+template <typename Expr>
 class optimizer {
 private:
-    r_expr expression_;
+    Expr expression_;
     bool keep_optimizing_ = true;
 
 public:
-    optimizer(const r_expr& e): expression_(e) {}
-    void start() {
-        keep_optimizing_ = true;
-    }
-    void reset() {
-        keep_optimizing_ = false;
-    }
-    void optimize() {
-        keep_optimizing_ = false;
-        auto result = cse(expression_);
-        expression_ = result.first;
-        keep_optimizing_ |= result.second;
+    optimizer(const Expr& e): expression_(e) {}
 
-//        std::cout << "--------------0------------" << std::endl;
-//        std::cout << to_string(expression_) << std::endl << std::endl;
+    Expr optimize() {
+        while (keep_optimizing_) {
+            keep_optimizing_ = false;
+            auto result = cse(expression_);
+            expression_ = result.first;
+            keep_optimizing_ |= result.second;
 
-        result = constant_fold(expression_);
-        expression_ = result.first;
-        keep_optimizing_ |= result.second;
+//            std::cout << "--------------0------------" << std::endl;
+//            std::cout << to_string(expression_) << std::endl << std::endl;
 
-//        std::cout << "--------------1------------" << std::endl;
-//        std::cout << to_string(expression_) << std::endl << std::endl;
+            result = constant_fold(expression_);
+            expression_ = result.first;
+            keep_optimizing_ |= result.second;
 
-        result = copy_propagate(expression_);
-        expression_ = result.first;
-        keep_optimizing_ |= result.second;
+//            std::cout << "--------------1------------" << std::endl;
+//            std::cout << to_string(expression_) << std::endl << std::endl;
 
-//        std::cout << "--------------2------------" << std::endl;
-//        std::cout << to_string(expression_) << std::endl << std::endl;
+            result = copy_propagate(expression_);
+            expression_ = result.first;
+            keep_optimizing_ |= result.second;
 
-        result = eliminate_dead_code(expression_);
-        expression_ = result.first;
-        keep_optimizing_ |= result.second;
+//            std::cout << "--------------2------------" << std::endl;
+//            std::cout << to_string(expression_) << std::endl << std::endl;
 
-//        std::cout << "--------------3------------" << std::endl;
-//        std::cout << to_string(expression_) << std::endl << std::endl;
-    }
-    bool keep_optimizing() {
-        return keep_optimizing_;
-    }
-    r_expr expression() {
+            result = eliminate_dead_code(expression_);
+            expression_ = result.first;
+            keep_optimizing_ |= result.second;
+
+//            std::cout << "--------------3------------" << std::endl;
+//            std::cout << to_string(expression_) << std::endl << std::endl;
+        }
         return expression_;
+    }
+
+/*    resolved_mechanism optimize(const resolved_mechanism& e) {
+        resolved_mechanism mech = e;
+        while (keep_optimizing_) {
+            keep_optimizing_ = false;
+            auto result = cse(mech);
+            mech = result.first;
+            keep_optimizing_ |= result.second;
+
+//            std::cout << "--------------0------------" << std::endl;
+//            std::cout << to_string(mech) << std::endl << std::endl;
+
+            result = constant_fold(mech);
+            mech = result.first;
+            keep_optimizing_ |= result.second;
+
+//            std::cout << "--------------1------------" << std::endl;
+//            std::cout << to_string(mech) << std::endl << std::endl;
+
+            result = copy_propagate(mech);
+            mech = result.first;
+            keep_optimizing_ |= result.second;
+
+//            std::cout << "--------------2------------" << std::endl;
+//            std::cout << to_string(mech) << std::endl << std::endl;
+
+            result = eliminate_dead_code(mech);
+            mech = result.first;
+            keep_optimizing_ |= result.second;
+
+//            std::cout << "--------------3------------" << std::endl;
+//            std::cout << to_string(mech) << std::endl << std::endl;
+        }
+        return mech;
+    }*/
+
+    void reset() {
+        keep_optimizing_ = true;
     }
 };
 

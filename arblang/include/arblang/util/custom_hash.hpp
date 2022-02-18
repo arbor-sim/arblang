@@ -172,7 +172,7 @@ template <>
 struct hash<resolved_call> {
     inline size_t operator()(const resolved_call& e) const {
         std::size_t res = 0;
-        hash_combine(res, *e.f_identifier);
+        hash_combine(res, e.f_identifier);
         hash_combine(res, *e.type);
         for (const auto& a: e.call_args) {
             hash_combine(res, *a);

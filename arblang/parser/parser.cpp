@@ -643,9 +643,19 @@ p_expr parser::parse_prefix_expr() {
             return make_pexpr<parsed_unary>(prefix_op.type, std::move(e), prefix_op.loc);
         }
         case tok::lnot:
-        case tok::minus:
-            next(); // consume '-'
-            return make_pexpr<parsed_unary>(prefix_op.type, parse_expr(), prefix_op.loc);
+        case tok::minus: {
+            auto t = next(); // consume '-'
+            auto arg = parse_value_expr();
+            t = current();
+            if (t.type == tok::dot) {
+                // We're parsing an object field access
+                auto loc = t.loc;
+                t = next(); // consume `.`
+                auto rhs = parse_value_expr();
+                arg = make_pexpr<parsed_binary>(binary_op::dot, arg, rhs, loc);
+            }
+            return make_pexpr<parsed_unary>(prefix_op.type, arg, prefix_op.loc);
+        }
         case tok::plus:
             next(); // consume '+'
             return parse_expr();

@@ -3,6 +3,7 @@ set(arblang-sources
     optimizer/copy_propagate.cpp
     optimizer/cse.cpp
     optimizer/elimiinate_dead_code.cpp
+    optimizer/inline_func.cpp
     parser/lexer.cpp
     parser/parser.cpp
     parser/parsed_expressions.cpp
@@ -13,7 +14,8 @@ set(arblang-sources
     resolver/resolved_expressions.cpp
     resolver/resolved_types.cpp
     resolver/canonicalize.cpp
-    resolver/single_assign.cpp)
+    resolver/single_assign.cpp util/rexp_helpers.hpp
+    util/rexp_helpers.cpp)
 
 add_library(arblang ${arblang-sources})
 

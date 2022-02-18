@@ -4,6 +4,7 @@
 #include <vector>
 
 #include <arblang/optimizer/optimizer.hpp>
+#include <arblang/optimizer/inline_func.hpp>
 #include <arblang/parser/token.hpp>
 #include <arblang/parser/parser.hpp>
 #include <arblang/parser/normalizer.hpp>
@@ -45,10 +46,9 @@ TEST(canonicalizer, call) {
         auto call_ssa = single_assign(call_canon);
 
         auto opt = optimizer(call_ssa);
-        while (opt.keep_optimizing()) {
-            opt.optimize();
-        }
-        std::cout << to_string(opt.expression()) << std::endl;
+        auto call_opt = opt.optimize();
+
+        std::cout << to_string(call_opt) << std::endl;
         std::cout << std::endl;
 
         // let t0_:real = foo();
@@ -69,10 +69,9 @@ TEST(canonicalizer, call) {
         auto call_ssa = single_assign(call_canon);
 
         auto opt = optimizer(call_ssa);
-        while (opt.keep_optimizing()) {
-            opt.optimize();
-        }
-        std::cout << to_string(opt.expression()) << std::endl;
+        auto call_opt = opt.optimize();
+
+        std::cout << to_string(call_opt) << std::endl;
         std::cout << std::endl;
 
         // let t0_:foo2(2, 1);
@@ -94,10 +93,9 @@ TEST(canonicalizer, call) {
         auto call_ssa = single_assign(call_canon);
 
         auto opt = optimizer(call_ssa);
-        while (opt.keep_optimizing()) {
-            opt.optimize();
-        }
-        std::cout << to_string(opt.expression()) << std::endl;
+        auto call_opt = opt.optimize();
+
+        std::cout << to_string(call_opt) << std::endl;
         std::cout << std::endl;
 
         // let t1_ = foo_bar(2.5, a, -1);
@@ -119,10 +117,9 @@ TEST(canonicalizer, call) {
         auto call_ssa = single_assign(call_canon);
 
         auto opt = optimizer(call_ssa);
-        while (opt.keep_optimizing()) {
-            opt.optimize();
-        }
-        std::cout << to_string(opt.expression()) << std::endl;
+        auto call_opt = opt.optimize();
+
+        std::cout << to_string(call_opt) << std::endl;
         std::cout << std::endl;
 
         // let t1_:real = foo();
@@ -144,10 +141,9 @@ TEST(canonicalizer, call) {
         auto call_ssa = single_assign(call_canon);
 
         auto opt = optimizer(call_ssa);
-        while (opt.keep_optimizing()) {
-            opt.optimize();
-        }
-        std::cout << to_string(opt.expression()) << std::endl;
+        auto call_opt = opt.optimize();
+
+        std::cout << to_string(call_opt) << std::endl;
         std::cout << std::endl;
 
         // let t0_:real = bar.X;
@@ -177,10 +173,9 @@ TEST(canonicalizer, let) {
         auto let_ssa = single_assign(let_canon);
 
         auto opt = optimizer(let_ssa);
-        while (opt.keep_optimizing()) {
-            opt.optimize();
-        }
-        std::cout << to_string(opt.expression()) << std::endl;
+        auto call_opt = opt.optimize();
+
+        std::cout << to_string(call_opt) << std::endl;
         std::cout << std::endl;
 
         // 11:real
@@ -200,10 +195,9 @@ TEST(canonicalizer, let) {
         auto let_ssa = single_assign(let_canon);
 
         auto opt = optimizer(let_ssa);
-        while (opt.keep_optimizing()) {
-            opt.optimize();
-        }
-        std::cout << to_string(opt.expression()) << std::endl;
+        auto call_opt = opt.optimize();
+
+        std::cout << to_string(call_opt) << std::endl;
         std::cout << std::endl;
 
         // let t0_:voltage = a*5;
@@ -231,10 +225,9 @@ TEST(canonicalizer, let) {
         auto let_ssa = single_assign(let_canon);
 
         auto opt = optimizer(let_ssa);
-        while (opt.keep_optimizing()) {
-            opt.optimize();
-        }
-        std::cout << to_string(opt.expression()) << std::endl;
+        auto let_opt = opt.optimize();
+
+        std::cout << to_string(let_opt) << std::endl;
         std::cout << std::endl;
 
         // let t1_:voltage = a+0.0025; // x
@@ -285,10 +278,9 @@ TEST(canonicalizer, with) {
         auto let_ssa = single_assign(let_canon);
 
         auto opt = optimizer(let_ssa);
-        while (opt.keep_optimizing()) {
-            opt.optimize();
-        }
-        std::cout << to_string(opt.expression()) << std::endl;
+        auto let_opt = opt.optimize();
+
+        std::cout << to_string(let_opt) << std::endl;
         std::cout << std::endl;
 
         // let t0_:real = 5-q;
@@ -325,10 +317,9 @@ TEST(canonicalizer, with) {
         auto let_ssa = single_assign(let_canon);
 
         auto opt = optimizer(let_ssa);
-        while (opt.keep_optimizing()) {
-            opt.optimize();
-        }
-        std::cout << to_string(opt.expression()) << std::endl;
+        auto let_opt = opt.optimize();
+
+        std::cout << to_string(let_opt) << std::endl;
         std::cout << std::endl;
 
         // let t0_:real = 5-q;
@@ -359,10 +350,9 @@ TEST(canonicalizer, with) {
         auto let_ssa = single_assign(let_canon);
 
         auto opt = optimizer(let_ssa);
-        while (opt.keep_optimizing()) {
-            opt.optimize();
-        }
-        std::cout << to_string(opt.expression()) << std::endl;
+        auto let_opt = opt.optimize();
+
+        std::cout << to_string(let_opt) << std::endl;
         std::cout << std::endl;
 
         // let t0_:{a:voltage; b:current} = {a=2; b=1;};
@@ -399,10 +389,9 @@ TEST(canonicalizer, conditional) {
         auto if_ssa = single_assign(if_canon);
 
         auto opt = optimizer(if_ssa);
-        while (opt.keep_optimizing()) {
-            opt.optimize();
-        }
-        std::cout << to_string(opt.expression()) << std::endl;
+        auto if_opt = opt.optimize();
+
+        std::cout << to_string(if_opt) << std::endl;
         std::cout << std::endl;
 
         // let t0_:bool = t==4;
@@ -431,10 +420,9 @@ TEST(canonicalizer, conditional) {
         auto if_ssa = single_assign(if_canon);
 
         auto opt = optimizer(if_ssa);
-        while (opt.keep_optimizing()) {
-            opt.optimize();
-        }
-        std::cout << to_string(opt.expression()) << std::endl;
+        auto if_opt = opt.optimize();
+
+        std::cout << to_string(if_opt) << std::endl;
         std::cout << std::endl;
 
         // let t0_:bool = t==4;
@@ -502,10 +490,9 @@ TEST(cse, let) {
         auto let_ssa = single_assign(let_canon);
 
         auto opt = optimizer(let_ssa);
-        while (opt.keep_optimizing()) {
-            opt.optimize();
-        }
-        std::cout << to_string(opt.expression()) << std::endl;
+        auto let_opt = opt.optimize();
+
+        std::cout << to_string(let_opt) << std::endl;
         std::cout << std::endl;
 
         // let t0_:voltage = a*5;
@@ -533,10 +520,9 @@ TEST(cse, let) {
         auto let_ssa = single_assign(let_canon);
 
         auto opt = optimizer(let_ssa);
-        while (opt.keep_optimizing()) {
-            opt.optimize();
-        }
-        std::cout << to_string(opt.expression()) << std::endl;
+        auto let_opt = opt.optimize();
+
+        std::cout << to_string(let_opt) << std::endl;
         std::cout << std::endl;
 
         // let t1_:voltage = a+0.0025[V]; // x
@@ -564,10 +550,9 @@ TEST(cse, let) {
         auto let_ssa = single_assign(let_canon);
 
         auto opt = optimizer(let_ssa);
-        while (opt.keep_optimizing()) {
-            opt.optimize();
-        }
-        std::cout << to_string(opt.expression()) << std::endl;
+        auto let_opt = opt.optimize();
+
+        std::cout << to_string(let_opt) << std::endl;
         std::cout << std::endl;
 
         // 6:real
@@ -591,12 +576,293 @@ TEST(cse, let) {
         auto let_ssa = single_assign(let_canon);
 
         auto opt = optimizer(let_ssa);
-        while (opt.keep_optimizing()) {
-            opt.optimize();
-        }
-        std::cout << to_string(opt.expression()) << std::endl;
+        auto let_opt = opt.optimize();
+
+        std::cout << to_string(let_opt) << std::endl;
         std::cout << std::endl;
 
         // 1:real
+    }
+}
+
+TEST(function_inline, misc) {
+    auto loc = src_location{};
+    auto real_type    = make_rtype<resolved_quantity>(normalized_type(quantity::real), loc);
+    {
+        std::string bar_func =
+            "function bar(a:real) {\n"
+            "  let x = 2*a;\n"
+            "  x^2;\n"
+            "};";
+
+        std::string foo_func =
+            "function foo(a:real, b:real, c:real) {\n"
+            "  let x = a+b+c;\n"
+            "  let y = x*c;\n"
+            "  let z = bar(y);\n"
+            "  let w = z*x;\n"
+            "  w;\n"
+            "};";
+
+        std::string let_expr =
+            "let a = foo(x, y, z); a;\n";
+
+        // bar
+        in_scope_map bar_scope_map;
+
+        auto p_bar = parser(bar_func);
+        auto bar = p_bar.parse_function();
+
+        auto bar_normal = normalize(bar);
+        auto bar_resolved = resolve(bar_normal, bar_scope_map);
+        auto bar_canon = canonicalize(bar_resolved);
+        auto bar_ssa = single_assign(bar_canon);
+
+        auto b_opt = optimizer(bar_ssa);
+        auto bar_opt = b_opt.optimize();
+
+        // foo
+        in_scope_map foo_scope_map;
+        foo_scope_map.func_map.insert({"bar", std::get<resolved_function>(*bar_opt)});
+
+        auto p_foo = parser(foo_func);
+        auto foo = p_foo.parse_function();
+
+        auto foo_normal = normalize(foo);
+        auto foo_resolved = resolve(foo_normal, foo_scope_map);
+        auto foo_canon = canonicalize(foo_resolved);
+        auto foo_ssa = single_assign(foo_canon);
+
+        auto f_opt = optimizer(foo_ssa);
+        auto foo_opt = f_opt.optimize();
+
+        // let
+        in_scope_map let_scope_map;
+        let_scope_map.local_map.insert({"x",  resolved_argument("x", real_type, loc)});
+        let_scope_map.local_map.insert({"y",  resolved_argument("y", real_type, loc)});
+        let_scope_map.local_map.insert({"z",  resolved_argument("z", real_type, loc)});
+        let_scope_map.func_map.insert({"bar", std::get<resolved_function>(*bar_opt)});
+        let_scope_map.func_map.insert({"foo", std::get<resolved_function>(*foo_opt)});
+
+
+        auto p_let = parser(let_expr);
+        auto let = p_let.parse_let();
+
+        auto let_normal = normalize(let);
+        auto let_resolved = resolve(let_normal, let_scope_map);
+        auto let_canon = canonicalize(let_resolved);
+        auto let_ssa = single_assign(let_canon);
+
+        auto l_opt = optimizer(let_ssa);
+        auto let_opt = l_opt.optimize();
+
+        std::unordered_map<std::string, r_expr> avail_funcs = {{"foo", foo_opt}, {"bar", bar_opt}};
+        auto let_inlined = inline_func(let_opt, avail_funcs);
+
+        auto l_opt2 = optimizer(let_inlined);
+        auto let_opt2 = l_opt2.optimize();
+
+        std::cout << to_string(let_opt2) << std::endl;
+        std::cout << std::endl;
+    }
+
+    // let _t0:real = x+y;
+    // let _t1:real = _t0+z;   // foo::x
+    // let _t2:real = _t1*z;   // foo::y
+    // let _r0:real = 2*_t2;   // bar::x
+    // let _r1:real = _r0^2;   // bar
+    // let _t4:real = _r1*_t1; // foo
+    // _t4;
+}
+
+TEST(optimizer, mechanism) {
+    {
+        std::string mech =
+            "# Adapted from Allen Institute Ca_dynamics.mod,\n"
+            "# in turn based on model of Destexhe et al. 1994.\n"
+            "\n"
+            "mechanism concentration \"CaDynamics\" {\n"
+            "    parameter gamma = 0.05;      # Proportion of unbuffered calcium.\n"
+            "    parameter decay = 80 [ms];   # Calcium removal time constant.\n"
+            "    parameter minCai = 1e-4 [mM];\n"
+            "    parameter depth = 0.1 [um];  # Depth of shell.\n"
+            "\n"
+            "    bind flux = molar_flux(\"ca\");\n"
+            "    bind cai = internal_concentration(\"ca\");\n"
+            "    \n"
+            "    effect molar_flow_rate(\"ca\") = -(gamma*flux - depth*(cai - minCai)/decay);\n"
+            "}";
+
+        auto p = parser(mech);
+        auto m = p.parse_mechanism();
+        auto m_normal = normalize(m);
+        auto m_resolved = resolve(m_normal);
+        auto m_canon = canonicalize(m_resolved);
+        auto m_ssa = single_assign(m_canon);
+
+        auto opt_0 = optimizer(m_ssa);
+        auto m_opt = opt_0.optimize();
+
+        auto m_inlined = inline_func(m_opt);
+
+        auto opt_1 = optimizer(m_inlined);
+        auto m_fin = opt_1.optimize();
+
+        std::cout << "-----------------------------" << std::endl;
+        std::cout << mech << std::endl;
+        std::cout << "-----------------------------" << std::endl;
+        std::cout << to_string(m_fin) << std::endl;
+        std::cout << "-----------------------------" << std::endl;
+        std::cout << std::endl;
+    }
+    {
+        std::string mech =
+                "mechanism point \"expsyn_stdp\" {\n"
+                "    # A scaling factor for incoming (pre-synaptic) events is required, as the\n"
+                "    # weight of an event is dimensionelss.\n"
+                "\n"
+                "    parameter A     =  1 [uS];    # pre-synaptic event contribution factor\n"
+                "    parameter Apre  =  0.01 [uS]; # pre-synaptic event plasticity contribution\n"
+                "    parameter Apost = -0.01 [uS]; # post-synaptic event plasticity contribution\n"
+                "\n"
+                "    parameter t      = 2 [ms]; # synaptic time constant\n"
+                "    parameter tpre  = 10 [ms]; # pre-synaptic plasticity contrib time constant\n"
+                "    parameter tpost = 10 [ms]; # post-synaptic plasticity contrib time constant\n"
+                "\n"
+                "    parameter gmax  = 10 [uS]; # maximum synaptic conductance\n"
+                "    parameter e = 0 [mV];      # reversal potential\n"
+                "\n"
+                "    bind ca = internal_concentration(\"the other, other calcium\");\n"
+                "\n"
+                "    record state_rec {\n"
+                "        g:         conductance,\n"
+                "        apre:      conductance,\n"
+                "        apost:     conductance,\n"
+                "        w_plastic: conductance\n"
+                "    }\n"
+                "    state expsyn: state_rec;\n"
+                "    state other: volume^2*force;\n"
+                "\n"
+                "    bind v = membrane_potential;\n"
+                "\n"
+                "    function external_spike(s: state_rec, weight: real) : state_rec {\n"
+                "       let x = s.g + s.w_plastic + weight*A;\n"
+                "       let g = if x < 0 [S] then 0 [S]\n"
+                "               else if x > gmax then gmax\n"
+                "               else x;\n"
+                "       let apre = s.apre + Apre; \n"
+                "       let w_plastic = s.w_plastic + s.apost;\n"
+                "       state_rec {\n"
+                "           g = g;\n"
+                "           apre = apre; \n"
+                "           apost = s.apost; \n"
+                "           w_plastic = w_plastic;\n"
+                "       }\n"
+                "    }\n"
+                "\n"
+                "    initial expsyn = state_rec {\n"
+                "        g         = 0 [uS];\n"
+                "        apre      = 0 [uS];\n"
+                "        apost     = 0 [uS];\n"
+                "        w_plastic = 0 [uS];\n"
+                "    };\n"
+                "\n"
+                "    evolve expsyn' = state_rec' {\n"
+                "        g' = -expsyn.g/t;\n"
+                "        apre' = -expsyn.apre/tpre;\n"
+                "        apost'= -expsyn.apost/tpost;\n"
+                "        w_plastic' = 0[uS/s];\n"
+                "    };\n"
+                "\n"
+                "    effect current = expsyn.g*(v - e);\n"
+                "}";
+        auto p = parser(mech);
+        auto m = p.parse_mechanism();
+        auto m_normal = normalize(m);
+        auto m_resolved = resolve(m_normal);
+        auto m_canon = canonicalize(m_resolved);
+        auto m_ssa = single_assign(m_canon);
+
+        auto opt_0 = optimizer(m_ssa);
+        auto m_opt = opt_0.optimize();
+
+        auto m_inlined = inline_func(m_opt);
+
+        auto opt_1 = optimizer(m_inlined);
+        auto m_fin = opt_1.optimize();
+
+        std::cout << "-----------------------------" << std::endl;
+        std::cout << mech << std::endl;
+        std::cout << "-----------------------------" << std::endl;
+        std::cout << to_string(m_fin) << std::endl;
+        std::cout << "-----------------------------" << std::endl;
+        std::cout << std::endl;
+    }
+    {
+        std::string mech =
+                "mechanism density \"Kd\" {\n"
+                "    parameter gbar = 1e-5 [S/cm^2];\n"
+                "    parameter ek = -77 [mV];\n"
+                "    bind v = membrane_potential;\n"
+                "\n"
+                "    record state_rec {\n"
+                "        m: real,\n"
+                "        h: real,\n"
+                "    };\n"
+                "    state s: state_rec;\n"
+                "\n"
+                "    function mInf(v: voltage): real {\n"
+                "        1 - 1/(1 + exp((v + 43 [mV])/8 [mV]))\n"
+                "    };\n"
+                "\n"
+                "    function hInf(v: voltage): real {\n"
+                "        1/(1 + exp((v + 67 [mV])/7.3 [mV]));\n"
+                "    }\n"
+                "\n"
+                "    function state0(v: voltage): state_rec {\n"
+                "        state_rec {\n"
+                "            m = mInf(v);\n"
+                "            h = hInf(v);\n"
+                "        };\n"
+                "    };\n"
+                "\n"
+                "    function rate(s: state_rec, v: voltage): state_rec' {\n"
+                "        state_rec'{\n"
+                "            m' = (s.m - mInf(v))/1 [ms];\n"
+                "            h' = (s.h - hInf(v))/1500 [ms];\n"
+                "        };\n"
+                "    }\n"
+                "\n"
+                "    function curr(s: state_rec, v_minus_ek: voltage): current/area {\n"
+                "        gbar*s.m*s.h*v_minus_ek;\n"
+                "    }\n"
+                "\n"
+                "    initial s = state0(v);\n"
+                "    evolve s' = rate(s, v);\n"
+                "    effect current_density(\"k\") = curr(s, v - ek);\n"
+                "    \n"
+                "    export gbar; \n"
+                "}";
+        auto p = parser(mech);
+        auto m = p.parse_mechanism();
+        auto m_normal = normalize(m);
+        auto m_resolved = resolve(m_normal);
+        auto m_canon = canonicalize(m_resolved);
+        auto m_ssa = single_assign(m_canon);
+
+        auto opt_0 = optimizer(m_ssa);
+        auto m_opt = opt_0.optimize();
+
+        auto m_inlined = inline_func(m_opt);
+
+        auto opt_1 = optimizer(m_inlined);
+        auto m_fin = opt_1.optimize();
+
+        std::cout << "-----------------------------" << std::endl;
+        std::cout << mech << std::endl;
+        std::cout << "-----------------------------" << std::endl;
+        std::cout << to_string(m_fin) << std::endl;
+        std::cout << "-----------------------------" << std::endl;
+        std::cout << std::endl;
     }
 }

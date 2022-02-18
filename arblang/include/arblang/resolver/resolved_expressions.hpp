@@ -201,12 +201,12 @@ struct resolved_export {
 
 // Function calls
 struct resolved_call {
-    r_expr f_identifier;
+    std::string f_identifier; // keep as string, when we finally inline, resolved_calls will disappear
     std::vector<r_expr> call_args;
     r_type type;
     src_location loc;
 
-    resolved_call(r_expr iden, std::vector<r_expr> args, r_type type, const src_location& loc):
+    resolved_call(std::string iden, std::vector<r_expr> args, r_type type, const src_location& loc):
         f_identifier(std::move(iden)), call_args(std::move(args)), type(std::move(type)), loc(loc) {};
 };
 
@@ -291,16 +291,6 @@ struct resolved_binary {
         op(op), lhs(std::move(lhs)), rhs(std::move(rhs)), type(std::move(type)), loc(loc) {}
 };
 
-struct in_scope_map {
-    std::unordered_map<std::string, resolved_parameter> param_map;
-    std::unordered_map<std::string, resolved_constant> const_map;
-    std::unordered_map<std::string, resolved_state> state_map;
-    std::unordered_map<std::string, resolved_bind> bind_map;
-    std::unordered_map<std::string, resolved_function> func_map;
-    std::unordered_map<std::string, resolved_argument> local_map;
-    std::unordered_map<std::string, r_type> type_map;
-};
-
 bool operator==(const resolved_parameter& lhs, const resolved_parameter& rhs);
 bool operator==(const resolved_constant& lhs, const resolved_constant& rhs);
 bool operator==(const resolved_state& lhs, const resolved_state& rhs);
@@ -321,7 +311,16 @@ bool operator==(const resolved_int& lhs, const resolved_int& rhs);
 bool operator==(const resolved_unary& lhs, const resolved_unary& rhs);
 bool operator==(const resolved_binary& lhs, const resolved_binary& rhs);
 
-resolved_mechanism resolve(const parsed_ir::parsed_mechanism&, const in_scope_map&);
+struct in_scope_map {
+    std::unordered_map<std::string, resolved_parameter> param_map;
+    std::unordered_map<std::string, resolved_constant> const_map;
+    std::unordered_map<std::string, resolved_state> state_map;
+    std::unordered_map<std::string, resolved_bind> bind_map;
+    std::unordered_map<std::string, resolved_function> func_map;
+    std::unordered_map<std::string, resolved_argument> local_map;
+    std::unordered_map<std::string, r_type> type_map;
+};
+resolved_mechanism resolve(const parsed_ir::parsed_mechanism&);
 r_expr resolve(const parsed_ir::p_expr &, const in_scope_map&);
 
 std::string to_string(const resolved_mechanism&, bool include_type=true, int indent=0);

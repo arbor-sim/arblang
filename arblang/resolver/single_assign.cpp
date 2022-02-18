@@ -9,51 +9,67 @@ namespace resolved_ir {
 
 // TODO make sure that canonicalize is called before single_assign
 resolved_mechanism single_assign(const resolved_mechanism& e) {
+    std::unordered_set<std::string> globals;
     std::unordered_set<std::string> reserved;
     std::unordered_map<std::string, r_expr> rewrites;
     resolved_mechanism mech;
+
+    // Get all globally available symbols
     for (const auto& c: e.constants) {
-        reserved.clear();
-        rewrites.clear();
+        globals.insert(std::get<resolved_constant>(*c).name);
+    }
+    for (const auto& c: e.parameters) {
+        globals.insert(std::get<resolved_parameter>(*c).name);
+    }
+    for (const auto& c: e.bindings) {
+        globals.insert(std::get<resolved_bind>(*c).name);
+    }
+    for (const auto& c: e.states) {
+        globals.insert(std::get<resolved_state>(*c).name);
+    }
+
+    // Handle expressions
+    for (const auto& c: e.constants) {
+        reserved = globals;
         mech.constants.push_back(single_assign(c, reserved, rewrites));
     }
     for (const auto& c: e.parameters) {
-        reserved.clear();
+        reserved = globals;
         rewrites.clear();
         mech.parameters.push_back(single_assign(c, reserved, rewrites));
     }
     for (const auto& c: e.bindings) {
-        reserved.clear();
+        reserved = globals;
         rewrites.clear();
         mech.bindings.push_back(single_assign(c, reserved, rewrites));
     }
     for (const auto& c: e.states) {
-        reserved.clear();
+        reserved = globals;
         rewrites.clear();
         mech.states.push_back(single_assign(c, reserved, rewrites));
     }
     for (const auto& c: e.functions) {
-        reserved.clear();
+        reserved = globals;
         rewrites.clear();
         mech.functions.push_back(single_assign(c, reserved, rewrites));
     }
     for (const auto& c: e.initializations) {
-        reserved.clear();
+        reserved = globals;
         rewrites.clear();
         mech.initializations.push_back(single_assign(c, reserved, rewrites));
     }
     for (const auto& c: e.evolutions) {
-        reserved.clear();
+        reserved = globals;
         rewrites.clear();
         mech.evolutions.push_back(single_assign(c, reserved, rewrites));
     }
     for (const auto& c: e.effects) {
-        reserved.clear();
+        reserved = globals;
         rewrites.clear();
         mech.effects.push_back(single_assign(c, reserved, rewrites));
     }
     for (const auto& c: e.exports) {
-        reserved.clear();
+        reserved = globals;
         rewrites.clear();
         mech.exports.push_back(single_assign(c, reserved, rewrites));
     }
@@ -67,10 +83,6 @@ r_expr single_assign(const resolved_parameter& e,
                      std::unordered_set<std::string>& reserved,
                      std::unordered_map<std::string, r_expr>& rewrites)
 {
-    if(!reserved.insert(e.name).second) {
-        throw std::runtime_error("Parameter "+e.name+" at "+to_string(e.loc)+
-                                 " shadows another parameter, constant, state variable or binding, with the same name");
-    }
     auto val_ssa = single_assign(e.value, reserved, rewrites);
     return make_rexpr<resolved_parameter>(e.name, val_ssa, e.type, e.loc);
 }
@@ -79,10 +91,6 @@ r_expr single_assign(const resolved_constant& e,
                      std::unordered_set<std::string>& reserved,
                      std::unordered_map<std::string, r_expr>& rewrites)
 {
-    if(!reserved.insert(e.name).second) {
-        throw std::runtime_error("Parameter "+e.name+" at "+to_string(e.loc)+
-                                 " shadows another parameter, constant, state variable or binding, with the same name");
-    }
     auto val_ssa = single_assign(e.value, reserved, rewrites);
     return make_rexpr<resolved_constant>(e.name, val_ssa, e.type, e.loc);
 }
@@ -91,10 +99,6 @@ r_expr single_assign(const resolved_state& e,
                      std::unordered_set<std::string>& reserved,
                      std::unordered_map<std::string, r_expr>& rewrites)
 {
-    if(!reserved.insert(e.name).second) {
-        throw std::runtime_error("State "+e.name+" at "+to_string(e.loc)+
-                                 " shadows another parameter, constant, state variable or binding, with the same name");
-    }
     return make_rexpr<resolved_state>(e);
 }
 
@@ -129,10 +133,6 @@ r_expr single_assign(const resolved_bind& e,
                      std::unordered_set<std::string>& reserved,
                      std::unordered_map<std::string, r_expr>& rewrites)
 {
-    if(!reserved.insert(e.name).second) {
-        throw std::runtime_error("Binding "+e.name+" at "+to_string(e.loc)+
-                                 " shadows another parameter, constant, state variable or binding, with the same name");
-    }
     return make_rexpr<resolved_bind>(e);
 }
 
@@ -202,7 +202,6 @@ r_expr single_assign(const resolved_let& e,
     auto iden = std::get<resolved_argument>(*e.identifier);
     if (!reserved.insert(iden.name).second) {
         auto rename = unique_local_name(reserved, "r");
-        reserved.insert(rename);
         iden_ssa = make_rexpr<resolved_argument>(rename, iden.type, iden.loc);
         rewrites[iden.name] = iden_ssa;
     }

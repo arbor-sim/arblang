@@ -14,55 +14,91 @@ std::pair<resolved_mechanism, bool> eliminate_dead_code(const resolved_mechanism
     bool made_changes = false;
     for (const auto& c: e.constants) {
         find_dead_code(c, dead_code);
-        if (!dead_code.empty()) mech.constants.push_back(remove_dead_code(c, dead_code));
+        if (!dead_code.empty()) {
+            mech.constants.push_back(remove_dead_code(c, dead_code));
+        } else {
+            mech.constants.push_back(c);
+        }
         made_changes |= !dead_code.empty();
     }
     for (const auto& c: e.parameters) {
         dead_code.clear();
         find_dead_code(c, dead_code);
-        if (!dead_code.empty()) mech.parameters.push_back(remove_dead_code(c, dead_code));
+        if (!dead_code.empty()) {
+            mech.parameters.push_back(remove_dead_code(c, dead_code));
+        } else {
+            mech.parameters.push_back(c);
+        }
         made_changes |= !dead_code.empty();
     }
     for (const auto& c: e.bindings) {
         dead_code.clear();
         find_dead_code(c, dead_code);
-        if (!dead_code.empty()) mech.bindings.push_back(remove_dead_code(c, dead_code));
+        if (!dead_code.empty()) {
+            mech.bindings.push_back(remove_dead_code(c, dead_code));
+        } else {
+            mech.bindings.push_back(c);
+        }
         made_changes |= !dead_code.empty();
     }
     for (const auto& c: e.states) {
         dead_code.clear();
         find_dead_code(c, dead_code);
-        if (!dead_code.empty()) mech.states.push_back(remove_dead_code(c, dead_code));
+        if (!dead_code.empty()) {
+            mech.states.push_back(remove_dead_code(c, dead_code));
+        } else {
+            mech.states.push_back(c);
+        }
         made_changes |= !dead_code.empty();
     }
     for (const auto& c: e.functions) {
         dead_code.clear();
         find_dead_code(c, dead_code);
-        if (!dead_code.empty()) mech.functions.push_back(remove_dead_code(c, dead_code));
+        if (!dead_code.empty()) {
+            mech.functions.push_back(remove_dead_code(c, dead_code));
+        } else {
+            mech.functions.push_back(c);
+        }
         made_changes |= !dead_code.empty();
     }
     for (const auto& c: e.initializations) {
         dead_code.clear();
         find_dead_code(c, dead_code);
-        if (!dead_code.empty()) mech.initializations.push_back(remove_dead_code(c, dead_code));
+        if (!dead_code.empty()) {
+            mech.initializations.push_back(remove_dead_code(c, dead_code));
+        } else {
+            mech.initializations.push_back(c);
+        }
         made_changes |= !dead_code.empty();
     }
     for (const auto& c: e.evolutions) {
         dead_code.clear();
         find_dead_code(c, dead_code);
-        if (!dead_code.empty()) mech.evolutions.push_back(remove_dead_code(c, dead_code));
+        if (!dead_code.empty()) {
+            mech.evolutions.push_back(remove_dead_code(c, dead_code));
+        } else {
+            mech.evolutions.push_back(c);
+        }
         made_changes |= !dead_code.empty();
     }
     for (const auto& c: e.effects) {
         dead_code.clear();
         find_dead_code(c, dead_code);
-        if (!dead_code.empty()) mech.effects.push_back(remove_dead_code(c, dead_code));
+        if (!dead_code.empty()) {
+            mech.effects.push_back(remove_dead_code(c, dead_code));
+        } else {
+            mech.effects.push_back(c);
+        }
         made_changes |= !dead_code.empty();
     }
     for (const auto& c: e.exports) {
         dead_code.clear();
         find_dead_code(c, dead_code);
-        if (!dead_code.empty()) mech.exports.push_back(remove_dead_code(c, dead_code));
+        if (!dead_code.empty()) {
+            mech.exports.push_back(remove_dead_code(c, dead_code));
+        } else {
+            mech.exports.push_back(c);
+        }
         made_changes |= !dead_code.empty();
     }
     mech.name = e.name;
@@ -132,7 +168,7 @@ void find_dead_code(const resolved_conditional& e,std::unordered_set<std::string
     find_dead_code(e.value_false, dead_args);
 }
 
-void  find_dead_code(const resolved_float& e, std::unordered_set<std::string>& dead_args) {}
+void find_dead_code(const resolved_float& e, std::unordered_set<std::string>& dead_args) {}
 
 void find_dead_code(const resolved_int& e, std::unordered_set<std::string>& dead_args) {}
 
