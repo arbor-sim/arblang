@@ -214,7 +214,13 @@ r_expr resolve(const parsed_effect& e, const in_scope_map& map) {
     auto e_effect = e.effect;
     auto e_ion = e.ion;
     auto e_val = resolve(e.value, map);
-    auto e_type = resolve_type(e_effect, e.loc);
+    auto e_type = type_of(e_val);
+    auto f_type = resolve_type(e_effect, e.loc);
+
+    if (*f_type != *e_type) {
+        throw std::runtime_error(fmt::format("type mismatch between {} and {} in effect expression at {}.",
+                                             to_string(f_type), to_string(e_type), to_string(e.loc)));
+    }
 
     return make_rexpr<resolved_effect>(e_effect, e_ion, e_val, e_type, e.loc);
 }
@@ -560,72 +566,30 @@ r_expr resolve(const parsed_identifier& e, const in_scope_map& map) {
         return make_rexpr<resolved_argument>(map.local_map.at(e.name));
     }
     if (map.param_map.count(e.name)) {
-        auto p = map.param_map.at(e.name);
-        return make_rexpr<resolved_argument>(p.name, p.type, p.loc);
+        return make_rexpr<resolved_argument>( map.param_map.at(e.name));
     }
     if (map.const_map.count(e.name)) {
-        auto c = map.const_map.at(e.name);
-        return make_rexpr<resolved_argument>(c.name, c.type, c.loc);
+        return make_rexpr<resolved_argument>(map.const_map.at(e.name));
     }
     if (map.bind_map.count(e.name)) {
-        auto b = map.bind_map.at(e.name);
-        return make_rexpr<resolved_argument>(b.name, b.type, b.loc);
+        return make_rexpr<resolved_argument>(map.bind_map.at(e.name));
     }
     if (map.state_map.count(e.name)) {
         auto s = map.state_map.at(e.name);
-        return make_rexpr<resolved_argument>(s.name, s.type, s.loc);
+        return make_rexpr<resolved_argument>(map.state_map.at(e.name));
     }
     throw std::runtime_error(fmt::format("undefined identifier {}, at {}",
                                          e.name, to_string(e.loc)));
 }
 
+// Resolve record aliases first, then parameters, constants, bindings and states.
+// Then resolved functions (they need the above to be resolved beforehand).
+// Finally, resolve API hooks.
 resolved_mechanism resolve(const parsed_mechanism& e) {
     resolved_mechanism mech;
     in_scope_map available_map;
 
-    for (const auto& c: e.constants) {
-        auto val = resolve(c, available_map);
-        mech.constants.push_back(val);
-        auto const_val = std::get_if<resolved_constant>(val.get());
-        if (!const_val) {
-            throw std::runtime_error(fmt::format("internal compiler error, expected constant expression at {}",
-                                                 to_string(location_of(val))));
-        }
-        if (!available_map.const_map.insert({const_val->name, *const_val}).second) {
-            auto found_loc = available_map.const_map.at(const_val->name).loc;
-            throw std::runtime_error(fmt::format("Constant `{}` found at {} already defined at {}",
-                                                 const_val->name, to_string(location_of(val)), to_string(found_loc)));
-        }
-    }
-    for (const auto& c: e.parameters) {
-        auto val =resolve(c, available_map);
-        mech.parameters.push_back(val);
-        auto param_val = std::get_if<resolved_parameter>(val.get());
-        if (!param_val) {
-            throw std::runtime_error(fmt::format("internal compiler error, expected parameter expression at {}",
-                                                 to_string(location_of(val))));
-        }
-        if (!available_map.param_map.insert({param_val->name, *param_val}).second) {
-            auto found_loc = available_map.param_map.at(param_val->name).loc;
-            throw std::runtime_error(fmt::format("Parameter `{}` found at {} already defined at {}",
-                                                 param_val->name, to_string(location_of(val)), to_string(found_loc)));
-        }
-    }
-    for (const auto& c: e.bindings) {
-        auto val = resolve(c, available_map);
-        mech.bindings.push_back(val);
-        auto bind_val = std::get_if<resolved_bind>(val.get());
-        if (!bind_val) {
-            throw std::runtime_error(fmt::format("internal compiler error, expected bind expression at {}",
-                                                 to_string(location_of(val))));
-        }
-        if (!available_map.bind_map.insert({bind_val->name, *bind_val}).second) {
-            auto found_loc = available_map.bind_map.at(bind_val->name).loc;
-            throw std::runtime_error(fmt::format("Binding `{}` found at {} already defined at {}",
-                                                 bind_val->name, to_string(location_of(val)), to_string(found_loc)));
-        }
-    }
-    // For records, create 2 records: regular and prime
+    // Create 2 records: regular and prime
     for (const auto& r: e.records) {
         auto rec = std::get_if<parsed_record_alias>(r.get());
         if (!rec) {
@@ -652,6 +616,51 @@ resolved_mechanism resolve(const parsed_mechanism& e) {
             available_map.type_map.insert({resolved_record_val->name+"'", derived_parsed_record_type.value()});
         }
     }
+    for (const auto& c: e.constants) {
+        auto val = resolve(c, available_map);
+        mech.constants.push_back(val);
+        auto const_val = std::get_if<resolved_constant>(val.get());
+        if (!const_val) {
+            throw std::runtime_error(fmt::format("internal compiler error, expected constant expression at {}",
+                                                 to_string(location_of(val))));
+        }
+        auto const_arg = resolved_argument(const_val->name, const_val->type, const_val->loc);
+        if (!available_map.const_map.insert({const_arg.name, const_arg}).second) {
+            auto found_loc = available_map.const_map.at(const_arg.name).loc;
+            throw std::runtime_error(fmt::format("Constant `{}` found at {} already defined at {}",
+                                                 const_val->name, to_string(location_of(val)), to_string(found_loc)));
+        }
+    }
+    for (const auto& c: e.parameters) {
+        auto val =resolve(c, available_map);
+        mech.parameters.push_back(val);
+        auto param_val = std::get_if<resolved_parameter>(val.get());
+        if (!param_val) {
+            throw std::runtime_error(fmt::format("internal compiler error, expected parameter expression at {}",
+                                                 to_string(location_of(val))));
+        }
+        auto param_arg = resolved_argument(param_val->name, param_val->type, param_val->loc);
+        if (!available_map.param_map.insert({param_arg.name, param_arg}).second) {
+            auto found_loc = available_map.param_map.at(param_arg.name).loc;
+            throw std::runtime_error(fmt::format("Parameter `{}` found at {} already defined at {}",
+                                                 param_val->name, to_string(location_of(val)), to_string(found_loc)));
+        }
+    }
+    for (const auto& c: e.bindings) {
+        auto val = resolve(c, available_map);
+        mech.bindings.push_back(val);
+        auto bind_val = std::get_if<resolved_bind>(val.get());
+        if (!bind_val) {
+            throw std::runtime_error(fmt::format("internal compiler error, expected bind expression at {}",
+                                                 to_string(location_of(val))));
+        }
+        auto bind_arg = resolved_argument(bind_val->name, bind_val->type, bind_val->loc);
+        if (!available_map.bind_map.insert({bind_arg.name, bind_arg}).second) {
+            auto found_loc = available_map.bind_map.at(bind_arg.name).loc;
+            throw std::runtime_error(fmt::format("Binding `{}` found at {} already defined at {}",
+                                                 bind_val->name, to_string(location_of(val)), to_string(found_loc)));
+        }
+    }
     for (const auto& c: e.states) {
         auto val = resolve(c, available_map);
         mech.states.push_back(val);
@@ -660,8 +669,9 @@ resolved_mechanism resolve(const parsed_mechanism& e) {
             throw std::runtime_error(fmt::format("internal compiler error, expected state expression at {}",
                                                  to_string(location_of(val))));
         }
-        if (!available_map.state_map.insert({state_val->name, *state_val}).second) {
-            auto found_loc = available_map.state_map.at(state_val->name).loc;
+        auto state_arg = resolved_argument(state_val->name, state_val->type, state_val->loc);
+        if (!available_map.state_map.insert({state_arg.name, state_arg}).second) {
+            auto found_loc = available_map.state_map.at(state_arg.name).loc;
             throw std::runtime_error(fmt::format("State `{}` found at {} already defined at {}",
                                                  state_val->name, to_string(location_of(val)), to_string(found_loc)));
         }

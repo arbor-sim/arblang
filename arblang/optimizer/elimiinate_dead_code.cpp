@@ -10,9 +10,42 @@ namespace resolved_ir {
 
 std::pair<resolved_mechanism, bool> eliminate_dead_code(const resolved_mechanism& e) {
     std::unordered_set<std::string> dead_code;
+    std::unordered_set<std::string> dead_param;
     resolved_mechanism mech;
+
     bool made_changes = false;
     for (const auto& c: e.constants) {
+        dead_param.insert(std::get<resolved_constant>(*c).name);
+    }
+    for (const auto& c: e.parameters) {
+        dead_param.insert(std::get<resolved_parameter>(*c).name);
+    }
+    for (const auto& c: e.bindings) {
+        dead_param.insert(std::get<resolved_bind>(*c).name);
+    }
+    for (const auto& c: e.states) {
+        dead_param.insert(std::get<resolved_state>(*c).name);
+    }
+    for (const auto& c: e.functions) {
+        find_dead_code(c, dead_param);
+    }
+    for (const auto& c: e.initializations) {
+        find_dead_code(c, dead_param);
+    }
+    for (const auto& c: e.evolutions) {
+        find_dead_code(c, dead_param);
+    }
+    for (const auto& c: e.effects) {
+        find_dead_code(c, dead_param);
+    }
+
+    // Whatever remains in dead_const, dead_param, dead_bind, dead_state
+    // wasn't actually used and can be skipped in the final mechanism
+
+    for (const auto& c: e.constants) {
+        auto name = std::get<resolved_constant>(*c).name;
+        if (dead_param.count(name)) continue;
+
         find_dead_code(c, dead_code);
         if (!dead_code.empty()) {
             mech.constants.push_back(remove_dead_code(c, dead_code));
@@ -22,6 +55,9 @@ std::pair<resolved_mechanism, bool> eliminate_dead_code(const resolved_mechanism
         made_changes |= !dead_code.empty();
     }
     for (const auto& c: e.parameters) {
+        auto name = std::get<resolved_parameter>(*c).name;
+        if (dead_param.count(name)) continue;
+
         dead_code.clear();
         find_dead_code(c, dead_code);
         if (!dead_code.empty()) {
@@ -32,6 +68,9 @@ std::pair<resolved_mechanism, bool> eliminate_dead_code(const resolved_mechanism
         made_changes |= !dead_code.empty();
     }
     for (const auto& c: e.bindings) {
+        auto name = std::get<resolved_bind>(*c).name;
+        if (dead_param.count(name)) continue;
+
         dead_code.clear();
         find_dead_code(c, dead_code);
         if (!dead_code.empty()) {
@@ -42,6 +81,9 @@ std::pair<resolved_mechanism, bool> eliminate_dead_code(const resolved_mechanism
         made_changes |= !dead_code.empty();
     }
     for (const auto& c: e.states) {
+        auto name = std::get<resolved_state>(*c).name;
+        if (dead_param.count(name)) continue;
+
         dead_code.clear();
         find_dead_code(c, dead_code);
         if (!dead_code.empty()) {

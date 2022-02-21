@@ -2,6 +2,8 @@
 #include <string>
 #include <unordered_set>
 
+#include <fmt/core.h>
+
 #include <arblang/optimizer/constant_fold.hpp>
 #include <arblang/util/custom_hash.hpp>
 
@@ -24,69 +26,82 @@ bool is_integer(double v) {
 
 std::pair<resolved_mechanism, bool> constant_fold(const resolved_mechanism& e) {
     std::unordered_map<std::string, r_expr> constants_map, local_constant_map;
+    std::unordered_set<std::string> exported_params;
+
+    auto reset_constants = [&]() {
+        local_constant_map.clear();
+        local_constant_map = constants_map;
+    };
+
     resolved_mechanism mech;
     bool made_changes = false;
+    for (const auto& c: e.exports) {
+        // No need to constant fold, there is nothing to do.
+        mech.exports.push_back(c);
+
+        // Keep set of exported parameters.
+        // Remaining un-exported parameters can be constant propagated.
+        auto param_id = std::get<resolved_export>(*c).identifier;
+        exported_params.insert(std::get<resolved_argument>(*param_id).name);
+    }
     for (const auto& c: e.constants) {
-        auto name = std::get<resolved_constant>(*c).name;
+        reset_constants();
         auto result = constant_fold(c, local_constant_map);
-        if (as_number(result.first)) constants_map.insert({name, result.first});
-        mech.constants.push_back(result.first);
+
+        auto constant  = std::get<resolved_constant>(*result.first);
+        if (as_number(constant.value)) {
+            constants_map.insert({constant.name, constant.value});
+        } else {
+            mech.constants.push_back(result.first);
+        }
         made_changes |= result.second;
     }
     for (const auto& c: e.parameters) {
-        local_constant_map.clear();
-        local_constant_map = constants_map;
+        reset_constants();
         auto result = constant_fold(c, local_constant_map);
-        mech.parameters.push_back(result.first);
+
+        auto param  = std::get<resolved_parameter>(*result.first);
+        if (!exported_params.count(param.name) && as_number(param.value)) {
+            constants_map.insert({param.name, param.value});
+        } else {
+            mech.parameters.push_back(result.first);
+        }
         made_changes |= result.second;
     }
     for (const auto& c: e.bindings) {
-        local_constant_map.clear();
-        local_constant_map = constants_map;
+        reset_constants();
         auto result = constant_fold(c, local_constant_map);
         mech.bindings.push_back(result.first);
         made_changes |= result.second;
     }
     for (const auto& c: e.states) {
-        local_constant_map.clear();
-        local_constant_map = constants_map;
+        reset_constants();
         auto result = constant_fold(c, local_constant_map);
         mech.states.push_back(result.first);
         made_changes |= result.second;
     }
     for (const auto& c: e.functions) {
-        local_constant_map.clear();
-        local_constant_map = constants_map;
+        reset_constants();
         auto result = constant_fold(c, local_constant_map);
         mech.functions.push_back(result.first);
         made_changes |= result.second;
     }
     for (const auto& c: e.initializations) {
-        local_constant_map.clear();
-        local_constant_map = constants_map;
+        reset_constants();
         auto result = constant_fold(c, local_constant_map);
         mech.initializations.push_back(result.first);
         made_changes |= result.second;
     }
     for (const auto& c: e.evolutions) {
-        local_constant_map.clear();
-        local_constant_map = constants_map;
+        reset_constants();
         auto result = constant_fold(c, local_constant_map);
         mech.evolutions.push_back(result.first);
         made_changes |= result.second;
     }
     for (const auto& c: e.effects) {
-        local_constant_map.clear();
-        local_constant_map = constants_map;
+        reset_constants();
         auto result = constant_fold(c, local_constant_map);
         mech.effects.push_back(result.first);
-        made_changes |= result.second;
-    }
-    for (const auto& c: e.exports) {
-        local_constant_map.clear();
-        local_constant_map = constants_map;
-        auto result = constant_fold(c, local_constant_map);
-        mech.exports.push_back(result.first);
         made_changes |= result.second;
     }
     mech.name = e.name;
@@ -277,6 +292,68 @@ std::pair<r_expr, bool> constant_fold(const resolved_binary& e, std::unordered_m
             return {make_rexpr<resolved_int>(val, e.type, e.loc), true};
         }
         return {make_rexpr<resolved_float>(val, e.type, e.loc), true};
+    }
+    else if (lhs_opt) {
+        auto lhs = lhs_opt.value();
+        if (lhs == 0) {
+            switch (e.op) {
+                case binary_op::add:  return {rhs_arg.first, true};
+                case binary_op::mul:  return {make_rexpr<resolved_int>(0, e.type, e.loc), true};
+                case binary_op::div:  return {make_rexpr<resolved_int>(0, e.type, e.loc), true};
+                case binary_op::land: return {make_rexpr<resolved_int>(0, e.type, e.loc), true};
+                case binary_op::lor:  return {rhs_arg.first, true};
+                default: break;
+            }
+        }
+        else if (lhs == 1) {
+            switch (e.op) {
+                case binary_op::mul:  return {rhs_arg.first, true};
+                case binary_op::land: return {rhs_arg.first, true};
+                case binary_op::lor:  return {make_rexpr<resolved_int>(1, e.type, e.loc), true};
+                default: break;
+            }
+        }
+    }
+    else if (rhs_opt) {
+        auto rhs = rhs_opt.value();
+        if (rhs == 0) {
+            switch (e.op) {
+                case binary_op::add: return {lhs_arg.first, true};
+                case binary_op::sub: return {lhs_arg.first, true};
+                case binary_op::mul: return {make_rexpr<resolved_int>(0, e.type, e.loc), true};
+                case binary_op::div: throw std::runtime_error(fmt::format("Divide by zero detected at {}.",
+                                                                          to_string(location_of(e.lhs))));
+                case binary_op::land: return {make_rexpr<resolved_int>(0, e.type, e.loc), true};
+                case binary_op::lor:  return {lhs_arg.first, true};
+                default: break;
+            }
+        }
+        else if (rhs == 1) {
+            switch (e.op) {
+                case binary_op::mul:  return {lhs_arg.first, true};
+                case binary_op::div:  return {lhs_arg.first, true};
+                case binary_op::land: return {lhs_arg.first, true};
+                case binary_op::lor:  return {make_rexpr<resolved_int>(1, e.type, e.loc), true};
+                default: break;
+            }
+        }
+    }
+    else {
+        if (*lhs_arg.first == *rhs_arg.first) {
+            switch (e.op) {
+                case binary_op::sub: return {make_rexpr<resolved_int>(0, e.type, e.loc), true};
+                case binary_op::div: return {make_rexpr<resolved_int>(1, e.type, e.loc), true};
+                case binary_op::lt:  return {make_rexpr<resolved_int>(0, e.type, e.loc), true};
+                case binary_op::le:  return {make_rexpr<resolved_int>(1, e.type, e.loc), true};
+                case binary_op::gt:  return {make_rexpr<resolved_int>(0, e.type, e.loc), true};
+                case binary_op::ge:  return {make_rexpr<resolved_int>(1, e.type, e.loc), true};
+                case binary_op::eq:  return {make_rexpr<resolved_int>(1, e.type, e.loc), true};
+                case binary_op::ne:  return {make_rexpr<resolved_int>(0, e.type, e.loc), true};
+                case binary_op::min: return {lhs_arg.first, true};
+                case binary_op::max: return {lhs_arg.first, true};
+                default: break;
+            }
+        }
     }
     if (e.op == binary_op::dot) {
         std::string field;

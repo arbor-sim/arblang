@@ -510,7 +510,7 @@ TEST(cse, let) {
                                                             {make_rexpr<resolved_argument>("a", current_type, loc)},
                                                             real_body, real_type, loc)});
 
-        std::string p_expr = "let b = let x = a+5 [mV] /2; x*s; let c = foo(b)*foo(a*s); c/(foo(b) * 1 [A]);";
+        std::string p_expr = "let b = let x = a+5 [mV] /2; x*s; let c = foo(b)*foo(a*s); c/(foo(b)*1 [A]);";
         auto p = parser(p_expr);
         auto let = p.parse_let();
 
@@ -532,7 +532,7 @@ TEST(cse, let) {
         // let t5_:real = foo(t4_);       // foo(a*s)
         // let t6_:real = t3_*t5_;        // c
         // let t8_:current = t3_*1[A];    // foo(b)*1[A]
-        // let t9_:a/current = t6_/t8_;   // c/
+        // let t9_:a/current = t6_/t8_;   // c/foo(b)*1[A]
         // t9_
 
     }
@@ -690,7 +690,7 @@ TEST(optimizer, mechanism) {
             "    bind flux = molar_flux(\"ca\");\n"
             "    bind cai = internal_concentration(\"ca\");\n"
             "    \n"
-            "    effect molar_flow_rate(\"ca\") = -(gamma*flux - depth*(cai - minCai)/decay);\n"
+            "    effect molar_flux(\"ca\") = -(gamma*flux - depth*(cai - minCai)/decay);\n"
             "}";
 
         auto p = parser(mech);

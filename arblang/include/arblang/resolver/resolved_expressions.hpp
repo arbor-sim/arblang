@@ -312,12 +312,12 @@ bool operator==(const resolved_unary& lhs, const resolved_unary& rhs);
 bool operator==(const resolved_binary& lhs, const resolved_binary& rhs);
 
 struct in_scope_map {
-    std::unordered_map<std::string, resolved_parameter> param_map;
-    std::unordered_map<std::string, resolved_constant> const_map;
-    std::unordered_map<std::string, resolved_state> state_map;
-    std::unordered_map<std::string, resolved_bind> bind_map;
-    std::unordered_map<std::string, resolved_function> func_map;
+    std::unordered_map<std::string, resolved_argument> param_map;
+    std::unordered_map<std::string, resolved_argument> const_map;
+    std::unordered_map<std::string, resolved_argument> state_map;
+    std::unordered_map<std::string, resolved_argument> bind_map;
     std::unordered_map<std::string, resolved_argument> local_map;
+    std::unordered_map<std::string, resolved_function> func_map;
     std::unordered_map<std::string, r_type> type_map;
 };
 resolved_mechanism resolve(const parsed_ir::parsed_mechanism&);
