@@ -137,7 +137,7 @@ r_expr canonicalize(const resolved_call& e, std::unordered_set<std::string>& res
         }
     }
     auto call_canon = make_rexpr<resolved_call>(e.f_identifier, args_canon, e.type, e.loc);
-    auto temp_expr = make_rexpr<resolved_argument>(unique_local_name(reserved), e.type, e.loc);
+    auto temp_expr = make_rexpr<resolved_variable>(unique_local_name(reserved), call_canon, e.type, e.loc);
     auto let_wrapper = make_rexpr<resolved_let>(temp_expr, call_canon, temp_expr, e.type, e.loc);
 
     if (!has_let) return let_wrapper;

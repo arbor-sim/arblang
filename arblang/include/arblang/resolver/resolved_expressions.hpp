@@ -17,13 +17,15 @@ namespace resolved_ir {
 
 using namespace resolved_type_ir;
 
+struct resolved_argument;
+struct resolved_variable;
+struct resolved_field_access;
 struct resolved_mechanism;
 struct resolved_parameter;
 struct resolved_constant;
 struct resolved_state;
 struct resolved_record_alias;
 struct resolved_function;
-struct resolved_argument;
 struct resolved_bind;
 struct resolved_initial;
 struct resolved_evolve;
@@ -39,12 +41,14 @@ struct resolved_unary;
 struct resolved_binary;
 
 using resolved_expr = std::variant<
+    resolved_argument,
+    resolved_variable,
+    resolved_field_access,
     resolved_parameter,
     resolved_constant,
     resolved_state,
-    resolved_record_alias,  // after resolution, shouldn't show up
+    resolved_record_alias,
     resolved_function,
-    resolved_argument,
     resolved_bind,
     resolved_initial,
     resolved_evolve,
@@ -76,6 +80,46 @@ struct resolved_mechanism {
     std::vector<r_expr> evolutions;     // expect resolved_evolve
     std::vector<r_expr> exports;        // expect resolved_export
     src_location loc;
+};
+
+// Used for function arguments and to refer to parameters, constants, states and bindings.
+// For function arguments, it is a placeholder until inlining at which point, it should
+// become a resolved_variable.
+// For parameters, constants, states and bindings, it is a placeholder until inlining at
+// which point, it should become a resolved_variable.
+// For constants, it is also a placeholder until constant propagation at which point, it
+// should be replaced by a resolved_float or resolved_int.
+struct resolved_argument {
+    std::string name; // argument name
+    r_type type;
+    src_location loc;
+
+    resolved_argument(std::string iden, r_type type, const src_location& loc):
+            name(std::move(iden)), type(std::move(type)), loc(loc) {};
+};
+
+// references to let bound variables.
+struct resolved_variable {
+    std::string name; // variable name
+    r_expr value;     // pointer to the expression value
+    r_type type;
+    src_location loc;
+
+    resolved_variable(std::string iden, r_expr value, r_type type, const src_location& loc):
+            name(std::move(iden)), value(std::move(value)), type(std::move(type)), loc(loc) {};
+};
+
+// Used for object field access using the dot operator.
+// It will either have been replaced by a resolved_variable after inlining
+// or it will remain, if the object has is a state.
+struct resolved_field_access {
+    r_expr object;   // pointer to the expression representing the object
+    std::string field;  // name of the field in the tuple representing the object
+    r_type type;
+    src_location loc;
+
+    resolved_field_access(r_expr object, std::string field, r_type type, const src_location& loc):
+            object(std::move(object)), field(std::move(field)), type(std::move(type)), loc(loc) {};
 };
 
 // Top level parameters
@@ -110,7 +154,6 @@ struct resolved_state {
         name(std::move(iden)), type(std::move(type)), loc(loc) {};
 };
 
-
 // Top level bindables
 struct resolved_bind {
     std::string name;
@@ -143,16 +186,6 @@ struct resolved_function {
 
     resolved_function(std::string name, std::vector<r_expr> args, r_expr body, r_type type, const src_location& loc):
         name(std::move(name)), args(std::move(args)), body(std::move(body)), type(std::move(type)), loc(loc) {};
-};
-
-// Function arguments, record fields, let-bound variables
-struct resolved_argument {
-    std::string name;
-    r_type type;
-    src_location loc;
-
-    resolved_argument(std::string iden, r_type type, const src_location& loc):
-            name(std::move(iden)), type(std::move(type)), loc(loc) {};
 };
 
 // Top level initialization
@@ -212,14 +245,13 @@ struct resolved_call {
 
 // Object creation
 struct resolved_object {
-    std::optional<r_expr> r_identifier;
     std::vector<r_expr> record_fields;
     std::vector<r_expr> record_values;
     r_type type;
     src_location loc;
 
-    resolved_object(std::optional<r_expr> iden, std::vector<r_expr> record_fields, std::vector<r_expr> records_vals, r_type type, const src_location& loc):
-        r_identifier(std::move(iden)), record_fields(std::move(record_fields)), record_values(std::move(records_vals)), type(std::move(type)), loc(loc) {};
+    resolved_object(std::vector<r_expr> record_fields, std::vector<r_expr> records_vals, r_type type, const src_location& loc):
+        record_fields(std::move(record_fields)), record_values(std::move(records_vals)), type(std::move(type)), loc(loc) {};
 };
 
 // Let bindings
@@ -291,12 +323,14 @@ struct resolved_binary {
         op(op), lhs(std::move(lhs)), rhs(std::move(rhs)), type(std::move(type)), loc(loc) {}
 };
 
+bool operator==(const resolved_argument& lhs, const resolved_argument& rhs);
+bool operator==(const resolved_variable& lhs, const resolved_variable& rhs);
+bool operator==(const resolved_field_access& lhs, const resolved_field_access& rhs);
 bool operator==(const resolved_parameter& lhs, const resolved_parameter& rhs);
 bool operator==(const resolved_constant& lhs, const resolved_constant& rhs);
 bool operator==(const resolved_state& lhs, const resolved_state& rhs);
 bool operator==(const resolved_record_alias& lhs, const resolved_record_alias& rhs);
 bool operator==(const resolved_function& lhs, const resolved_function& rhs);
-bool operator==(const resolved_argument& lhs, const resolved_argument& rhs);
 bool operator==(const resolved_bind& lhs, const resolved_bind& rhs);
 bool operator==(const resolved_initial& lhs, const resolved_initial& rhs);
 bool operator==(const resolved_evolve& lhs, const resolved_evolve& rhs);
@@ -312,12 +346,12 @@ bool operator==(const resolved_unary& lhs, const resolved_unary& rhs);
 bool operator==(const resolved_binary& lhs, const resolved_binary& rhs);
 
 struct in_scope_map {
-    std::unordered_map<std::string, resolved_argument> param_map;
-    std::unordered_map<std::string, resolved_argument> const_map;
-    std::unordered_map<std::string, resolved_argument> state_map;
-    std::unordered_map<std::string, resolved_argument> bind_map;
-    std::unordered_map<std::string, resolved_argument> local_map;
-    std::unordered_map<std::string, resolved_function> func_map;
+    std::unordered_map<std::string, r_expr> param_map;
+    std::unordered_map<std::string, r_expr> const_map;
+    std::unordered_map<std::string, r_expr> state_map;
+    std::unordered_map<std::string, r_expr> bind_map;
+    std::unordered_map<std::string, r_expr> local_map;
+    std::unordered_map<std::string, r_expr> func_map;
     std::unordered_map<std::string, r_type> type_map;
 };
 resolved_mechanism resolve(const parsed_ir::parsed_mechanism&);

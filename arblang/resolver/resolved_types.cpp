@@ -213,9 +213,14 @@ bool operator==(const resolved_quantity& lhs, const resolved_quantity& rhs) {
     return (lhs.type == rhs.type);
 }
 bool operator==(const resolved_record& lhs, const resolved_record& rhs) {
-    if (lhs.fields.size() != rhs.fields.size()) return false;
-    for (unsigned i = 0; i < lhs.fields.size(); ++i) {
-        if (*(lhs.fields[i].second) != *(rhs.fields[i].second)) return false;
+    auto lhs_fields = lhs.fields;
+    auto rhs_fields = rhs.fields;
+    std::sort(lhs_fields.begin(), lhs_fields.end(), [](const auto& a, const auto&b) {return a.first < b.first;});
+    std::sort(rhs_fields.begin(), rhs_fields.end(), [](const auto& a, const auto&b) {return a.first < b.first;});
+
+    if (lhs_fields.size() != rhs_fields.size()) return false;
+    for (unsigned i = 0; i < lhs_fields.size(); ++i) {
+        if (*(lhs_fields[i].second) != *(rhs_fields[i].second)) return false;
     }
     return true;
 }

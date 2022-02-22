@@ -22,19 +22,19 @@ using namespace resolved_type_ir;
 void check_duplicate(const std::string& name, const src_location& loc, const in_scope_map& map) {
     if (map.param_map.count(name)) {
         throw std::runtime_error(fmt::format("duplicate definition, found at {} and {}",
-                                             to_string(map.param_map.at(name).loc), to_string(loc)));
+                                             to_string(location_of(map.param_map.at(name))), to_string(loc)));
     }
     if (map.const_map.count(name)) {
         throw std::runtime_error(fmt::format("duplicate constant name, also found at {}",
-                                             to_string(map.const_map.at(name).loc), to_string(loc)));
+                                             to_string(location_of(map.const_map.at(name))), to_string(loc)));
     }
     if (map.bind_map.count(name)) {
         throw std::runtime_error(fmt::format("duplicate binding name, also found at {}",
-                                             to_string(map.bind_map.at(name).loc), to_string(loc)));
+                                             to_string(location_of(map.bind_map.at(name))), to_string(loc)));
     }
     if (map.state_map.count(name)) {
         throw std::runtime_error(fmt::format("duplicate state name, also found at {}",
-                                             to_string(map.state_map.at(name).loc), to_string(loc)));
+                                             to_string(location_of(map.state_map.at(name))), to_string(loc)));
     }
 }
 
@@ -118,7 +118,7 @@ r_expr resolve(const parsed_bind& e, const in_scope_map& map) {
 r_expr resolve(const parsed_record_alias& e, const in_scope_map& map) {
     if (map.func_map.count(e.name)) {
         throw std::runtime_error(fmt::format("duplicate record alias name, also found at {}",
-                                             to_string(map.param_map.at(e.name).loc)));
+                                             to_string(location_of(map.param_map.at(e.name)))));
     }
     auto a_type = resolve_type(e.type, map.type_map);
     return make_rexpr<resolved_record_alias>(e.name, a_type, e.loc);
@@ -128,7 +128,7 @@ r_expr resolve(const parsed_function& e, const in_scope_map& map) {
     auto f_name = e.name;
     if (map.func_map.count(f_name)) {
         throw std::runtime_error(fmt::format("duplicate function name, also found at {}",
-                                             to_string(map.param_map.at(f_name).loc)));
+                                             to_string(location_of(map.param_map.at(f_name)))));
     }
     auto available_map = map;
     std::vector<r_expr> f_args;
@@ -139,8 +139,8 @@ r_expr resolve(const parsed_function& e, const in_scope_map& map) {
                                                  a_id.name, to_string(a_id.loc)));
         }
         auto a_type = resolve_type(a_id.type.value(), map.type_map);
-        auto f_a = resolved_argument(a_id.name, a_type, a_id.loc);
-        f_args.push_back(make_rexpr<resolved_argument>(f_a));
+        auto f_a = make_rexpr<resolved_argument>(a_id.name, a_type, a_id.loc);
+        f_args.push_back(f_a);
         available_map.local_map.insert_or_assign(a_id.name, f_a);
     }
     auto f_body = resolve(e.body, available_map);
@@ -163,8 +163,9 @@ r_expr resolve(const parsed_initial& e, const in_scope_map& map) {
     if (!map.state_map.count(i_name)) {
         throw std::runtime_error(fmt::format("variable {} initialized at {} is not a state variable.", i_name, to_string(e.loc)));
     }
-    auto s = map.state_map.at(i_name);
-    auto i_expr = make_rexpr<resolved_argument>(s.name, s.type, s.loc);
+
+    auto state = std::get<resolved_state>(*map.state_map.at(i_name));
+    auto i_expr = make_rexpr<resolved_argument>(state.name, state.type, state.loc);
     auto i_val = resolve(e.value, map);
     auto i_type = type_of(i_val);
 
@@ -188,10 +189,10 @@ r_expr resolve(const parsed_evolve& e, const in_scope_map& map) {
     if (!map.state_map.count(e_name)) {
         throw std::runtime_error(fmt::format("variable {} evolved at {} is not a state variable.", e_name, to_string(e.loc)));
     }
-    auto s_expr = map.state_map.at(e_name);
-    auto s_val = make_rexpr<resolved_argument>(s_expr.name, s_expr.type, s_expr.loc);
+    auto state = std::get<resolved_state>(*map.state_map.at(e_name));
+    auto s_val = make_rexpr<resolved_argument>(state.name, state.type, state.loc);
 
-    auto s_type = derive(s_expr.type).value();
+    auto s_type = derive(state.type).value();
     auto e_val = resolve(e.value, map);
     auto e_type = type_of(e_val);
 
@@ -232,8 +233,8 @@ r_expr resolve(const parsed_export& e, const in_scope_map& map) {
     if (!map.param_map.count(p_name)) {
         throw std::runtime_error(fmt::format("variable {} exported at {} is not a parameter.", p_name, to_string(e.loc)));
     }
-    auto p_expr = map.param_map.at(p_name);
-    return make_rexpr<resolved_export>(make_rexpr<resolved_argument>(p_expr.name, p_expr.type, p_expr.loc), p_expr.type, e.loc);
+    auto param  = std::get<resolved_parameter>(*map.param_map.at(p_name));
+    return make_rexpr<resolved_export>(make_rexpr<resolved_argument>(param.name, param.type, param.loc), param.type, e.loc);
 }
 
 r_expr resolve(const parsed_call& e, const in_scope_map& map) {
@@ -242,16 +243,17 @@ r_expr resolve(const parsed_call& e, const in_scope_map& map) {
         throw std::runtime_error(fmt::format("function {} called at {} is not defined.", f_name, to_string(e.loc)));
     }
     auto f_expr = map.func_map.at(f_name);
+    auto func = std::get<resolved_function>(*f_expr);
 
     std::vector<r_expr> c_args;
     for (const auto& a: e.call_args) {
         c_args.push_back(resolve(a, map));
     }
-    if (f_expr.args.size() != c_args.size()) {
+    if (func.args.size() != c_args.size()) {
         throw std::runtime_error(fmt::format("argument count mismatch when calling function {} at {}.", f_name, to_string(e.loc)));
     }
-    for (unsigned i=0; i < f_expr.args.size(); ++i) {
-        auto f_arg_type = type_of(f_expr.args[i]);
+    for (unsigned i=0; i < func.args.size(); ++i) {
+        auto f_arg_type = type_of(func.args[i]);
         auto c_arg_type = type_of(c_args[i]);
         if (*f_arg_type != *c_arg_type) {
             throw std::runtime_error(fmt::format("type mismatch between {} and {} of argument {} of function call {} at {}.",
@@ -259,7 +261,7 @@ r_expr resolve(const parsed_call& e, const in_scope_map& map) {
         }
     }
 
-    return make_rexpr<resolved_call>(f_name, c_args, f_expr.type, e.loc);
+    return make_rexpr<resolved_call>(f_name, c_args, func.type, e.loc);
 }
 
 r_expr resolve(const parsed_object& e, const in_scope_map& map) {
@@ -275,26 +277,25 @@ r_expr resolve(const parsed_object& e, const in_scope_map& map) {
     std::vector<std::pair<std::string, r_type>> t_vec;
     for (unsigned i = 0; i < e.record_fields.size(); ++i) {
         auto f_id = std::get<parsed_identifier>(*e.record_fields[i]);
-        o_fields.push_back(make_rexpr<resolved_argument>(f_id.name, o_types[i], f_id.loc));
+        o_fields.push_back(make_rexpr<resolved_variable>(f_id.name, o_values[i], o_types[i], f_id.loc));
         t_vec.emplace_back(f_id.name, o_types[i]);
     }
     auto o_type = make_rtype<resolved_record>(t_vec, e.loc);
 
-    if (!e.record_name) {
-        return make_rexpr<resolved_object>(std::nullopt, o_fields, o_values, o_type, e.loc);
+    if (e.record_name) {
+        auto r_name = e.record_name.value();
+        if (!map.type_map.count(r_name)) {
+            throw std::runtime_error(
+                    fmt::format("record {} referenced at {} is not defined.", r_name, to_string(e.loc)));
+        }
+        auto r_type = map.type_map.at(r_name);
+        if (*r_type != *o_type) {
+            throw std::runtime_error(fmt::format("type mismatch between {} and {} while constructing object {} at {}.",
+                                                 to_string(r_type), to_string(o_type), r_name, to_string(e.loc)));
+        }
     }
 
-    auto r_name = e.record_name.value();
-    if (!map.type_map.count(r_name)) {
-        throw std::runtime_error(fmt::format("record {} referenced at {} is not defined.", r_name, to_string(e.loc)));
-    }
-    auto r_type = map.type_map.at(r_name);
-    if (*r_type != *o_type) {
-        throw std::runtime_error(fmt::format("type mismatch between {} and {} while constructing object {} at {}.",
-                                             to_string(r_type), to_string(o_type), r_name, to_string(e.loc)));
-    }
-
-    return make_rexpr<resolved_object>(std::nullopt, o_fields, o_values, o_type, e.loc);
+    return make_rexpr<resolved_object>(o_fields, o_values, o_type, e.loc);
 }
 
 r_expr resolve(const parsed_let& e, const in_scope_map& map) {
@@ -302,23 +303,23 @@ r_expr resolve(const parsed_let& e, const in_scope_map& map) {
     auto id = std::get<parsed_identifier>(*e.identifier);
     check_duplicate(id.name, id.loc, map);
 
-    auto i_type = type_of(v_expr);
+    auto v_type = type_of(v_expr);
     if (id.type) {
         auto id_type = resolve_type(id.type.value(), map.type_map);
-        if (*id_type != *i_type) {
+        if (*id_type != *v_type) {
             throw std::runtime_error(fmt::format("type mismatch between {} and {} at {}.",
-                                                 to_string(id_type), to_string(i_type), to_string(id.loc)));
+                                                 to_string(id_type), to_string(v_type), to_string(id.loc)));
         }
     }
-    auto i_expr = resolved_argument(id.name, i_type, id.loc);
+    auto v_var = make_rexpr<resolved_variable>(id.name, v_expr, v_type, id.loc);
 
     auto available_map = map;
-    available_map.local_map.insert_or_assign(id.name, i_expr);
+    available_map.local_map.insert_or_assign(id.name, v_var);
 
     auto b_expr = resolve(e.body, available_map);
     auto b_type = type_of(b_expr);
 
-    return make_rexpr<resolved_let>(make_rexpr<resolved_argument>(i_expr), v_expr, b_expr, b_type, e.loc);
+    return make_rexpr<resolved_let>(v_var, v_expr, b_expr, b_type, e.loc);
 }
 
 r_expr resolve(const parsed_with& e, const in_scope_map& map) {
@@ -340,7 +341,7 @@ r_expr resolve(const parsed_with& e, const in_scope_map& map) {
     }
 
     let_vars.back().body = e.body;
-    for (int i = let_vars.size()-2; i >=0; i--) {
+    for (int i = (int)let_vars.size()-2; i >=0; i--) {
         let_vars[i].body = make_pexpr<parsed_let>(let_vars[i+1]);
     }
     auto equivalent_let = make_pexpr<parsed_let>(let_vars.front());
@@ -426,31 +427,21 @@ r_expr resolve(const parsed_binary& e, const in_scope_map& map) {
 
     if (e.op == binary_op::dot) {
         auto make_or_throw = [&](const resolved_record& r) {
-            // Add fields to the local map
-            auto available_map = map;
-            for (auto [f_id, f_type]: r.fields) {
-                available_map.local_map.insert_or_assign(f_id, resolved_argument(f_id, f_type, r.loc));
-            }
-            auto rhs_v = resolve(e.rhs, available_map);
-
-            // Resolved rhs is expected to be one of the just added fields
-            // But we need to check
-
-            // Check that it is a resolved_argument
-            auto* r_rhs = std::get_if<resolved_argument>(rhs_v.get());
-            if (!r_rhs) {
+            // rhs needs to be an identifier, can't be anything else.
+            auto* rhs = std::get_if<parsed_identifier>(e.rhs.get());
+            if (!rhs) {
                 throw std::runtime_error(fmt::format("incompatible argument type to dot operator, at {}", to_string(e.loc)));
             }
-            auto rhs_id = r_rhs->name;
+            auto rhs_id = rhs->name;
 
-            // Check that it is an argument of the record
+            // Check that it is an argument of the record.
             for (auto [f_id, f_type]: r.fields) {
                 if (rhs_id == f_id) {
-                    return make_rexpr<resolved_binary>(e.op, lhs_v, rhs_v, f_type, e.loc);
+                    return make_rexpr<resolved_field_access>(lhs_v, rhs_id, f_type, e.loc);
                 }
             }
             throw std::runtime_error(fmt::format("argument {} doesn't match any of the record fields, at {}",
-                                                 to_string(rhs_v), to_string(lhs_loc)));
+                                                 rhs_id, to_string(lhs_loc)));
         };
 
         if (auto* lhs_rec = std::get_if<resolved_record>(lhs_t.get())) {
@@ -541,7 +532,7 @@ r_expr resolve(const parsed_binary& e, const in_scope_map& map) {
         case binary_op::ge:
         case binary_op::eq:
         case binary_op::ne: {
-            // Only applicable if neither lhs or rhs is a boolean type
+            // Only applicable if neither lhs nor rhs is a boolean type
             if (lhs_q && rhs_q) {
                 if (lhs_q->type != rhs_q->type) {
                     throw std::runtime_error(fmt::format("incompatible arguments types to op {}, at {}",
@@ -563,20 +554,19 @@ r_expr resolve(const parsed_identifier& e, const in_scope_map& map) {
     // parsed_identifiers are always resolved to resolved_argument
     // with the correct type and location
     if (map.local_map.count(e.name)) {
-        return make_rexpr<resolved_argument>(map.local_map.at(e.name));
+        return map.local_map.at(e.name);
     }
     if (map.param_map.count(e.name)) {
-        return make_rexpr<resolved_argument>( map.param_map.at(e.name));
+        return map.param_map.at(e.name);
     }
     if (map.const_map.count(e.name)) {
-        return make_rexpr<resolved_argument>(map.const_map.at(e.name));
+        return map.const_map.at(e.name);
     }
     if (map.bind_map.count(e.name)) {
-        return make_rexpr<resolved_argument>(map.bind_map.at(e.name));
+        return map.bind_map.at(e.name);
     }
     if (map.state_map.count(e.name)) {
-        auto s = map.state_map.at(e.name);
-        return make_rexpr<resolved_argument>(map.state_map.at(e.name));
+        return map.state_map.at(e.name);
     }
     throw std::runtime_error(fmt::format("undefined identifier {}, at {}",
                                          e.name, to_string(e.loc)));
@@ -624,9 +614,9 @@ resolved_mechanism resolve(const parsed_mechanism& e) {
             throw std::runtime_error(fmt::format("internal compiler error, expected constant expression at {}",
                                                  to_string(location_of(val))));
         }
-        auto const_arg = resolved_argument(const_val->name, const_val->type, const_val->loc);
-        if (!available_map.const_map.insert({const_arg.name, const_arg}).second) {
-            auto found_loc = available_map.const_map.at(const_arg.name).loc;
+        auto const_arg = make_rexpr<resolved_argument>(const_val->name, const_val->type, const_val->loc);
+        if (!available_map.const_map.insert({const_val->name, const_arg}).second) {
+            auto found_loc = location_of(available_map.const_map.at(const_val->name));
             throw std::runtime_error(fmt::format("Constant `{}` found at {} already defined at {}",
                                                  const_val->name, to_string(location_of(val)), to_string(found_loc)));
         }
@@ -639,9 +629,9 @@ resolved_mechanism resolve(const parsed_mechanism& e) {
             throw std::runtime_error(fmt::format("internal compiler error, expected parameter expression at {}",
                                                  to_string(location_of(val))));
         }
-        auto param_arg = resolved_argument(param_val->name, param_val->type, param_val->loc);
-        if (!available_map.param_map.insert({param_arg.name, param_arg}).second) {
-            auto found_loc = available_map.param_map.at(param_arg.name).loc;
+        auto param_arg = make_rexpr<resolved_argument>(param_val->name, param_val->type, param_val->loc);
+        if (!available_map.param_map.insert({param_val->name, param_arg}).second) {
+            auto found_loc = location_of(available_map.param_map.at(param_val->name));
             throw std::runtime_error(fmt::format("Parameter `{}` found at {} already defined at {}",
                                                  param_val->name, to_string(location_of(val)), to_string(found_loc)));
         }
@@ -654,9 +644,9 @@ resolved_mechanism resolve(const parsed_mechanism& e) {
             throw std::runtime_error(fmt::format("internal compiler error, expected bind expression at {}",
                                                  to_string(location_of(val))));
         }
-        auto bind_arg = resolved_argument(bind_val->name, bind_val->type, bind_val->loc);
-        if (!available_map.bind_map.insert({bind_arg.name, bind_arg}).second) {
-            auto found_loc = available_map.bind_map.at(bind_arg.name).loc;
+        auto bind_arg = make_rexpr<resolved_argument>(bind_val->name, bind_val->type, bind_val->loc);
+        if (!available_map.bind_map.insert({bind_val->name, bind_arg}).second) {
+            auto found_loc = location_of(available_map.bind_map.at(bind_val->name));
             throw std::runtime_error(fmt::format("Binding `{}` found at {} already defined at {}",
                                                  bind_val->name, to_string(location_of(val)), to_string(found_loc)));
         }
@@ -669,9 +659,9 @@ resolved_mechanism resolve(const parsed_mechanism& e) {
             throw std::runtime_error(fmt::format("internal compiler error, expected state expression at {}",
                                                  to_string(location_of(val))));
         }
-        auto state_arg = resolved_argument(state_val->name, state_val->type, state_val->loc);
-        if (!available_map.state_map.insert({state_arg.name, state_arg}).second) {
-            auto found_loc = available_map.state_map.at(state_arg.name).loc;
+        auto state_arg = make_rexpr<resolved_argument>(state_val->name, state_val->type, state_val->loc);
+        if (!available_map.state_map.insert({state_val->name, state_arg}).second) {
+            auto found_loc = location_of(available_map.state_map.at(state_val->name));
             throw std::runtime_error(fmt::format("State `{}` found at {} already defined at {}",
                                                  state_val->name, to_string(location_of(val)), to_string(found_loc)));
         }
@@ -684,8 +674,8 @@ resolved_mechanism resolve(const parsed_mechanism& e) {
             throw std::runtime_error(fmt::format("internal compiler error, expected function expression at {}",
                                                  to_string(location_of(val))));
         }
-        if (!available_map.func_map.insert({func_val->name, *func_val}).second) {
-            auto found_loc = available_map.func_map.at(func_val->name).loc;
+        if (!available_map.func_map.insert({func_val->name, val}).second) {
+            auto found_loc = location_of(available_map.func_map.at(func_val->name));
             throw std::runtime_error(fmt::format("Function `{}` found at {} already defined at {}",
                                                  func_val->name, to_string(location_of(val)), to_string(found_loc)));
         }
@@ -893,17 +883,17 @@ std::string to_string(const resolved_call& e, bool include_type, int indent) {
 
 // resolved_object
 std::string to_string(const resolved_object& e, bool include_type, int indent) {
-    assert(e.record_fields.size() == e.record_values.size());
-
     auto single_indent = std::string(indent*2, ' ');
     auto double_indent = single_indent + "  ";
+    auto triple_indent = double_indent + "  ";
 
     std::string str = single_indent + "(resolved_object";
-    if (e.r_identifier) str += "\n" + double_indent + std::get<resolved_record_alias>(*e.r_identifier.value()).name;
     for (unsigned i = 0; i < e.record_fields.size(); ++i) {
+        auto val = std::get<resolved_variable>(*e.record_fields[i]);
+
         str += "\n" + double_indent + "(\n";
-        str += to_string(e.record_fields[i], false, indent+2) + "\n";
-        str += to_string(e.record_values[i], false, indent+2) + "\n";
+        str += triple_indent + val.name + "\n";
+        str += to_string(val.value, false, indent+2) + "\n";
         str += double_indent + ")";
     }
     if (include_type) str += "\n" + to_string(e.type, indent+1);
@@ -997,11 +987,42 @@ std::string to_string(const resolved_argument& e, bool include_type, int indent)
     return str + ")";
 }
 
+std::string to_string(const resolved_variable& e, bool include_type, int indent) {
+    auto single_indent = std::string(indent*2, ' ');
+    auto double_indent = single_indent + "  ";
+
+    std::string str = single_indent + "(resolved_variable \n";
+    str += double_indent + e.name;
+    if (include_type) str += "\n" + to_string(e.type, indent+1);
+    return str + ")";
+}
+
+std::string to_string(const resolved_field_access& e, bool include_type, int indent) {
+    auto single_indent = std::string(indent*2, ' ');
+    auto double_indent = single_indent + "  ";
+
+    std::string str = single_indent + "(resolved_field_access \n";
+    str += double_indent + e.field;
+    if (include_type) str += "\n" + to_string(e.type, indent+1);
+    return str + ")";
+}
+
 std::string to_string(const r_expr & e, bool include_type, int indent) {
     return std::visit([&](auto&& c){return to_string(c, include_type, indent);}, *e);
 }
 
 // equality comparison
+bool operator==(const resolved_argument& lhs, const resolved_argument& rhs) {
+    return (lhs.name == rhs.name) && (*lhs.type == *rhs.type);
+}
+
+bool operator==(const resolved_variable& lhs, const resolved_variable& rhs) {
+    return (lhs.name == rhs.name) && (*lhs.value == *rhs.value) && (*lhs.type == *rhs.type);
+}
+
+bool operator==(const resolved_field_access& lhs, const resolved_field_access& rhs) {
+    return (lhs.field == rhs.field) & (*lhs.object == *rhs.object) && (*lhs.type == *rhs.type);
+}
 bool operator==(const resolved_parameter& lhs, const resolved_parameter& rhs) {
     return (lhs.name == rhs.name) && (*lhs.value == *rhs.value) && (*lhs.type == *rhs.type);
 }
@@ -1024,10 +1045,6 @@ bool operator==(const resolved_function& lhs, const resolved_function& rhs) {
         if (*lhs.args[i] != *rhs.args[i]) return false;
     }
     return (lhs.name == rhs.name) && (*lhs.body == *rhs.body) && (*lhs.type == *rhs.type);
-}
-
-bool operator==(const resolved_argument& lhs, const resolved_argument& rhs) {
-    return (lhs.name == rhs.name) && (*lhs.type == *rhs.type);
 }
 
 bool operator==(const resolved_bind& lhs, const resolved_bind& rhs) {
@@ -1059,20 +1076,20 @@ bool operator==(const resolved_call& lhs, const resolved_call& rhs) {
 }
 
 bool operator==(const resolved_object& lhs, const resolved_object& rhs) {
-    if (lhs.record_fields.size() != rhs.record_fields.size()) return false;
-    if (lhs.record_values.size() != rhs.record_values.size()) return false;
-    for (unsigned i = 0; i < lhs.record_fields.size(); ++i) {
-        if (*lhs.record_fields[i] != *rhs.record_fields[i]) return false;
+    auto lhs_fields = lhs.record_fields;
+    auto rhs_fields = rhs.record_fields;
+    std::sort(lhs_fields.begin(), lhs_fields.end());
+    std::sort(rhs_fields.begin(), rhs_fields.end());
+
+    if (lhs_fields.size() != rhs_fields.size()) return false;
+    for (unsigned i = 0; i < lhs_fields.size(); ++i) {
+        if (*lhs_fields[i] != *rhs_fields[i]) return false;
     }
-    for (unsigned i = 0; i < lhs.record_values.size(); ++i) {
-        if (*lhs.record_values[i] != *rhs.record_values[i]) return false;
-    }
-    return  (*lhs.r_identifier == *rhs.r_identifier) && (*lhs.type == *rhs.type);
+    return *lhs.type == *rhs.type;
 }
 
 bool operator==(const resolved_let& lhs, const resolved_let& rhs) {
-    return (*lhs.identifier == *rhs.identifier) && (*lhs.value == *rhs.value) &&
-           (*lhs.body == *rhs.body) && (*lhs.type == *rhs.type);
+    return (*lhs.value == *rhs.value) && (*lhs.body == *rhs.body) && (*lhs.type == *rhs.type);
 }
 
 bool operator==(const resolved_conditional& lhs, const resolved_conditional& rhs) {
@@ -1096,12 +1113,14 @@ bool operator==(const resolved_binary& lhs, const resolved_binary& rhs) {
     return (lhs.op == rhs.op) && (*lhs.lhs == *rhs.lhs) && (*lhs.rhs == *rhs.rhs) && (*lhs.type == *rhs.type);
 }
 
+bool operator!=(const resolved_argument& lhs, const resolved_argument& rhs) {return !(lhs == rhs);}
+bool operator!=(const resolved_variable& lhs, const resolved_variable& rhs) {return !(lhs == rhs);}
+bool operator!=(const resolved_field_access& lhs, const resolved_field_access& rhs) {return !(lhs == rhs);}
 bool operator!=(const resolved_parameter& lhs, const resolved_parameter& rhs) {return !(lhs == rhs);}
 bool operator!=(const resolved_constant& lhs, const resolved_constant& rhs) {return !(lhs == rhs);}
 bool operator!=(const resolved_state& lhs, const resolved_state& rhs) {return !(lhs == rhs);}
 bool operator!=(const resolved_record_alias& lhs, const resolved_record_alias& rhs) {return !(lhs == rhs);}
 bool operator!=(const resolved_function& lhs, const resolved_function& rhs) {return !(lhs == rhs);}
-bool operator!=(const resolved_argument& lhs, const resolved_argument& rhs) {return !(lhs == rhs);}
 bool operator!=(const resolved_bind& lhs, const resolved_bind& rhs) {return !(lhs == rhs);}
 bool operator!=(const resolved_initial& lhs, const resolved_initial& rhs) {return !(lhs == rhs);}
 bool operator!=(const resolved_evolve& lhs, const resolved_evolve& rhs) {return !(lhs == rhs);}
