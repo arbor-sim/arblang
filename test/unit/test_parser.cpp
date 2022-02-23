@@ -2254,13 +2254,6 @@ TEST(parser, mechanism) {
             "    export gbar; \n"
             "}";
         auto p = parser(mech);
-//        EXPECT_NO_THROW(p.parse_mechanism());
-        auto m = p.parse_mechanism();
-        auto m_normal = normalize(m);
-        auto m_resolved = resolved_ir::resolve(m_normal);
-
-        std::cout << to_string(m) << std::endl;
-        std::cout << to_string(m_normal) << std::endl;
-        std::cout << to_string(m_resolved) << std::endl;
+        EXPECT_NO_THROW(p.parse_mechanism());
     }
 }

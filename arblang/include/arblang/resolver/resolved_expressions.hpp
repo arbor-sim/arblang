@@ -345,18 +345,6 @@ bool operator==(const resolved_int& lhs, const resolved_int& rhs);
 bool operator==(const resolved_unary& lhs, const resolved_unary& rhs);
 bool operator==(const resolved_binary& lhs, const resolved_binary& rhs);
 
-struct in_scope_map {
-    std::unordered_map<std::string, r_expr> param_map;
-    std::unordered_map<std::string, r_expr> const_map;
-    std::unordered_map<std::string, r_expr> state_map;
-    std::unordered_map<std::string, r_expr> bind_map;
-    std::unordered_map<std::string, r_expr> local_map;
-    std::unordered_map<std::string, r_expr> func_map;
-    std::unordered_map<std::string, r_type> type_map;
-};
-resolved_mechanism resolve(const parsed_ir::parsed_mechanism&);
-r_expr resolve(const parsed_ir::p_expr &, const in_scope_map&);
-
 std::string to_string(const resolved_mechanism&, bool include_type=true, int indent=0);
 std::string to_string(const r_expr&, bool include_type=true, int indent=0);
 

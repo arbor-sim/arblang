@@ -46,6 +46,26 @@ struct hash<resolved_record> {
     }
 };
 
+template <>
+struct hash<resolved_argument> {
+    inline size_t operator()(const resolved_argument& e) const {
+        std::size_t res = 0;
+        hash_combine(res, e.name);
+        hash_combine(res, *e.type);
+        return res;
+    }
+};
+
+template <>
+struct hash<resolved_variable> {
+    inline size_t operator()(const resolved_variable& e) const {
+        std::size_t res = 0;
+        hash_combine(res, e.name);
+        hash_combine(res, e.value);
+        hash_combine(res, *e.type);
+        return res;
+    }
+};
 
 template<>
 struct hash<resolved_parameter> {
@@ -99,16 +119,6 @@ struct hash<resolved_function> {
             hash_combine(res, *a);
         }
         hash_combine(res, *e.body);
-        return res;
-    }
-};
-
-template <>
-struct hash<resolved_argument> {
-    inline size_t operator()(const resolved_argument& e) const {
-        std::size_t res = 0;
-        hash_combine(res, e.name);
-        hash_combine(res, *e.type);
         return res;
     }
 };
@@ -185,7 +195,6 @@ template <>
 struct hash<resolved_object> {
     inline size_t operator()(const resolved_object& e) const {
         std::size_t res = 0;
-        hash_combine(res, *e.r_identifier);
         hash_combine(res, *e.type);
         for (const auto& a: e.record_fields) {
             hash_combine(res, *a);
@@ -264,4 +273,14 @@ struct hash<resolved_binary> {
     }
 };
 
+template <>
+struct hash<resolved_field_access> {
+    inline size_t operator()(const resolved_field_access& e) const {
+        std::size_t res = 0;
+        hash_combine(res, e.field);
+        hash_combine(res, *e.object);
+        hash_combine(res, *e.type);
+        return res;
+    }
+};
 }

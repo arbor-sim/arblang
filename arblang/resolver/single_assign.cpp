@@ -79,6 +79,34 @@ resolved_mechanism single_assign(const resolved_mechanism& e) {
     return mech;
 }
 
+r_expr single_assign(const resolved_record_alias& e,
+                     std::unordered_set<std::string>& reserved,
+                     std::unordered_map<std::string, r_expr>& rewrites)
+{
+    throw std::runtime_error("Internal compiler error, didn't expect a resolved_record_alias at "
+                             "this stage in the compilation.");
+}
+
+r_expr single_assign(const resolved_argument& e,
+                     std::unordered_set<std::string>& reserved,
+                     std::unordered_map<std::string, r_expr>& rewrites)
+{
+    if (rewrites.count(e.name)) {
+        return rewrites[e.name];
+    }
+    return make_rexpr<resolved_argument>(e);
+}
+
+r_expr single_assign(const resolved_variable& e,
+                     std::unordered_set<std::string>& reserved,
+                     std::unordered_map<std::string, r_expr>& rewrites)
+{
+    if (rewrites.count(e.name)) {
+        return rewrites[e.name];
+    }
+    return make_rexpr<resolved_variable>(e);
+}
+
 r_expr single_assign(const resolved_parameter& e,
                      std::unordered_set<std::string>& reserved,
                      std::unordered_map<std::string, r_expr>& rewrites)
@@ -102,31 +130,12 @@ r_expr single_assign(const resolved_state& e,
     return make_rexpr<resolved_state>(e);
 }
 
-r_expr single_assign(const resolved_record_alias& e,
-                     std::unordered_set<std::string>& reserved,
-                     std::unordered_map<std::string, r_expr>& rewrites)
-{
-    // TODO check there are no duplicate record alias names
-    return make_rexpr<resolved_record_alias>(e);
-}
-
 r_expr single_assign(const resolved_function& e,
                      std::unordered_set<std::string>& reserved,
                      std::unordered_map<std::string, r_expr>& rewrites)
 {
-    // TODO check there are no duplicate function names?
     auto body_ssa = single_assign(e.body, reserved, rewrites);
     return make_rexpr<resolved_function>(e.name, e.args, body_ssa, e.type, e.loc);
-}
-
-r_expr single_assign(const resolved_argument& e,
-                     std::unordered_set<std::string>& reserved,
-                     std::unordered_map<std::string, r_expr>& rewrites)
-{
-    if (rewrites.count(e.name)) {
-        return rewrites[e.name];
-    }
-    return make_rexpr<resolved_argument>(e);
 }
 
 r_expr single_assign(const resolved_bind& e,
@@ -189,7 +198,7 @@ r_expr single_assign(const resolved_object& e,
     for (const auto& a: e.record_values) {
         args_ssa.push_back(single_assign(a, reserved, rewrites));
     }
-    return make_rexpr<resolved_object>(e.r_identifier, fields_ssa, args_ssa, e.type, e.loc);
+    return make_rexpr<resolved_object>(fields_ssa, args_ssa, e.type, e.loc);
 }
 
 r_expr single_assign(const resolved_let& e,
@@ -199,10 +208,10 @@ r_expr single_assign(const resolved_let& e,
     auto val_ssa = single_assign(e.value, reserved, rewrites);
     auto iden_ssa = e.identifier;
 
-    auto iden = std::get<resolved_argument>(*e.identifier);
+    auto iden = std::get<resolved_variable>(*e.identifier);
     if (!reserved.insert(iden.name).second) {
         auto rename = unique_local_name(reserved, "r");
-        iden_ssa = make_rexpr<resolved_argument>(rename, iden.type, iden.loc);
+        iden_ssa = make_rexpr<resolved_variable>(rename, iden.value, iden.type, iden.loc);
         rewrites[iden.name] = iden_ssa;
     }
 
@@ -249,8 +258,16 @@ r_expr single_assign(const resolved_binary& e,
                      std::unordered_map<std::string, r_expr>& rewrites)
 {
     auto lhs_ssa = single_assign(e.lhs, reserved, rewrites);
-    auto rhs_ssa = e.op == binary_op::dot? e.rhs: single_assign(e.rhs, reserved, rewrites);
+    auto rhs_ssa = single_assign(e.rhs, reserved, rewrites);
     return make_rexpr<resolved_binary>(e.op, lhs_ssa, rhs_ssa, e.type, e.loc);
+}
+
+r_expr single_assign(const resolved_field_access& e,
+                     std::unordered_set<std::string>& reserved,
+                     std::unordered_map<std::string, r_expr>& rewrites)
+{
+    auto obj_ssa = single_assign(e.object, reserved, rewrites);
+    return make_rexpr<resolved_field_access>(obj_ssa, e.field, e.type, e.loc);
 }
 
 r_expr single_assign(const r_expr& e,

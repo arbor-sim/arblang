@@ -11,11 +11,12 @@ set(arblang-sources
     parser/parsed_units.cpp
     parser/token.cpp
     parser/normalizer.cpp
+    resolver/resolve.cpp
     resolver/resolved_expressions.cpp
     resolver/resolved_types.cpp
-#    resolver/canonicalize.cpp
-#    resolver/single_assign.cpp
-#    util/rexp_helpers.cpp
+    resolver/canonicalize.cpp
+    resolver/single_assign.cpp
+    util/rexp_helpers.cpp
 )
 
 add_library(arblang ${arblang-sources})
