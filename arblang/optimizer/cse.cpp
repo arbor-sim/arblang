@@ -72,6 +72,19 @@ std::pair<resolved_mechanism, bool> cse(const resolved_mechanism& e) {
     return {mech, made_changes};
 }
 
+std::pair<r_expr, bool> cse(const resolved_record_alias& e, std::unordered_map<resolved_expr, r_expr>& expr_map) {
+    throw std::runtime_error("Internal compiler error, didn't expect a resolved_record_alias at "
+                             "this stage in the compilation.");
+}
+
+std::pair<r_expr, bool> cse(const resolved_argument& e, std::unordered_map<resolved_expr, r_expr>& expr_map) {
+    return {make_rexpr<resolved_argument>(e), false};
+}
+
+std::pair<r_expr, bool> cse(const resolved_variable& e, std::unordered_map<resolved_expr, r_expr>& expr_map) {
+    return {make_rexpr<resolved_variable>(e), false};
+}
+
 std::pair<r_expr, bool> cse(const resolved_parameter& e, std::unordered_map<resolved_expr, r_expr>& expr_map) {
     auto val_cse = cse(e.value, expr_map);
     return {make_rexpr<resolved_parameter>(e.name, val_cse.first, e.type, e.loc), val_cse.second};
@@ -86,17 +99,9 @@ std::pair<r_expr, bool> cse(const resolved_state& e, std::unordered_map<resolved
     return {make_rexpr<resolved_state>(e), false};
 }
 
-std::pair<r_expr, bool> cse(const resolved_record_alias& e, std::unordered_map<resolved_expr, r_expr>& expr_map) {
-    return {make_rexpr<resolved_record_alias>(e), false};
-}
-
 std::pair<r_expr, bool> cse(const resolved_function& e, std::unordered_map<resolved_expr, r_expr>& expr_map) {
     auto body_cse = cse(e.body, expr_map);
     return {make_rexpr<resolved_function>(e.name, e.args, body_cse.first, e.type, e.loc), body_cse.second};
-}
-
-std::pair<r_expr, bool> cse(const resolved_argument& e, std::unordered_map<resolved_expr, r_expr>& expr_map) {
-    return {make_rexpr<resolved_argument>(e), false};
 }
 
 std::pair<r_expr, bool> cse(const resolved_bind& e, std::unordered_map<resolved_expr, r_expr>& expr_map) {
@@ -160,9 +165,12 @@ std::pair<r_expr, bool> cse(const resolved_unary& e, std::unordered_map<resolved
     return {make_rexpr<resolved_unary>(e), false};
 }
 
-// TODO: Do we need to visit the args?
 std::pair<r_expr, bool> cse(const resolved_binary& e, std::unordered_map<resolved_expr, r_expr>& expr_map) {
     return {make_rexpr<resolved_binary>(e), false};
+}
+
+std::pair<r_expr, bool> cse(const resolved_field_access& e, std::unordered_map<resolved_expr, r_expr>& expr_map) {
+    return {make_rexpr<resolved_field_access>(e), false};
 }
 
 std::pair<r_expr, bool> cse(const r_expr& e, std::unordered_map<resolved_expr, r_expr>& expr_map){

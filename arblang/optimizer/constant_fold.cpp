@@ -110,6 +110,21 @@ std::pair<resolved_mechanism, bool> constant_fold(const resolved_mechanism& e) {
     return {mech, made_changes};
 }
 
+std::pair<r_expr, bool> constant_fold(const resolved_record_alias& e, std::unordered_map<std::string, r_expr>& constant_map) {
+    throw std::runtime_error("Internal compiler error, didn't expect a resolved_record_alias at "
+                             "this stage in the compilation.");
+}
+
+std::pair<r_expr, bool> constant_fold(const resolved_argument& e, std::unordered_map<std::string, r_expr>& constant_map) {
+    if (constant_map.count(e.name)) return {constant_map.at(e.name), true};
+    return {make_rexpr<resolved_argument>(e), false};
+}
+
+std::pair<r_expr, bool> constant_fold(const resolved_variable& e, std::unordered_map<std::string, r_expr>& constant_map) {
+    if (constant_map.count(e.name)) return {constant_map.at(e.name), true};
+    return {make_rexpr<resolved_variable>(e), false};
+}
+
 std::pair<r_expr, bool> constant_fold(const resolved_parameter& e, std::unordered_map<std::string, r_expr>& constant_map) {
     auto result = constant_fold(e.value, constant_map);
     return {make_rexpr<resolved_parameter>(e.name, result.first, e.type, e.loc), result.second};
@@ -124,18 +139,9 @@ std::pair<r_expr, bool> constant_fold(const resolved_state& e, std::unordered_ma
     return {make_rexpr<resolved_state>(e), false};
 }
 
-std::pair<r_expr, bool> constant_fold(const resolved_record_alias& e, std::unordered_map<std::string, r_expr>& constant_map) {
-    return {make_rexpr<resolved_record_alias>(e), false};
-}
-
 std::pair<r_expr, bool> constant_fold(const resolved_function& e, std::unordered_map<std::string, r_expr>& constant_map) {
     auto result = constant_fold(e.body, constant_map);
     return {make_rexpr<resolved_function>(e.name, e.args, result.first, e.type, e.loc), result.second};
-}
-
-std::pair<r_expr, bool> constant_fold(const resolved_argument& e, std::unordered_map<std::string, r_expr>& constant_map) {
-    if (constant_map.count(e.name)) return {constant_map.at(e.name), true};
-    return {make_rexpr<resolved_argument>(e), false};
 }
 
 std::pair<r_expr, bool> constant_fold(const resolved_bind& e, std::unordered_map<std::string, r_expr>& constant_map) {
@@ -180,7 +186,7 @@ std::pair<r_expr, bool> constant_fold(const resolved_object& e, std::unordered_m
         values.push_back(result.first);
         made_change |= result.second;
     }
-    return {make_rexpr<resolved_object>(e.r_identifier, e.record_fields, values, e.type, e.loc), made_change};
+    return {make_rexpr<resolved_object>(e.record_fields, values, e.type, e.loc), made_change};
 }
 
 std::pair<r_expr, bool> constant_fold(const resolved_let& e, std::unordered_map<std::string, r_expr>& constant_map) {
@@ -355,30 +361,27 @@ std::pair<r_expr, bool> constant_fold(const resolved_binary& e, std::unordered_m
             }
         }
     }
-    if (e.op == binary_op::dot) {
-        std::string field;
-        if (auto f_ptr = std::get_if<resolved_argument>(rhs_arg.first.get())) {
-            field = f_ptr->name;
-        }
-        else {
-            throw std::runtime_error("internal compiler error, expected argument name after `.` operator.");
-        }
-
-        if (auto o_ptr = std::get_if<resolved_object>(lhs_arg.first.get())) {
-            int idx = -1;
-            for (unsigned i = 0; i < o_ptr->record_fields.size(); ++i) {
-                if (std::get<resolved_argument>(*(o_ptr->record_fields[i])).name == field) {
-                    idx = (int)i;
-                    break;
-                }
-            }
-            if (idx < 0) {
-                throw std::runtime_error("internal compiler error, expected to find field of object but failed.");
-            }
-            return {o_ptr->record_values[idx], true};
-        }
-    }
     return {make_rexpr<resolved_binary>(e.op, lhs_arg.first, rhs_arg.first, e.type, e.loc), lhs_arg.second||rhs_arg.second};
+}
+
+std::pair<r_expr, bool> constant_fold(const resolved_field_access& e, std::unordered_map<std::string, r_expr>& constant_map) {
+    auto obj_arg = constant_fold(e.object, constant_map);
+    auto field = e.field;
+
+    if (auto o_ptr = std::get_if<resolved_object>(obj_arg.first.get())) {
+        int idx = -1;
+        for (unsigned i = 0; i < o_ptr->record_fields.size(); ++i) {
+            if (std::get<resolved_argument>(*(o_ptr->record_fields[i])).name == field) {
+                idx = (int)i;
+                break;
+            }
+        }
+        if (idx < 0) {
+            throw std::runtime_error("internal compiler error, expected to find field of object but failed.");
+        }
+        return {o_ptr->record_values[idx], true};
+    }
+    return {make_rexpr<resolved_field_access>(obj_arg.first, field, e.type, e.loc), obj_arg.second};
 }
 
 std::pair<r_expr, bool> constant_fold(const r_expr& e, std::unordered_map<std::string, r_expr>& constant_map) {

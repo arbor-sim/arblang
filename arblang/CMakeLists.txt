@@ -1,9 +1,9 @@
 set(arblang-sources
-#    optimizer/constant_fold.cpp
-#    optimizer/copy_propagate.cpp
-#    optimizer/cse.cpp
-#    optimizer/elimiinate_dead_code.cpp
-#    optimizer/inline_func.cpp
+    optimizer/constant_fold.cpp
+    optimizer/copy_propagate.cpp
+    optimizer/cse.cpp
+    optimizer/elimiinate_dead_code.cpp
+    optimizer/inline_func.cpp
     parser/lexer.cpp
     parser/parser.cpp
     parser/parsed_expressions.cpp

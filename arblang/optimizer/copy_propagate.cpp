@@ -77,6 +77,21 @@ std::pair<resolved_mechanism, bool> copy_propagate(const resolved_mechanism& e) 
     return {mech, made_changes};
 }
 
+std::pair<r_expr, bool> copy_propagate(const resolved_record_alias& e, std::unordered_map<std::string, r_expr>& copy_map) {
+    throw std::runtime_error("Internal compiler error, didn't expect a resolved_record_alias at "
+                             "this stage in the compilation.");
+}
+
+std::pair<r_expr, bool> copy_propagate(const resolved_argument& e, std::unordered_map<std::string, r_expr>& copy_map) {
+    if (copy_map.count(e.name)) return {copy_map.at(e.name), true};
+    return {make_rexpr<resolved_argument>(e), false};
+}
+
+std::pair<r_expr, bool> copy_propagate(const resolved_variable& e, std::unordered_map<std::string, r_expr>& copy_map) {
+    if (copy_map.count(e.name)) return {copy_map.at(e.name), true};
+    return {make_rexpr<resolved_variable>(e), false};
+}
+
 std::pair<r_expr, bool> copy_propagate(const resolved_parameter& e, std::unordered_map<std::string, r_expr>& copy_map) {
     auto result = copy_propagate(e.value, copy_map);
     return {make_rexpr<resolved_parameter>(e.name, result.first, e.type, e.loc), result.second};
@@ -91,18 +106,9 @@ std::pair<r_expr, bool> copy_propagate(const resolved_state& e, std::unordered_m
     return {make_rexpr<resolved_state>(e), false};
 }
 
-std::pair<r_expr, bool> copy_propagate(const resolved_record_alias& e, std::unordered_map<std::string, r_expr>& copy_map) {
-    return {make_rexpr<resolved_record_alias>(e), false};
-}
-
 std::pair<r_expr, bool> copy_propagate(const resolved_function& e, std::unordered_map<std::string, r_expr>& copy_map) {
     auto result = copy_propagate(e.body, copy_map);
     return {make_rexpr<resolved_function>(e.name, e.args, result.first, e.type, e.loc), result.second};
-}
-
-std::pair<r_expr, bool> copy_propagate(const resolved_argument& e, std::unordered_map<std::string, r_expr>& copy_map) {
-    if (copy_map.count(e.name)) return {copy_map.at(e.name), true};
-    return {make_rexpr<resolved_argument>(e), false};
 }
 
 std::pair<r_expr, bool> copy_propagate(const resolved_bind& e, std::unordered_map<std::string, r_expr>& copy_map) {
@@ -147,7 +153,7 @@ std::pair<r_expr, bool> copy_propagate(const resolved_object& e, std::unordered_
         values.push_back(result.first);
         made_change |= result.second;
     }
-    return {make_rexpr<resolved_object>(e.r_identifier, e.record_fields, values, e.type, e.loc), made_change};
+    return {make_rexpr<resolved_object>(e.record_fields, values, e.type, e.loc), made_change};
 }
 
 std::pair<r_expr, bool> copy_propagate(const resolved_let& e, std::unordered_map<std::string, r_expr>& copy_map) {
@@ -159,7 +165,7 @@ std::pair<r_expr, bool> copy_propagate(const resolved_let& e, std::unordered_map
     return {make_rexpr<resolved_let>(e.identifier, val.first, body.first, e.type, e.loc), val.second||body.second};
 }
 
-std::pair<r_expr, bool> copy_propagate(const resolved_conditional& e,std::unordered_map<std::string, r_expr>& copy_map) {
+std::pair<r_expr, bool> copy_propagate(const resolved_conditional& e, std::unordered_map<std::string, r_expr>& copy_map) {
     auto cond = copy_propagate(e.condition, copy_map);
     auto tval = copy_propagate(e.value_true, copy_map);
     auto fval = copy_propagate(e.value_false, copy_map);
@@ -184,6 +190,11 @@ std::pair<r_expr, bool> copy_propagate(const resolved_binary& e, std::unordered_
     auto lhs_arg = copy_propagate(e.lhs, copy_map);
     auto rhs_arg = copy_propagate(e.rhs, copy_map);
     return {make_rexpr<resolved_binary>(e.op, lhs_arg.first, rhs_arg.first, e.type, e.loc), lhs_arg.second||rhs_arg.second};
+}
+
+std::pair<r_expr, bool> copy_propagate(const resolved_field_access& e, std::unordered_map<std::string, r_expr>& copy_map) {
+    auto obj_arg = copy_propagate(e.object, copy_map);
+    return {make_rexpr<resolved_field_access>(obj_arg.first, e.field, e.type, e.loc), obj_arg.second};
 }
 
 std::pair<r_expr, bool> copy_propagate(const r_expr& e, std::unordered_map<std::string, r_expr>& copy_map) {

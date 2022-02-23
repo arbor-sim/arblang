@@ -150,6 +150,19 @@ std::pair<resolved_mechanism, bool> eliminate_dead_code(const resolved_mechanism
 }
 
 // Find dead code
+void find_dead_code(const resolved_record_alias& e, std::unordered_set<std::string>& dead_args) {
+    throw std::runtime_error("Internal compiler error, didn't expect a resolved_record_alias at "
+                             "this stage in the compilation.");
+}
+
+void find_dead_code(const resolved_argument& e, std::unordered_set<std::string>& dead_args) {
+    if (dead_args.count(e.name)) dead_args.erase(e.name);
+}
+
+void find_dead_code(const resolved_variable& e, std::unordered_set<std::string>& dead_args) {
+    if (dead_args.count(e.name)) dead_args.erase(e.name);
+}
+
 void find_dead_code(const resolved_parameter& e, std::unordered_set<std::string>& dead_args) {
     find_dead_code(e.value, dead_args);
 }
@@ -160,14 +173,8 @@ void find_dead_code(const resolved_constant& e, std::unordered_set<std::string>&
 
 void find_dead_code(const resolved_state& e, std::unordered_set<std::string>& dead_args) {}
 
-void find_dead_code(const resolved_record_alias& e, std::unordered_set<std::string>& dead_args) {}
-
 void find_dead_code(const resolved_function& e, std::unordered_set<std::string>& dead_args) {
     find_dead_code(e.body, dead_args);
-}
-
-void find_dead_code(const resolved_argument& e, std::unordered_set<std::string>& dead_args) {
-    if (dead_args.count(e.name)) dead_args.erase(e.name);
 }
 
 void find_dead_code(const resolved_bind& e, std::unordered_set<std::string>& dead_args) {}
@@ -223,13 +230,30 @@ void find_dead_code(const resolved_binary& e, std::unordered_set<std::string>& d
     find_dead_code(e.rhs, dead_args);
 }
 
+void find_dead_code(const resolved_field_access& e, std::unordered_set<std::string>& dead_args) {
+    find_dead_code(e.object, dead_args);
+}
+
 void find_dead_code(const r_expr& e, std::unordered_set<std::string>& dead_args) {
     return std::visit([&](auto& c) {return find_dead_code(c, dead_args);}, *e);
 }
 
 // Remove dead code
+r_expr remove_dead_code(const resolved_record_alias& e, const std::unordered_set<std::string>& dead_args) {
+    throw std::runtime_error("Internal compiler error, didn't expect a resolved_record_alias at "
+                             "this stage in the compilation.");
+}
+
 r_expr remove_dead_code(const resolved_parameter& e, const std::unordered_set<std::string>& dead_args) {
     return make_rexpr<resolved_parameter>(e.name, remove_dead_code(e.value, dead_args), e.type, e.loc);
+}
+
+r_expr remove_dead_code(const resolved_argument& e, const std::unordered_set<std::string>& dead_args) {
+    return make_rexpr<resolved_argument>(e);
+}
+
+r_expr remove_dead_code(const resolved_variable& e, const std::unordered_set<std::string>& dead_args) {
+    return make_rexpr<resolved_variable>(e);
 }
 
 r_expr remove_dead_code(const resolved_constant& e, const std::unordered_set<std::string>& dead_args) {
@@ -240,16 +264,8 @@ r_expr remove_dead_code(const resolved_state& e, const std::unordered_set<std::s
     return make_rexpr<resolved_state>(e);
 }
 
-r_expr remove_dead_code(const resolved_record_alias& e, const std::unordered_set<std::string>& dead_args) {
-    return make_rexpr<resolved_record_alias>(e);
-}
-
 r_expr remove_dead_code(const resolved_function& e, const std::unordered_set<std::string>& dead_args) {
     return make_rexpr<resolved_function>(e.name, e.args, remove_dead_code(e.body, dead_args), e.type, e.loc);
-}
-
-r_expr remove_dead_code(const resolved_argument& e, const std::unordered_set<std::string>& dead_args) {
-    return make_rexpr<resolved_argument>(e);
 }
 
 r_expr remove_dead_code(const resolved_bind& e, const std::unordered_set<std::string>& dead_args) {
@@ -305,6 +321,10 @@ r_expr remove_dead_code(const resolved_unary& e, const std::unordered_set<std::s
 
 r_expr remove_dead_code(const resolved_binary& e, const std::unordered_set<std::string>& dead_args) {
     return make_rexpr<resolved_binary>(e);
+}
+
+r_expr remove_dead_code(const resolved_field_access& e, const std::unordered_set<std::string>& dead_args) {
+    return make_rexpr<resolved_field_access>(e);
 }
 
 r_expr remove_dead_code(const r_expr& e, const std::unordered_set<std::string>& dead_args) {

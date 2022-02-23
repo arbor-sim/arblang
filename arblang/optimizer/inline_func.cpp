@@ -80,6 +80,37 @@ resolved_mechanism inline_func(const resolved_mechanism& e) {
     return mech;
 }
 
+r_expr inline_func(const resolved_record_alias& e,
+                   std::unordered_set<std::string>& reserved,
+                   std::unordered_map<std::string, r_expr>& rewrites,
+                   std::unordered_map<std::string, r_expr>& avail_funcs)
+{
+    throw std::runtime_error("Internal compiler error, didn't expect a resolved_record_alias at "
+                             "this stage in the compilation.");
+}
+
+r_expr inline_func(const resolved_argument& e,
+                   std::unordered_set<std::string>& reserved,
+                   std::unordered_map<std::string, r_expr>& rewrites,
+                   std::unordered_map<std::string, r_expr>& avail_funcs)
+{
+    if (rewrites.count(e.name)) {
+        return rewrites[e.name];
+    }
+    return make_rexpr<resolved_argument>(e);
+}
+
+r_expr inline_func(const resolved_variable& e,
+                   std::unordered_set<std::string>& reserved,
+                   std::unordered_map<std::string, r_expr>& rewrites,
+                   std::unordered_map<std::string, r_expr>& avail_funcs)
+{
+    if (rewrites.count(e.name)) {
+        return rewrites[e.name];
+    }
+    return make_rexpr<resolved_variable>(e);
+}
+
 r_expr inline_func(const resolved_parameter& e,
                    std::unordered_set<std::string>& reserved,
                    std::unordered_map<std::string, r_expr>& rewrites,
@@ -106,14 +137,6 @@ r_expr inline_func(const resolved_state& e,
     return make_rexpr<resolved_state>(e);
 }
 
-r_expr inline_func(const resolved_record_alias& e,
-                   std::unordered_set<std::string>& reserved,
-                   std::unordered_map<std::string, r_expr>& rewrites,
-                   std::unordered_map<std::string, r_expr>& avail_funcs)
-{
-    return make_rexpr<resolved_record_alias>(e);
-}
-
 r_expr inline_func(const resolved_function& e,
                    std::unordered_set<std::string>& reserved,
                    std::unordered_map<std::string, r_expr>& rewrites,
@@ -121,17 +144,6 @@ r_expr inline_func(const resolved_function& e,
 {
     auto body_ssa = inline_func(e.body, reserved, rewrites, avail_funcs);
     return make_rexpr<resolved_function>(e.name, e.args, body_ssa, e.type, e.loc);
-}
-
-r_expr inline_func(const resolved_argument& e,
-                   std::unordered_set<std::string>& reserved,
-                   std::unordered_map<std::string, r_expr>& rewrites,
-                   std::unordered_map<std::string, r_expr>& avail_funcs)
-{
-    if (rewrites.count(e.name)) {
-        return rewrites[e.name];
-    }
-    return make_rexpr<resolved_argument>(e);
 }
 
 r_expr inline_func(const resolved_bind& e,
@@ -224,7 +236,7 @@ r_expr inline_func(const resolved_object& e,
     for (const auto& a: e.record_values) {
         args_ssa.push_back(inline_func(a, reserved, rewrites, avail_funcs));
     }
-    return make_rexpr<resolved_object>(e.r_identifier, fields_ssa, args_ssa, e.type, e.loc);
+    return make_rexpr<resolved_object>(fields_ssa, args_ssa, e.type, e.loc);
 }
 
 r_expr inline_func(const resolved_let& e,
@@ -235,11 +247,11 @@ r_expr inline_func(const resolved_let& e,
     auto val_ssa = inline_func(e.value, reserved, rewrites, avail_funcs);
     auto iden_ssa = e.identifier;
 
-    auto iden = std::get<resolved_argument>(*e.identifier);
+    auto iden = std::get<resolved_variable>(*e.identifier);
     if (!reserved.insert(iden.name).second) {
         auto rename = unique_local_name(reserved, "r");
         reserved.insert(rename);
-        iden_ssa = make_rexpr<resolved_argument>(rename, iden.type, iden.loc);
+        iden_ssa = make_rexpr<resolved_variable>(rename, iden.value, iden.type, iden.loc);
         rewrites[iden.name] = iden_ssa;
     }
 
@@ -298,8 +310,17 @@ r_expr inline_func(const resolved_binary& e,
                    std::unordered_map<std::string, r_expr>& avail_funcs)
 {
     auto lhs_ssa = inline_func(e.lhs, reserved, rewrites, avail_funcs);
-    auto rhs_ssa = e.op == binary_op::dot? e.rhs: inline_func(e.rhs, reserved, rewrites, avail_funcs);
+    auto rhs_ssa = inline_func(e.rhs, reserved, rewrites, avail_funcs);
     return make_rexpr<resolved_binary>(e.op, lhs_ssa, rhs_ssa, e.type, e.loc);
+}
+
+r_expr inline_func(const resolved_field_access& e,
+                   std::unordered_set<std::string>& reserved,
+                   std::unordered_map<std::string, r_expr>& rewrites,
+                   std::unordered_map<std::string, r_expr>& avail_funcs)
+{
+    auto obj_ssa = inline_func(e.object, reserved, rewrites, avail_funcs);
+    return make_rexpr<resolved_field_access>(obj_ssa, e.field, e.type, e.loc);
 }
 
 r_expr inline_func(const r_expr& e,
