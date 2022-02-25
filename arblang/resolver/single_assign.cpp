@@ -91,9 +91,6 @@ r_expr single_assign(const resolved_argument& e,
                      std::unordered_set<std::string>& reserved,
                      std::unordered_map<std::string, r_expr>& rewrites)
 {
-    if (rewrites.count(e.name)) {
-        return rewrites[e.name];
-    }
     return make_rexpr<resolved_argument>(e);
 }
 
@@ -205,19 +202,18 @@ r_expr single_assign(const resolved_let& e,
                      std::unordered_set<std::string>& reserved,
                      std::unordered_map<std::string, r_expr>& rewrites)
 {
-    auto val_ssa = single_assign(e.value, reserved, rewrites);
-    auto iden_ssa = e.identifier;
+    auto val_ssa = single_assign(e.id_value(), reserved, rewrites);
+    r_expr var_ssa;
 
-    auto iden = std::get<resolved_variable>(*e.identifier);
-    if (!reserved.insert(iden.name).second) {
-        auto rename = unique_local_name(reserved, "r");
-        iden_ssa = make_rexpr<resolved_variable>(rename, iden.value, iden.type, iden.loc);
-        rewrites[iden.name] = iden_ssa;
+    auto var_name = e.id_name();
+    if (!reserved.insert(var_name).second) {
+        var_name = unique_local_name(reserved, "r");
     }
+    var_ssa = make_rexpr<resolved_variable>(var_name, val_ssa, type_of(val_ssa), location_of(val_ssa));
+    rewrites[e.id_name()] = var_ssa;
 
     auto body_ssa = single_assign(e.body, reserved, rewrites);
-
-    return make_rexpr<resolved_let>(iden_ssa, val_ssa, body_ssa, e.type, e.loc);
+    return make_rexpr<resolved_let>(var_ssa, body_ssa, e.type, e.loc);
 }
 
 r_expr single_assign(const resolved_conditional& e,

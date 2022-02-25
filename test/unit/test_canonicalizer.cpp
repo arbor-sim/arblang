@@ -13,7 +13,7 @@
 #include <arblang/resolver/resolved_expressions.hpp>
 #include <arblang/resolver/resolved_types.hpp>
 #include <arblang/resolver/single_assign.hpp>
-#include "arblang/util/custom_hash.hpp"
+#include <arblang/util/custom_hash.hpp>
 
 #include "../gtest.h"
 
@@ -21,7 +21,13 @@ using namespace al;
 using namespace resolved_ir;
 using namespace resolved_type_ir;
 
-// TODO test exceptions properly
+r_expr get_innermost_body(resolved_let* const let) {
+    resolved_let* let_last = let;
+    while (auto let_next = std::get_if<resolved_let>(let_last->body.get())) {
+        let_last = let_next;
+    }
+    return let_last->body;
+}
 
 TEST(canonicalizer, call) {
     in_scope_map scope_map;
@@ -46,11 +52,15 @@ TEST(canonicalizer, call) {
         auto call_canon = canonicalize(call_resolved);
         auto call_ssa = single_assign(call_canon);
 
-//        auto opt = optimizer(call_ssa);
-//        auto call_opt = opt.optimize();
+        auto opt = optimizer(call_ssa);
+        auto call_opt = opt.optimize();
 
-        std::cout << to_string(call_ssa) << std::endl;
+        std::cout << to_string(call_opt) << std::endl;
         std::cout << std::endl;
+        if (auto let = std::get_if<resolved_let>(call_opt.get())) {
+            std::cout << to_string(get_innermost_body(let), false, true, 0) << std::endl;
+            std::cout << std::endl;
+        }
 
         // let t0_:real = foo();
         // t0_;
@@ -69,11 +79,15 @@ TEST(canonicalizer, call) {
         auto call_canon = canonicalize(call_resolved);
         auto call_ssa = single_assign(call_canon);
 
-//        auto opt = optimizer(call_ssa);
-//        auto call_opt = opt.optimize();
+        auto opt = optimizer(call_ssa);
+        auto call_opt = opt.optimize();
 
-        std::cout << to_string(call_ssa) << std::endl;
+        std::cout << to_string(call_opt) << std::endl;
         std::cout << std::endl;
+        if (auto let = std::get_if<resolved_let>(call_opt.get())) {
+            std::cout << to_string(get_innermost_body(let), false, true, 0) << std::endl;
+            std::cout << std::endl;
+        }
 
         // let t0_:foo2(2, 1);
         // t0_;
@@ -93,11 +107,15 @@ TEST(canonicalizer, call) {
         auto call_canon = canonicalize(call_resolved);
         auto call_ssa = single_assign(call_canon);
 
-//        auto opt = optimizer(call_ssa);
-//        auto call_opt = opt.optimize();
+        auto opt = optimizer(call_ssa);
+        auto call_opt = opt.optimize();
 
-        std::cout << to_string(call_ssa) << std::endl;
+        std::cout << to_string(call_opt) << std::endl;
         std::cout << std::endl;
+        if (auto let = std::get_if<resolved_let>(call_opt.get())) {
+            std::cout << to_string(get_innermost_body(let), false, true, 0) << std::endl;
+            std::cout << std::endl;
+        }
 
         // let t1_ = foo_bar(2.5, a, -1);
         // t1_;
@@ -117,12 +135,15 @@ TEST(canonicalizer, call) {
         auto call_canon = canonicalize(call_resolved);
         auto call_ssa = single_assign(call_canon);
 
-//        auto opt = optimizer(call_ssa);
-//        auto call_opt = opt.optimize();
+        auto opt = optimizer(call_ssa);
+        auto call_opt = opt.optimize();
 
-        std::cout << to_string(call_ssa) << std::endl;
+        std::cout << to_string(call_opt) << std::endl;
         std::cout << std::endl;
-
+        if (auto let = std::get_if<resolved_let>(call_opt.get())) {
+            std::cout << to_string(get_innermost_body(let), false, true, 0) << std::endl;
+            std::cout << std::endl;
+        }
         // let t1_:real = foo();
         // let t2_:real = bar(5, t1_);
         // t2_;
@@ -141,11 +162,15 @@ TEST(canonicalizer, call) {
         auto call_canon = canonicalize(call_resolved);
         auto call_ssa = single_assign(call_canon);
 
-//        auto opt = optimizer(call_ssa);
-//        auto call_opt = opt.optimize();
+        auto opt = optimizer(call_ssa);
+        auto call_opt = opt.optimize();
 
-        std::cout << to_string(call_ssa) << std::endl;
+        std::cout << to_string(call_opt) << std::endl;
         std::cout << std::endl;
+        if (auto let = std::get_if<resolved_let>(call_opt.get())) {
+            std::cout << to_string(get_innermost_body(let), false, true, 0) << std::endl;
+            std::cout << std::endl;
+        }
 
         // let t0_:real = bar.X;
         // let t1_:real = baz(0.006, t0_);
@@ -173,11 +198,18 @@ TEST(canonicalizer, let) {
         auto let_canon = canonicalize(let_resolved);
         auto let_ssa = single_assign(let_canon);
 
-//        auto opt = optimizer(let_ssa);
-//        auto let_opt = opt.optimize();
-
         std::cout << to_string(let_ssa) << std::endl;
         std::cout << std::endl;
+
+        auto opt = optimizer(let_ssa);
+        auto let_opt = opt.optimize();
+
+        std::cout << to_string(let_opt) << std::endl;
+        std::cout << std::endl;
+        if (auto let = std::get_if<resolved_let>(let_opt.get())) {
+            std::cout << to_string(get_innermost_body(let), false, true, 0) << std::endl;
+            std::cout << std::endl;
+        }
 
         // 11:real
     }
@@ -195,11 +227,15 @@ TEST(canonicalizer, let) {
         auto let_canon = canonicalize(let_resolved);
         auto let_ssa = single_assign(let_canon);
 
-//        auto opt = optimizer(let_ssa);
-//        auto let_opt = opt.optimize();
+        auto opt = optimizer(let_ssa);
+        auto let_opt = opt.optimize();
 
-        std::cout << to_string(let_ssa) << std::endl;
+        std::cout << to_string(let_opt) << std::endl;
         std::cout << std::endl;
+        if (auto let = std::get_if<resolved_let>(let_opt.get())) {
+            std::cout << to_string(get_innermost_body(let), false, true, 0) << std::endl;
+            std::cout << std::endl;
+        }
 
         // let t0_:voltage = a*5;
         // let t1_:voltage = a+t0_; // b
@@ -224,11 +260,15 @@ TEST(canonicalizer, let) {
         auto let_canon = canonicalize(let_resolved);
         auto let_ssa = single_assign(let_canon);
 
-//        auto opt = optimizer(let_ssa);
-//        auto let_opt = opt.optimize();
+        auto opt = optimizer(let_ssa);
+        auto let_opt = opt.optimize();
 
-        std::cout << to_string(let_ssa) << std::endl;
+        std::cout << to_string(let_opt) << std::endl;
         std::cout << std::endl;
+        if (auto let = std::get_if<resolved_let>(let_opt.get())) {
+            std::cout << to_string(get_innermost_body(let), false, true, 0) << std::endl;
+            std::cout << std::endl;
+        }
 
         // let t1_:voltage = a+0.0025; // x
         // let t2_:current = t1_*s;    // b
@@ -241,7 +281,7 @@ TEST(canonicalizer, let) {
 
     }
 }
-/*
+
 TEST(canonicalizer, with) {
     auto loc = src_location{};
     auto real_type    = make_rtype<resolved_quantity>(normalized_type(quantity::real), loc);
@@ -257,9 +297,9 @@ TEST(canonicalizer, with) {
 
     {
         in_scope_map scope_map;
-        scope_map.local_map.insert({"t", resolved_argument("t", real_type, loc)});
-        scope_map.local_map.insert({"q", resolved_argument("q", real_type, loc)});
-        scope_map.func_map.insert({"foo", resolved_function("foo", {}, real_body, real_type, loc)});
+        scope_map.local_map.insert({"t", make_rexpr<resolved_argument>("t", real_type, loc)});
+        scope_map.local_map.insert({"q", make_rexpr<resolved_argument>("q", real_type, loc)});
+        scope_map.func_map.insert({"foo", make_rexpr<resolved_function>("foo", std::vector<r_expr>{}, real_body, real_type, loc)});
         scope_map.type_map.insert({"foo", foo_type});
         scope_map.type_map.insert({"bar", bar_type});
 
@@ -276,6 +316,9 @@ TEST(canonicalizer, with) {
         auto let_resolved = resolve(let_normal, scope_map);
         auto let_canon = canonicalize(let_resolved);
         auto let_ssa = single_assign(let_canon);
+
+        std::cout << to_string(let_ssa) << std::endl;
+        std::cout << std::endl;
 
         auto opt = optimizer(let_ssa);
         auto let_opt = opt.optimize();
@@ -294,9 +337,9 @@ TEST(canonicalizer, with) {
     }
     {
         in_scope_map scope_map;
-        scope_map.local_map.insert({"t", resolved_argument("t", real_type, loc)});
-        scope_map.local_map.insert({"q", resolved_argument("q", real_type, loc)});
-        scope_map.func_map.insert({"foo", resolved_function("foo", {}, real_body, real_type, loc)});
+        scope_map.local_map.insert({"t",  make_rexpr<resolved_argument>("t", real_type, loc)});
+        scope_map.local_map.insert({"q",  make_rexpr<resolved_argument>("q", real_type, loc)});
+        scope_map.func_map.insert({"foo", make_rexpr<resolved_function>("foo", std::vector<r_expr>{}, real_body, real_type, loc)});
         scope_map.type_map.insert({"foo", foo_type});
         scope_map.type_map.insert({"bar", bar_type});
 
@@ -376,7 +419,7 @@ TEST(canonicalizer, conditional) {
 
     {
         in_scope_map scope_map;
-        scope_map.local_map.insert({"t", resolved_argument("t", real_type, loc)});
+        scope_map.local_map.insert({"t", make_rexpr<resolved_argument>("t", real_type, loc)});
 
         std::string p_expr = "if t == 4 then let a=3; a*4 else 15.5;";
 
@@ -400,12 +443,12 @@ TEST(canonicalizer, conditional) {
     }
     {
         in_scope_map scope_map;
-        scope_map.func_map.insert({"foo", resolved_function("foo", {}, real_body, real_type, loc)});
+        scope_map.func_map.insert({"foo", make_rexpr<resolved_function>("foo", std::vector<r_expr>{}, real_body, real_type, loc)});
         scope_map.type_map.insert({"foo", foo_type});
         scope_map.type_map.insert({"bar", bar_type});
-        scope_map.local_map.insert({"t", resolved_argument("t", real_type, loc)});
-        scope_map.local_map.insert({"a", resolved_argument("a", real_type, loc)});
-        scope_map.local_map.insert({"obar", resolved_argument("obar", bar_type, loc)});
+        scope_map.local_map.insert({"t",    make_rexpr<resolved_argument>("t", real_type, loc)});
+        scope_map.local_map.insert({"a",    make_rexpr<resolved_argument>("a", real_type, loc)});
+        scope_map.local_map.insert({"obar", make_rexpr<resolved_argument>("obar", bar_type, loc)});
 
         std::string p_expr = "if (if t == 4 then a>3 else a<4)\n"
                              "then (if obar.X == 5 then obar.Y else {a=3[V]; b=5[mA];})\n"
@@ -440,7 +483,7 @@ TEST(canonicalizer, conditional) {
         // let t12_:{a:voltage; b:current} = t3_? t8_: t11_;
         // t12_;
     }
-}*/
+}
 
 TEST(custom_hash, map) {
     auto loc = src_location{};
@@ -467,7 +510,7 @@ TEST(custom_hash, map) {
     std::cout << std::endl;
 }
 
-/*TEST(cse, let) {
+TEST(cse, let) {
     auto loc = src_location{};
     auto real_type    = make_rtype<resolved_quantity>(normalized_type(quantity::real), loc);
     auto current_type = make_rtype<resolved_quantity>(normalized_type(quantity::current), loc);
@@ -477,8 +520,8 @@ TEST(custom_hash, map) {
 
     {
         in_scope_map scope_map;
-        scope_map.local_map.insert({"a", resolved_argument("a", voltage_type, loc)});
-        scope_map.local_map.insert({"s", resolved_argument("s", conductance_type, loc)});
+        scope_map.local_map.insert({"a", make_rexpr<resolved_argument>("a", voltage_type, loc)});
+        scope_map.local_map.insert({"s", make_rexpr<resolved_argument>("s", conductance_type, loc)});
 
         std::string p_expr = "let b:voltage = a + a*5; let c:current = b*s; c*(a*5))";
         auto p = parser(p_expr);
@@ -504,11 +547,13 @@ TEST(custom_hash, map) {
     }
     {
         in_scope_map scope_map;
-        scope_map.local_map.insert({"a",  resolved_argument("a", voltage_type, loc)});
-        scope_map.local_map.insert({"s",  resolved_argument("s", conductance_type, loc)});
-        scope_map.func_map.insert({"foo", resolved_function("foo",
-                                                            {make_rexpr<resolved_argument>("a", current_type, loc)},
-                                                            real_body, real_type, loc)});
+        scope_map.local_map.insert({"a",  make_rexpr<resolved_argument>("a", voltage_type, loc)});
+        scope_map.local_map.insert({"s",  make_rexpr<resolved_argument>("s", conductance_type, loc)});
+
+        std::vector<r_expr> args = {make_rexpr<resolved_argument>("a", current_type, loc)};
+        auto foo =  make_rexpr<resolved_function>("foo", args, real_body, real_type, loc);
+        scope_map.func_map.insert({"foo", foo});
+
 
         std::string p_expr = "let b = let x = a+5 [mV] /2; x*s; let c = foo(b)*foo(a*s); c/(foo(b)*1 [A]);";
         auto p = parser(p_expr);
@@ -623,7 +668,7 @@ TEST(function_inline, misc) {
 
         // foo
         in_scope_map foo_scope_map;
-        foo_scope_map.func_map.insert({"bar", std::get<resolved_function>(*bar_opt)});
+        foo_scope_map.func_map.insert({"bar", bar_opt});
 
         auto p_foo = parser(foo_func);
         auto foo = p_foo.parse_function();
@@ -638,11 +683,11 @@ TEST(function_inline, misc) {
 
         // let
         in_scope_map let_scope_map;
-        let_scope_map.local_map.insert({"x",  resolved_argument("x", real_type, loc)});
-        let_scope_map.local_map.insert({"y",  resolved_argument("y", real_type, loc)});
-        let_scope_map.local_map.insert({"z",  resolved_argument("z", real_type, loc)});
-        let_scope_map.func_map.insert({"bar", std::get<resolved_function>(*bar_opt)});
-        let_scope_map.func_map.insert({"foo", std::get<resolved_function>(*foo_opt)});
+        let_scope_map.local_map.insert({"x",  make_rexpr<resolved_argument>("x", real_type, loc)});
+        let_scope_map.local_map.insert({"y",  make_rexpr<resolved_argument>("y", real_type, loc)});
+        let_scope_map.local_map.insert({"z",  make_rexpr<resolved_argument>("z", real_type, loc)});
+        let_scope_map.func_map.insert({"bar", bar_opt});
+        let_scope_map.func_map.insert({"foo", foo_opt});
 
 
         auto p_let = parser(let_expr);
@@ -656,14 +701,14 @@ TEST(function_inline, misc) {
         auto l_opt = optimizer(let_ssa);
         auto let_opt = l_opt.optimize();
 
-        std::unordered_map<std::string, r_expr> avail_funcs = {{"foo", foo_opt}, {"bar", bar_opt}};
-        auto let_inlined = inline_func(let_opt, avail_funcs);
-
-        auto l_opt2 = optimizer(let_inlined);
-        auto let_opt2 = l_opt2.optimize();
-
-        std::cout << to_string(let_opt2) << std::endl;
-        std::cout << std::endl;
+//        std::unordered_map<std::string, r_expr> avail_funcs = {{"foo", foo_opt}, {"bar", bar_opt}};
+//        auto let_inlined = inline_func(let_opt, avail_funcs);
+//
+//        auto l_opt2 = optimizer(let_inlined);
+//        auto let_opt2 = l_opt2.optimize();
+//
+//        std::cout << to_string(let_opt2) << std::endl;
+//        std::cout << std::endl;
     }
 
     // let _t0:real = x+y;
@@ -703,17 +748,17 @@ TEST(optimizer, mechanism) {
         auto opt_0 = optimizer(m_ssa);
         auto m_opt = opt_0.optimize();
 
-        auto m_inlined = inline_func(m_opt);
-
-        auto opt_1 = optimizer(m_inlined);
-        auto m_fin = opt_1.optimize();
-
-        std::cout << "-----------------------------" << std::endl;
-        std::cout << mech << std::endl;
-        std::cout << "-----------------------------" << std::endl;
-        std::cout << to_string(m_fin) << std::endl;
-        std::cout << "-----------------------------" << std::endl;
-        std::cout << std::endl;
+//        auto m_inlined = inline_func(m_opt);
+//
+//        auto opt_1 = optimizer(m_inlined);
+//        auto m_fin = opt_1.optimize();
+//
+//        std::cout << "-----------------------------" << std::endl;
+//        std::cout << mech << std::endl;
+//        std::cout << "-----------------------------" << std::endl;
+//        std::cout << to_string(m_fin) << std::endl;
+//        std::cout << "-----------------------------" << std::endl;
+//        std::cout << std::endl;
     }
     {
         std::string mech =
@@ -786,17 +831,17 @@ TEST(optimizer, mechanism) {
         auto opt_0 = optimizer(m_ssa);
         auto m_opt = opt_0.optimize();
 
-        auto m_inlined = inline_func(m_opt);
-
-        auto opt_1 = optimizer(m_inlined);
-        auto m_fin = opt_1.optimize();
-
-        std::cout << "-----------------------------" << std::endl;
-        std::cout << mech << std::endl;
-        std::cout << "-----------------------------" << std::endl;
-        std::cout << to_string(m_fin) << std::endl;
-        std::cout << "-----------------------------" << std::endl;
-        std::cout << std::endl;
+//        auto m_inlined = inline_func(m_opt);
+//
+//        auto opt_1 = optimizer(m_inlined);
+//        auto m_fin = opt_1.optimize();
+//
+//        std::cout << "-----------------------------" << std::endl;
+//        std::cout << mech << std::endl;
+//        std::cout << "-----------------------------" << std::endl;
+//        std::cout << to_string(m_fin) << std::endl;
+//        std::cout << "-----------------------------" << std::endl;
+//        std::cout << std::endl;
     }
     {
         std::string mech =
@@ -853,16 +898,16 @@ TEST(optimizer, mechanism) {
         auto opt_0 = optimizer(m_ssa);
         auto m_opt = opt_0.optimize();
 
-        auto m_inlined = inline_func(m_opt);
-
-        auto opt_1 = optimizer(m_inlined);
-        auto m_fin = opt_1.optimize();
-
-        std::cout << "-----------------------------" << std::endl;
-        std::cout << mech << std::endl;
-        std::cout << "-----------------------------" << std::endl;
-        std::cout << to_string(m_fin) << std::endl;
-        std::cout << "-----------------------------" << std::endl;
-        std::cout << std::endl;
+//        auto m_inlined = inline_func(m_opt);
+//
+//        auto opt_1 = optimizer(m_inlined);
+//        auto m_fin = opt_1.optimize();
+//
+//        std::cout << "-----------------------------" << std::endl;
+//        std::cout << mech << std::endl;
+//        std::cout << "-----------------------------" << std::endl;
+//        std::cout << to_string(m_fin) << std::endl;
+//        std::cout << "-----------------------------" << std::endl;
+//        std::cout << std::endl;
     }
-}*/
+}

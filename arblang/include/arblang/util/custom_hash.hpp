@@ -211,7 +211,6 @@ struct hash<resolved_let> {
     inline size_t operator()(const resolved_let& e) const {
         std::size_t res = 0;
         hash_combine(res, *e.identifier);
-        hash_combine(res, *e.value);
         hash_combine(res, *e.body);
         hash_combine(res, *e.type);
         return res;

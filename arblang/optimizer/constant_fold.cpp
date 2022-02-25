@@ -25,10 +25,11 @@ bool is_integer(double v) {
 }
 
 std::pair<resolved_mechanism, bool> constant_fold(const resolved_mechanism& e) {
-    std::unordered_map<std::string, r_expr> constants_map, local_constant_map;
+    std::unordered_map<std::string, r_expr> constants_map, rewrites, local_constant_map;
     std::unordered_set<std::string> exported_params;
 
-    auto reset_constants = [&]() {
+    auto reset_maps = [&]() {
+        rewrites.clear();
         local_constant_map.clear();
         local_constant_map = constants_map;
     };
@@ -45,8 +46,8 @@ std::pair<resolved_mechanism, bool> constant_fold(const resolved_mechanism& e) {
         exported_params.insert(std::get<resolved_argument>(*param_id).name);
     }
     for (const auto& c: e.constants) {
-        reset_constants();
-        auto result = constant_fold(c, local_constant_map);
+        reset_maps();
+        auto result = constant_fold(c, local_constant_map, rewrites);
 
         auto constant  = std::get<resolved_constant>(*result.first);
         if (as_number(constant.value)) {
@@ -57,8 +58,8 @@ std::pair<resolved_mechanism, bool> constant_fold(const resolved_mechanism& e) {
         made_changes |= result.second;
     }
     for (const auto& c: e.parameters) {
-        reset_constants();
-        auto result = constant_fold(c, local_constant_map);
+        reset_maps();
+        auto result = constant_fold(c, local_constant_map, rewrites);
 
         auto param  = std::get<resolved_parameter>(*result.first);
         if (!exported_params.count(param.name) && as_number(param.value)) {
@@ -69,38 +70,38 @@ std::pair<resolved_mechanism, bool> constant_fold(const resolved_mechanism& e) {
         made_changes |= result.second;
     }
     for (const auto& c: e.bindings) {
-        reset_constants();
-        auto result = constant_fold(c, local_constant_map);
+        reset_maps();
+        auto result = constant_fold(c, local_constant_map, rewrites);
         mech.bindings.push_back(result.first);
         made_changes |= result.second;
     }
     for (const auto& c: e.states) {
-        reset_constants();
-        auto result = constant_fold(c, local_constant_map);
+        reset_maps();
+        auto result = constant_fold(c, local_constant_map, rewrites);
         mech.states.push_back(result.first);
         made_changes |= result.second;
     }
     for (const auto& c: e.functions) {
-        reset_constants();
-        auto result = constant_fold(c, local_constant_map);
+        reset_maps();
+        auto result = constant_fold(c, local_constant_map, rewrites);
         mech.functions.push_back(result.first);
         made_changes |= result.second;
     }
     for (const auto& c: e.initializations) {
-        reset_constants();
-        auto result = constant_fold(c, local_constant_map);
+        reset_maps();
+        auto result = constant_fold(c, local_constant_map, rewrites);
         mech.initializations.push_back(result.first);
         made_changes |= result.second;
     }
     for (const auto& c: e.evolutions) {
-        reset_constants();
-        auto result = constant_fold(c, local_constant_map);
+        reset_maps();
+        auto result = constant_fold(c, local_constant_map, rewrites);
         mech.evolutions.push_back(result.first);
         made_changes |= result.second;
     }
     for (const auto& c: e.effects) {
-        reset_constants();
-        auto result = constant_fold(c, local_constant_map);
+        reset_maps();
+        auto result = constant_fold(c, local_constant_map, rewrites);
         mech.effects.push_back(result.first);
         made_changes |= result.second;
     }
@@ -110,98 +111,153 @@ std::pair<resolved_mechanism, bool> constant_fold(const resolved_mechanism& e) {
     return {mech, made_changes};
 }
 
-std::pair<r_expr, bool> constant_fold(const resolved_record_alias& e, std::unordered_map<std::string, r_expr>& constant_map) {
+std::pair<r_expr, bool> constant_fold(const resolved_record_alias& e,
+                                      std::unordered_map<std::string, r_expr>& constant_map,
+                                      std::unordered_map<std::string, r_expr>& rewrites)
+{
     throw std::runtime_error("Internal compiler error, didn't expect a resolved_record_alias at "
                              "this stage in the compilation.");
 }
 
-std::pair<r_expr, bool> constant_fold(const resolved_argument& e, std::unordered_map<std::string, r_expr>& constant_map) {
+std::pair<r_expr, bool> constant_fold(const resolved_argument& e,
+                                      std::unordered_map<std::string, r_expr>& constant_map,
+                                      std::unordered_map<std::string, r_expr>& rewrites)
+{
     if (constant_map.count(e.name)) return {constant_map.at(e.name), true};
     return {make_rexpr<resolved_argument>(e), false};
 }
 
-std::pair<r_expr, bool> constant_fold(const resolved_variable& e, std::unordered_map<std::string, r_expr>& constant_map) {
+std::pair<r_expr, bool> constant_fold(const resolved_variable& e,
+                                      std::unordered_map<std::string, r_expr>& constant_map,
+                                      std::unordered_map<std::string, r_expr>& rewrites)
+{
     if (constant_map.count(e.name)) return {constant_map.at(e.name), true};
+    if (rewrites.count(e.name)) return {rewrites.at(e.name), false};
     return {make_rexpr<resolved_variable>(e), false};
 }
 
-std::pair<r_expr, bool> constant_fold(const resolved_parameter& e, std::unordered_map<std::string, r_expr>& constant_map) {
-    auto result = constant_fold(e.value, constant_map);
+std::pair<r_expr, bool> constant_fold(const resolved_parameter& e,
+                                      std::unordered_map<std::string, r_expr>& constant_map,
+                                      std::unordered_map<std::string, r_expr>& rewrites)
+{
+    auto result = constant_fold(e.value, constant_map, rewrites);
     return {make_rexpr<resolved_parameter>(e.name, result.first, e.type, e.loc), result.second};
 }
 
-std::pair<r_expr, bool> constant_fold(const resolved_constant& e, std::unordered_map<std::string, r_expr>& constant_map) {
-    auto result = constant_fold(e.value, constant_map);
+std::pair<r_expr, bool> constant_fold(const resolved_constant& e,
+                                      std::unordered_map<std::string, r_expr>& constant_map,
+                                      std::unordered_map<std::string, r_expr>& rewrites)
+{
+    auto result = constant_fold(e.value, constant_map, rewrites);
     return {make_rexpr<resolved_constant>(e.name, result.first, e.type, e.loc), result.second};
 }
 
-std::pair<r_expr, bool> constant_fold(const resolved_state& e, std::unordered_map<std::string, r_expr>& constant_map) {
+std::pair<r_expr, bool> constant_fold(const resolved_state& e,
+                                      std::unordered_map<std::string, r_expr>& constant_map,
+                                      std::unordered_map<std::string, r_expr>& rewrites)
+{
     return {make_rexpr<resolved_state>(e), false};
 }
 
-std::pair<r_expr, bool> constant_fold(const resolved_function& e, std::unordered_map<std::string, r_expr>& constant_map) {
-    auto result = constant_fold(e.body, constant_map);
+std::pair<r_expr, bool> constant_fold(const resolved_function& e,
+                                      std::unordered_map<std::string, r_expr>& constant_map,
+                                      std::unordered_map<std::string, r_expr>& rewrites)
+{
+    auto result = constant_fold(e.body, constant_map, rewrites);
     return {make_rexpr<resolved_function>(e.name, e.args, result.first, e.type, e.loc), result.second};
 }
 
-std::pair<r_expr, bool> constant_fold(const resolved_bind& e, std::unordered_map<std::string, r_expr>& constant_map) {
+std::pair<r_expr, bool> constant_fold(const resolved_bind& e,
+                                      std::unordered_map<std::string, r_expr>& constant_map,
+                                      std::unordered_map<std::string, r_expr>& rewrites)
+{
     return {make_rexpr<resolved_bind>(e), false};
 }
 
-std::pair<r_expr, bool> constant_fold(const resolved_initial& e, std::unordered_map<std::string, r_expr>& constant_map) {
-    auto result = constant_fold(e.value, constant_map);
+std::pair<r_expr, bool> constant_fold(const resolved_initial& e,
+                                      std::unordered_map<std::string, r_expr>& constant_map,
+                                      std::unordered_map<std::string, r_expr>& rewrites)
+{
+    auto result = constant_fold(e.value, constant_map, rewrites);
     return {make_rexpr<resolved_initial>(e.identifier, result.first, e.type, e.loc), result.second};
 }
 
-std::pair<r_expr, bool> constant_fold(const resolved_evolve& e, std::unordered_map<std::string, r_expr>& constant_map) {
-    auto result = constant_fold(e.value, constant_map);
+std::pair<r_expr, bool> constant_fold(const resolved_evolve& e,
+                                      std::unordered_map<std::string, r_expr>& constant_map,
+                                      std::unordered_map<std::string, r_expr>& rewrites)
+{
+    auto result = constant_fold(e.value, constant_map, rewrites);
     return {make_rexpr<resolved_evolve>(e.identifier, result.first, e.type, e.loc), result.second};
 }
 
-std::pair<r_expr, bool> constant_fold(const resolved_effect& e, std::unordered_map<std::string, r_expr>& constant_map) {
-    auto result = constant_fold(e.value, constant_map);
+std::pair<r_expr, bool> constant_fold(const resolved_effect& e,
+                                      std::unordered_map<std::string, r_expr>& constant_map,
+                                      std::unordered_map<std::string, r_expr>& rewrites)
+{
+    auto result = constant_fold(e.value, constant_map, rewrites);
     return {make_rexpr<resolved_effect>(e.effect, e.ion, result.first, e.type, e.loc), result.second};
 }
 
-std::pair<r_expr, bool> constant_fold(const resolved_export& e, std::unordered_map<std::string, r_expr>& constant_map) {
+std::pair<r_expr, bool> constant_fold(const resolved_export& e,
+                                      std::unordered_map<std::string, r_expr>& constant_map,
+                                      std::unordered_map<std::string, r_expr>& rewrites)
+{
     return {make_rexpr<resolved_export>(e), false};
 }
 
-std::pair<r_expr, bool> constant_fold(const resolved_call& e, std::unordered_map<std::string, r_expr>& constant_map) {
+std::pair<r_expr, bool> constant_fold(const resolved_call& e,
+                                      std::unordered_map<std::string, r_expr>& constant_map,
+                                      std::unordered_map<std::string, r_expr>& rewrites)
+{
     std::vector<r_expr> args;
     bool made_change = false;
     for (const auto& a: e.call_args) {
-        auto result = constant_fold(a, constant_map);
+        auto result = constant_fold(a, constant_map, rewrites);
         args.push_back(result.first);
         made_change |= result.second;
     }
     return {make_rexpr<resolved_call>(e.f_identifier, args, e.type, e.loc), made_change};
 }
 
-std::pair<r_expr, bool> constant_fold(const resolved_object& e, std::unordered_map<std::string, r_expr>& constant_map) {
+std::pair<r_expr, bool> constant_fold(const resolved_object& e,
+                                      std::unordered_map<std::string, r_expr>& constant_map,
+                                      std::unordered_map<std::string, r_expr>& rewrites)
+{
     std::vector<r_expr> values;
     bool made_change = false;
     for (const auto& a: e.record_values) {
-        auto result = constant_fold(a, constant_map);
+        auto result = constant_fold(a, constant_map, rewrites);
         values.push_back(result.first);
         made_change |= result.second;
     }
     return {make_rexpr<resolved_object>(e.record_fields, values, e.type, e.loc), made_change};
 }
 
-std::pair<r_expr, bool> constant_fold(const resolved_let& e, std::unordered_map<std::string, r_expr>& constant_map) {
-    if (as_number(e.value)) {
-        constant_map.insert({std::get<resolved_argument>(*e.identifier).name, e.value});
+std::pair<r_expr, bool> constant_fold(const resolved_let& e,
+                                      std::unordered_map<std::string, r_expr>& constant_map,
+                                      std::unordered_map<std::string, r_expr>& rewrites)
+{
+    auto var_name = e.id_name();
+    if (as_number(e.id_value())) {
+        constant_map.insert({var_name, e.id_value()});
     }
-    auto val  = constant_fold(e.value, constant_map);
-    auto body = constant_fold(e.body, constant_map);
-    return {make_rexpr<resolved_let>(e.identifier, val.first, body.first, e.type, e.loc), val.second||body.second};
+
+    auto val = constant_fold(e.id_value(), constant_map, rewrites);
+
+    auto var_cst = make_rexpr<resolved_variable>(var_name, val.first, type_of(val.first), location_of(val.first));
+    rewrites.insert({var_name, var_cst});
+
+    auto body = constant_fold(e.body, constant_map, rewrites);
+    return {make_rexpr<resolved_let>(var_cst, body.first, e.type, e.loc), val.second||body.second};
 }
 
-std::pair<r_expr, bool> constant_fold(const resolved_conditional& e,std::unordered_map<std::string, r_expr>& constant_map) {
-    auto cond = constant_fold(e.condition, constant_map);
-    auto tval = constant_fold(e.value_true, constant_map);
-    auto fval = constant_fold(e.value_false, constant_map);
+std::pair<r_expr, bool> constant_fold(const resolved_conditional& e,
+                                      std::unordered_map<std::string, r_expr>& constant_map,
+                                      std::unordered_map<std::string, r_expr>& rewrites)
+{
+    auto cond = constant_fold(e.condition, constant_map, rewrites);
+    auto tval = constant_fold(e.value_true, constant_map, rewrites);
+    auto fval = constant_fold(e.value_false, constant_map, rewrites);
 
     if (auto val = as_number(cond.first)) {
         if ((bool)val.value()) {
@@ -213,16 +269,25 @@ std::pair<r_expr, bool> constant_fold(const resolved_conditional& e,std::unorder
             cond.second||tval.second||fval.second};
 }
 
-std::pair<r_expr, bool>  constant_fold(const resolved_float& e, std::unordered_map<std::string, r_expr>& constant_map) {
+std::pair<r_expr, bool>  constant_fold(const resolved_float& e,
+                                      std::unordered_map<std::string, r_expr>& constant_map,
+                                      std::unordered_map<std::string, r_expr>& rewrites)
+{
     return {make_rexpr<resolved_float>(e), false};
 }
 
-std::pair<r_expr, bool> constant_fold(const resolved_int& e, std::unordered_map<std::string, r_expr>& constant_map) {
+std::pair<r_expr, bool> constant_fold(const resolved_int& e,
+                                      std::unordered_map<std::string, r_expr>& constant_map,
+                                      std::unordered_map<std::string, r_expr>& rewrites)
+{
     return {make_rexpr<resolved_int>(e), false};
 }
 
-std::pair<r_expr, bool> constant_fold(const resolved_unary& e, std::unordered_map<std::string, r_expr>& constant_map) {
-    auto arg = constant_fold(e.arg, constant_map);
+std::pair<r_expr, bool> constant_fold(const resolved_unary& e,
+                                      std::unordered_map<std::string, r_expr>& constant_map,
+                                      std::unordered_map<std::string, r_expr>& rewrites)
+{
+    auto arg = constant_fold(e.arg, constant_map, rewrites);
     if (auto val_opt = as_number(arg.first)) {
         auto val = val_opt.value();
         switch (e.op) {
@@ -251,9 +316,12 @@ std::pair<r_expr, bool> constant_fold(const resolved_unary& e, std::unordered_ma
     return {make_rexpr<resolved_unary>(e.op, arg.first, e.type, e.loc), arg.second};
 }
 
-std::pair<r_expr, bool> constant_fold(const resolved_binary& e, std::unordered_map<std::string, r_expr>& constant_map) {
-    auto lhs_arg = constant_fold(e.lhs, constant_map);
-    auto rhs_arg = constant_fold(e.rhs, constant_map);
+std::pair<r_expr, bool> constant_fold(const resolved_binary& e,
+                                      std::unordered_map<std::string, r_expr>& constant_map,
+                                      std::unordered_map<std::string, r_expr>& rewrites)
+{
+    auto lhs_arg = constant_fold(e.lhs, constant_map, rewrites);
+    auto rhs_arg = constant_fold(e.rhs, constant_map, rewrites);
     auto lhs_opt = as_number(lhs_arg.first);
     auto rhs_opt = as_number(rhs_arg.first);
     if (lhs_opt && rhs_opt) {
@@ -364,14 +432,18 @@ std::pair<r_expr, bool> constant_fold(const resolved_binary& e, std::unordered_m
     return {make_rexpr<resolved_binary>(e.op, lhs_arg.first, rhs_arg.first, e.type, e.loc), lhs_arg.second||rhs_arg.second};
 }
 
-std::pair<r_expr, bool> constant_fold(const resolved_field_access& e, std::unordered_map<std::string, r_expr>& constant_map) {
-    auto obj_arg = constant_fold(e.object, constant_map);
+std::pair<r_expr, bool> constant_fold(const resolved_field_access& e,
+                                      std::unordered_map<std::string, r_expr>& constant_map,
+                                      std::unordered_map<std::string, r_expr>& rewrites)
+{
+    auto obj_arg = constant_fold(e.object, constant_map, rewrites);
     auto field = e.field;
 
+    // TODO This shouldn't be in the constant fold pass
     if (auto o_ptr = std::get_if<resolved_object>(obj_arg.first.get())) {
         int idx = -1;
         for (unsigned i = 0; i < o_ptr->record_fields.size(); ++i) {
-            if (std::get<resolved_argument>(*(o_ptr->record_fields[i])).name == field) {
+            if (std::get<resolved_variable>(*(o_ptr->record_fields[i])).name == field) {
                 idx = (int)i;
                 break;
             }
@@ -384,13 +456,16 @@ std::pair<r_expr, bool> constant_fold(const resolved_field_access& e, std::unord
     return {make_rexpr<resolved_field_access>(obj_arg.first, field, e.type, e.loc), obj_arg.second};
 }
 
-std::pair<r_expr, bool> constant_fold(const r_expr& e, std::unordered_map<std::string, r_expr>& constant_map) {
-    return std::visit([&](auto& c) {return constant_fold(c, constant_map);}, *e);
+std::pair<r_expr, bool> constant_fold(const r_expr& e,
+                                      std::unordered_map<std::string, r_expr>& constant_map,
+                                      std::unordered_map<std::string, r_expr>& rewrites)
+{
+    return std::visit([&](auto& c) {return constant_fold(c, constant_map, rewrites);}, *e);
 }
 
 std::pair<r_expr, bool> constant_fold(const r_expr& e) {
-    std::unordered_map<std::string, r_expr> constant_map;
-    return constant_fold(e, constant_map);
+    std::unordered_map<std::string, r_expr> constant_map, rewrites;
+    return constant_fold(e, constant_map, rewrites);
 }
 
 } // namespace resolved_ir

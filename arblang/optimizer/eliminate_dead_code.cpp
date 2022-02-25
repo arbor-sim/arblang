@@ -206,8 +206,8 @@ void find_dead_code(const resolved_object& e, std::unordered_set<std::string>& d
 }
 
 void find_dead_code(const resolved_let& e, std::unordered_set<std::string>& dead_args) {
-    dead_args.insert(std::get<resolved_argument>(*e.identifier).name);
-    find_dead_code(e.value, dead_args);
+    dead_args.insert(std::get<resolved_variable>(*e.identifier).name);
+    find_dead_code(e.id_value(), dead_args);
     find_dead_code(e.body, dead_args);
 }
 
@@ -297,10 +297,10 @@ r_expr remove_dead_code(const resolved_object& e, const std::unordered_set<std::
 }
 
 r_expr remove_dead_code(const resolved_let& e, const std::unordered_set<std::string>& dead_args) {
-    if (dead_args.count(std::get<resolved_argument>(*e.identifier).name)) {
+    if (dead_args.count(e.id_name())) {
         return remove_dead_code(e.body, dead_args);
     }
-    return make_rexpr<resolved_let>(e.identifier, e.value, remove_dead_code(e.body, dead_args), e.type, e.loc);
+    return make_rexpr<resolved_let>(e.identifier, remove_dead_code(e.body, dead_args), e.type, e.loc);
 }
 
 r_expr remove_dead_code(const resolved_conditional& e,const std::unordered_set<std::string>& dead_args) {

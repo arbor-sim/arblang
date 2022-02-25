@@ -374,7 +374,7 @@ r_expr resolve(const parsed_let& e, const in_scope_map& map) {
     auto b_expr = resolve(e.body, available_map);
     auto b_type = type_of(b_expr);
 
-    return make_rexpr<resolved_let>(v_var, v_expr, b_expr, b_type, e.loc);
+    return make_rexpr<resolved_let>(v_var, b_expr, b_type, e.loc);
 }
 
 // The with expression becomes an equivalent let expression

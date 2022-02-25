@@ -172,7 +172,7 @@ r_expr canonicalize(const resolved_call& e, std::unordered_set<std::string>& res
     // to its value if needed.
 
     auto temp_expr = make_rexpr<resolved_variable>(unique_local_name(reserved), call_canon, e.type, e.loc);
-    auto let_wrapper = make_rexpr<resolved_let>(temp_expr, call_canon, temp_expr, e.type, e.loc);
+    auto let_wrapper = make_rexpr<resolved_let>(temp_expr, temp_expr, e.type, e.loc);
 
     if (!has_let) return let_wrapper;
 
@@ -230,7 +230,7 @@ r_expr canonicalize(const resolved_object& e, std::unordered_set<std::string>& r
     // to its value if needed.
     auto object_canon = make_rexpr<resolved_object>(e.record_fields, values_canon, e.type, e.loc);
     auto temp_expr = make_rexpr<resolved_variable>(unique_local_name(reserved), object_canon, e.type, e.loc);
-    auto let_wrapper = make_rexpr<resolved_let>(temp_expr, object_canon, temp_expr, e.type, e.loc);
+    auto let_wrapper = make_rexpr<resolved_let>(temp_expr, temp_expr, e.type, e.loc);
 
     if (!has_let) return let_wrapper;
 
@@ -251,17 +251,19 @@ r_expr canonicalize(const resolved_let& e, std::unordered_set<std::string>& rese
     // 2. To canonicalize 'let x = (let _t0 = a+b; let _t1 = _t0+c; _t1;); x;' perform the
     //    procedure outlined above to get 'let _t0 = a+b; let _t1 = _t0+c; let x = _t1; x;'
 
-    auto val_canon = canonicalize(e.value, reserved);
+    auto val_canon = canonicalize(e.id_value(), reserved);
     auto body_canon = canonicalize(e.body, reserved);
-
-    auto let_outer = resolved_let(e.identifier, val_canon, body_canon, e.type, e.loc);
+    auto let_outer = resolved_let(e.id_name(), val_canon, body_canon, e.type, e.loc);
 
     if (auto let_opt = get_let(val_canon)) {
         auto let_val = let_opt.value();
-        let_outer.value = get_innermost_body(&let_val);
+
+        let_outer.id_value(get_innermost_body(&let_val));
         set_innermost_body(&let_val, make_rexpr<resolved_let>(let_outer));
+
         return make_rexpr<resolved_let>(let_val);
     }
+
     return make_rexpr<resolved_let>(let_outer);
 }
 
@@ -315,7 +317,7 @@ r_expr canonicalize(const resolved_conditional& e, std::unordered_set<std::strin
 
     auto if_canon = make_rexpr<resolved_conditional>(cond_canon, true_canon, false_canon, e.type, e.loc);
     auto temp_expr = make_rexpr<resolved_variable>(unique_local_name(reserved), if_canon, e.type, e.loc);
-    auto let_wrapper = make_rexpr<resolved_let>(temp_expr, if_canon, temp_expr, e.type, e.loc);
+    auto let_wrapper = make_rexpr<resolved_let>(temp_expr, temp_expr, e.type, e.loc);
 
     if (!has_let) return let_wrapper;
 
@@ -356,7 +358,7 @@ r_expr canonicalize(const resolved_unary& e, std::unordered_set<std::string>& re
     }
     auto unary_canon = make_rexpr<resolved_unary>(e.op, arg_canon, e.type, e.loc);
     auto temp_expr = make_rexpr<resolved_variable>(unique_local_name(reserved), unary_canon, e.type, e.loc);
-    auto let_wrapper = make_rexpr<resolved_let>(temp_expr, unary_canon, temp_expr, e.type, e.loc);
+    auto let_wrapper = make_rexpr<resolved_let>(temp_expr, temp_expr, e.type, e.loc);
 
     if (!has_let) return let_wrapper;
 
@@ -411,7 +413,7 @@ r_expr canonicalize(const resolved_binary& e, std::unordered_set<std::string>& r
 
     auto binary_canon = make_rexpr<resolved_binary>(e.op, lhs_canon, rhs_canon, e.type, e.loc);
     auto temp_expr = make_rexpr<resolved_variable>(unique_local_name(reserved), binary_canon, e.type, e.loc);
-    auto let_wrapper = make_rexpr<resolved_let>(temp_expr, binary_canon, temp_expr, e.type, e.loc);
+    auto let_wrapper = make_rexpr<resolved_let>(temp_expr, temp_expr, e.type, e.loc);
 
     if (!has_let) return let_wrapper;
 
@@ -445,7 +447,7 @@ r_expr canonicalize(const resolved_field_access& e, std::unordered_set<std::stri
 
     auto access_canon = make_rexpr<resolved_field_access>(obj_canon, e.field, e.type, e.loc);
     auto temp_expr = make_rexpr<resolved_variable>(unique_local_name(reserved), access_canon, e.type, e.loc);
-    auto let_wrapper = make_rexpr<resolved_let>(temp_expr, access_canon, temp_expr, e.type, e.loc);
+    auto let_wrapper = make_rexpr<resolved_let>(temp_expr, temp_expr, e.type, e.loc);
 
     if (!has_let) return let_wrapper;
 

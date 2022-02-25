@@ -55,41 +55,6 @@ public:
         return expression_;
     }
 
-/*    resolved_mechanism optimize(const resolved_mechanism& e) {
-        resolved_mechanism mech = e;
-        while (keep_optimizing_) {
-            keep_optimizing_ = false;
-            auto result = cse(mech);
-            mech = result.first;
-            keep_optimizing_ |= result.second;
-
-//            std::cout << "--------------0------------" << std::endl;
-//            std::cout << to_string(mech) << std::endl << std::endl;
-
-            result = constant_fold(mech);
-            mech = result.first;
-            keep_optimizing_ |= result.second;
-
-//            std::cout << "--------------1------------" << std::endl;
-//            std::cout << to_string(mech) << std::endl << std::endl;
-
-            result = copy_propagate(mech);
-            mech = result.first;
-            keep_optimizing_ |= result.second;
-
-//            std::cout << "--------------2------------" << std::endl;
-//            std::cout << to_string(mech) << std::endl << std::endl;
-
-            result = eliminate_dead_code(mech);
-            mech = result.first;
-            keep_optimizing_ |= result.second;
-
-//            std::cout << "--------------3------------" << std::endl;
-//            std::cout << to_string(mech) << std::endl << std::endl;
-        }
-        return mech;
-    }*/
-
     void reset() {
         keep_optimizing_ = true;
     }

@@ -110,8 +110,8 @@ struct resolved_variable {
 };
 
 // Used for object field access using the dot operator.
-// It will either have been replaced by a resolved_variable after inlining
-// or it will remain, if the object has is a state.
+// It will either have been replaced by a resolved_variable after inlining,
+// or it will remain if the object is a state.
 struct resolved_field_access {
     r_expr object;   // pointer to the expression representing the object
     std::string field;  // name of the field in the tuple representing the object
@@ -257,14 +257,19 @@ struct resolved_object {
 // Let bindings
 struct resolved_let {
     r_expr identifier;
-    r_expr value;
     r_expr body;
     r_type type;
     src_location loc;
 
     resolved_let() = default;
-    resolved_let(r_expr iden, r_expr value, r_expr body, r_type type, const src_location& loc):
-        identifier(std::move(iden)), value(std::move(value)), body(std::move(body)), type(std::move(type)), loc(loc) {};
+    resolved_let(r_expr iden, r_expr body, r_type type, const src_location& loc):
+        identifier(std::move(iden)), body(std::move(body)), type(std::move(type)), loc(loc) {};
+
+    resolved_let(std::string iden, r_expr value, r_expr body, r_type type, const src_location& loc);
+
+    r_expr id_value() const;
+    void id_value(r_expr);
+    std::string id_name() const;
 };
 
 // if/else statements
@@ -345,8 +350,8 @@ bool operator==(const resolved_int& lhs, const resolved_int& rhs);
 bool operator==(const resolved_unary& lhs, const resolved_unary& rhs);
 bool operator==(const resolved_binary& lhs, const resolved_binary& rhs);
 
-std::string to_string(const resolved_mechanism&, bool include_type=true, int indent=0);
-std::string to_string(const r_expr&, bool include_type=true, int indent=0);
+std::string to_string(const resolved_mechanism&, bool include_type=true, bool expand_var=false, int indent=0);
+std::string to_string(const r_expr&, bool include_type=true, bool expand_var=false, int indent=0);
 
 r_type type_of(const r_expr&);
 src_location location_of(const r_expr&);
