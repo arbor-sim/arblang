@@ -244,25 +244,27 @@ r_expr inline_func(const resolved_let& e,
                    std::unordered_map<std::string, r_expr>& rewrites,
                    std::unordered_map<std::string, r_expr>& avail_funcs)
 {
-    auto val_ssa = inline_func(e.value, reserved, rewrites, avail_funcs);
-    auto iden_ssa = e.identifier;
+    auto val_ssa = inline_func(e.id_value(), reserved, rewrites, avail_funcs);
 
-    auto iden = std::get<resolved_variable>(*e.identifier);
-    if (!reserved.insert(iden.name).second) {
-        auto rename = unique_local_name(reserved, "r");
-        reserved.insert(rename);
-        iden_ssa = make_rexpr<resolved_variable>(rename, iden.value, iden.type, iden.loc);
-        rewrites[iden.name] = iden_ssa;
+    auto id_name = e.id_name();
+    if (!reserved.insert(id_name).second) {
+        id_name = unique_local_name(reserved, "f");
+        reserved.insert(id_name);
     }
+    auto iden_ssa = make_rexpr<resolved_variable>(id_name, val_ssa, type_of(val_ssa), location_of(val_ssa));
+    rewrites[e.id_name()] = iden_ssa;
 
     auto body_ssa = inline_func(e.body, reserved, rewrites, avail_funcs);
+    auto let_outer = resolved_let(iden_ssa, body_ssa, e.type, e.loc);
 
     // Extract let
-    auto let_outer = resolved_let(iden_ssa, val_ssa, body_ssa, e.type, e.loc);
-    if (auto let_first = std::get_if<resolved_let>(val_ssa.get())) {
-        let_outer.value = get_innermost_body(let_first);
-        set_innermost_body(let_first, make_rexpr<resolved_let>(let_outer));
-        return make_rexpr<resolved_let>(*let_first);
+    if (auto let_opt = get_let(val_ssa)) {
+        auto let_val = let_opt.value();
+
+        let_outer.id_value(get_innermost_body(&let_val));
+        set_innermost_body(&let_val, make_rexpr<resolved_let>(let_outer));
+
+        return make_rexpr<resolved_let>(let_val);
     }
     return make_rexpr<resolved_let>(let_outer);
 }

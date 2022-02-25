@@ -6,5 +6,7 @@ namespace al {
 namespace resolved_ir {
 r_expr get_innermost_body(resolved_let* let);
 void set_innermost_body(resolved_let* let, const r_expr& body);
+
+std::optional<resolved_let> get_let(const r_expr& expr);
 } // namespace resolved_ir
 } // namespace al

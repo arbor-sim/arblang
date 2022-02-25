@@ -317,14 +317,15 @@ TEST(canonicalizer, with) {
         auto let_canon = canonicalize(let_resolved);
         auto let_ssa = single_assign(let_canon);
 
-        std::cout << to_string(let_ssa) << std::endl;
-        std::cout << std::endl;
-
         auto opt = optimizer(let_ssa);
         auto let_opt = opt.optimize();
 
         std::cout << to_string(let_opt) << std::endl;
         std::cout << std::endl;
+        if (auto let = std::get_if<resolved_let>(let_opt.get())) {
+            std::cout << to_string(get_innermost_body(let), false, true, 0) << std::endl;
+            std::cout << std::endl;
+        }
 
         // let t0_:real = 5-q;
         // let t1_:real = t+t0_;                                                     // B.X
@@ -364,6 +365,10 @@ TEST(canonicalizer, with) {
 
         std::cout << to_string(let_opt) << std::endl;
         std::cout << std::endl;
+        if (auto let = std::get_if<resolved_let>(let_opt.get())) {
+            std::cout << to_string(get_innermost_body(let), false, true, 0) << std::endl;
+            std::cout << std::endl;
+        }
 
         // let t0_:real = 5-q;
         // let t1_:real = t+t0_;              // t1_ -> B.X
@@ -378,7 +383,7 @@ TEST(canonicalizer, with) {
         in_scope_map scope_map;
         scope_map.type_map.insert({"foo", foo_type});
 
-        std::string p_expr = "let A:foo = {a = 2[V]; b = 1[A];};\n"
+        std::string p_expr = "let A:foo = {a = 2[V]; b = 0.5[A];};\n"
                              "with A;\n"
                              "let a = a/b;\n"
                              "with A;\n"
@@ -397,10 +402,41 @@ TEST(canonicalizer, with) {
 
         std::cout << to_string(let_opt) << std::endl;
         std::cout << std::endl;
+        if (auto let = std::get_if<resolved_let>(let_opt.get())) {
+            std::cout << to_string(get_innermost_body(let), false, true, 0) << std::endl;
+            std::cout << std::endl;
+        }
 
-        // let t0_:{a:voltage; b:current} = {a=2; b=1;};
-        // let t1_:voltage = t0_.a;
-        // t1_;
+        // 2:voltage
+    }
+    {
+        in_scope_map scope_map;
+        scope_map.type_map.insert({"foo", foo_type});
+
+        std::string p_expr = "let A:foo = {a = 2[V]; b = 0.5[A];};\n"
+                             "with A;\n"
+                             "let a = a/b;\n"
+                             "a;\n";
+
+        auto p = parser(p_expr);
+        auto let = p.parse_let();
+
+        auto let_normal = normalize(let);
+        auto let_resolved = resolve(let_normal, scope_map);
+        auto let_canon = canonicalize(let_resolved);
+        auto let_ssa = single_assign(let_canon);
+
+        auto opt = optimizer(let_ssa);
+        auto let_opt = opt.optimize();
+
+        std::cout << to_string(let_opt) << std::endl;
+        std::cout << std::endl;
+        if (auto let = std::get_if<resolved_let>(let_opt.get())) {
+            std::cout << to_string(get_innermost_body(let), false, true, 0) << std::endl;
+            std::cout << std::endl;
+        }
+
+        // 4:resistance
     }
 }
 
@@ -436,6 +472,10 @@ TEST(canonicalizer, conditional) {
 
         std::cout << to_string(if_opt) << std::endl;
         std::cout << std::endl;
+        if (auto if_stmt = std::get_if<resolved_let>(if_opt.get())) {
+            std::cout << to_string(get_innermost_body(if_stmt), false, true, 0) << std::endl;
+            std::cout << std::endl;
+        }
 
         // let t0_:bool = t==4;
         // let t2_:real = t0_? 12: 15.5;
@@ -467,20 +507,23 @@ TEST(canonicalizer, conditional) {
 
         std::cout << to_string(if_opt) << std::endl;
         std::cout << std::endl;
+        if (auto if_stmt = std::get_if<resolved_let>(if_opt.get())) {
+            std::cout << to_string(get_innermost_body(if_stmt), false, true, 0) << std::endl;
+            std::cout << std::endl;
+        }
 
+        /// TODO buggy
         // let t0_:bool = t==4;
-        // let t1_:real = a>3;
+        // let t1_:bool = a>3;
         // let t2_:bool = a<4;
         // let t3_:bool = t0_? t1_: t2_;                     // if t == 4 then a>3 else a<4
         // let t4_:real = obar.X;
         // let t5_:bool = t4_==5;
         // let t6_:{a:voltage; b:current} = obar.Y;
-        // let t7_:{a:voltage; b:current} = {a=3; b=0.005};
-        // let t8_:{a:voltage; b:current} = t5_? t6_: t7_;   // if obar.X == 5 then obar.Y else {a=3[V]; b=5[mA];}
+        // let t8_:{a:voltage; b:current} = t5_? t6_: {a=3; b=0.005};   // if obar.X == 5 then obar.Y else {a=3[V]; b=5[mA];}
         // let t9_:real = foo();
         // let t10_:voltage = t9_*3;
-        // let t11_:{a:voltage; b:current} = {a=t10_; b=7;}
-        // let t12_:{a:voltage; b:current} = t3_? t8_: t11_;
+        // let t12_:{a:voltage; b:current} = t3_? t8_: {a=t10_; b=7;};
         // t12_;
     }
 }
@@ -506,8 +549,6 @@ TEST(custom_hash, map) {
     map.insert({t4, 4});
     map.insert({t5, 5});
     map.insert({t6, 6});
-
-    std::cout << std::endl;
 }
 
 TEST(cse, let) {
@@ -537,6 +578,10 @@ TEST(cse, let) {
 
         std::cout << to_string(let_opt) << std::endl;
         std::cout << std::endl;
+        if (auto if_stmt = std::get_if<resolved_let>(let_opt.get())) {
+            std::cout << to_string(get_innermost_body(if_stmt), false, true, 0) << std::endl;
+            std::cout << std::endl;
+        }
 
         // let t0_:voltage = a*5;
         // let t1_:voltage = a+t0_; // b
@@ -569,6 +614,10 @@ TEST(cse, let) {
 
         std::cout << to_string(let_opt) << std::endl;
         std::cout << std::endl;
+        if (auto if_stmt = std::get_if<resolved_let>(let_opt.get())) {
+            std::cout << to_string(get_innermost_body(if_stmt), false, true, 0) << std::endl;
+            std::cout << std::endl;
+        }
 
         // let t1_:voltage = a+0.0025[V]; // x
         // let t2_:current = t1_*s;       // b
@@ -599,6 +648,10 @@ TEST(cse, let) {
 
         std::cout << to_string(let_opt) << std::endl;
         std::cout << std::endl;
+        if (auto if_stmt = std::get_if<resolved_let>(let_opt.get())) {
+            std::cout << to_string(get_innermost_body(if_stmt), false, true, 0) << std::endl;
+            std::cout << std::endl;
+        }
 
         // 6:real
     }
@@ -625,6 +678,10 @@ TEST(cse, let) {
 
         std::cout << to_string(let_opt) << std::endl;
         std::cout << std::endl;
+        if (auto if_stmt = std::get_if<resolved_let>(let_opt.get())) {
+            std::cout << to_string(get_innermost_body(if_stmt), false, true, 0) << std::endl;
+            std::cout << std::endl;
+        }
 
         // 1:real
     }
@@ -701,14 +758,18 @@ TEST(function_inline, misc) {
         auto l_opt = optimizer(let_ssa);
         auto let_opt = l_opt.optimize();
 
-//        std::unordered_map<std::string, r_expr> avail_funcs = {{"foo", foo_opt}, {"bar", bar_opt}};
-//        auto let_inlined = inline_func(let_opt, avail_funcs);
-//
-//        auto l_opt2 = optimizer(let_inlined);
-//        auto let_opt2 = l_opt2.optimize();
-//
-//        std::cout << to_string(let_opt2) << std::endl;
-//        std::cout << std::endl;
+        std::unordered_map<std::string, r_expr> avail_funcs = {{"foo", foo_opt}, {"bar", bar_opt}};
+        auto let_inlined = inline_func(let_opt, avail_funcs);
+
+        auto l_opt2 = optimizer(let_inlined);
+        auto let_opt2 = l_opt2.optimize();
+
+        std::cout << to_string(let_opt2) << std::endl;
+        std::cout << std::endl;
+        if (auto ll = std::get_if<resolved_let>(let_opt2.get())) {
+            std::cout << to_string(get_innermost_body(ll), false, true, 0) << std::endl;
+            std::cout << std::endl;
+        }
     }
 
     // let _t0:real = x+y;
@@ -748,17 +809,17 @@ TEST(optimizer, mechanism) {
         auto opt_0 = optimizer(m_ssa);
         auto m_opt = opt_0.optimize();
 
-//        auto m_inlined = inline_func(m_opt);
-//
-//        auto opt_1 = optimizer(m_inlined);
-//        auto m_fin = opt_1.optimize();
-//
-//        std::cout << "-----------------------------" << std::endl;
-//        std::cout << mech << std::endl;
-//        std::cout << "-----------------------------" << std::endl;
-//        std::cout << to_string(m_fin) << std::endl;
-//        std::cout << "-----------------------------" << std::endl;
-//        std::cout << std::endl;
+        auto m_inlined = inline_func(m_opt);
+
+        auto opt_1 = optimizer(m_inlined);
+        auto m_fin = opt_1.optimize();
+
+        std::cout << "-----------------------------" << std::endl;
+        std::cout << mech << std::endl;
+        std::cout << "-----------------------------" << std::endl;
+        std::cout << to_string(m_fin) << std::endl;
+        std::cout << "-----------------------------" << std::endl;
+        std::cout << std::endl;
     }
     {
         std::string mech =
@@ -831,17 +892,17 @@ TEST(optimizer, mechanism) {
         auto opt_0 = optimizer(m_ssa);
         auto m_opt = opt_0.optimize();
 
-//        auto m_inlined = inline_func(m_opt);
-//
-//        auto opt_1 = optimizer(m_inlined);
-//        auto m_fin = opt_1.optimize();
-//
-//        std::cout << "-----------------------------" << std::endl;
-//        std::cout << mech << std::endl;
-//        std::cout << "-----------------------------" << std::endl;
-//        std::cout << to_string(m_fin) << std::endl;
-//        std::cout << "-----------------------------" << std::endl;
-//        std::cout << std::endl;
+        auto m_inlined = inline_func(m_opt);
+
+        auto opt_1 = optimizer(m_inlined);
+        auto m_fin = opt_1.optimize();
+
+        std::cout << "-----------------------------" << std::endl;
+        std::cout << mech << std::endl;
+        std::cout << "-----------------------------" << std::endl;
+        std::cout << to_string(m_fin) << std::endl;
+        std::cout << "-----------------------------" << std::endl;
+        std::cout << std::endl;
     }
     {
         std::string mech =
@@ -898,16 +959,19 @@ TEST(optimizer, mechanism) {
         auto opt_0 = optimizer(m_ssa);
         auto m_opt = opt_0.optimize();
 
-//        auto m_inlined = inline_func(m_opt);
-//
-//        auto opt_1 = optimizer(m_inlined);
-//        auto m_fin = opt_1.optimize();
-//
-//        std::cout << "-----------------------------" << std::endl;
-//        std::cout << mech << std::endl;
-//        std::cout << "-----------------------------" << std::endl;
-//        std::cout << to_string(m_fin) << std::endl;
-//        std::cout << "-----------------------------" << std::endl;
-//        std::cout << std::endl;
+        auto m_inlined = inline_func(m_opt);
+
+        auto opt_1 = optimizer(m_inlined);
+        auto m_fin = opt_1.optimize();
+
+        std::cout << "-----------------------------" << std::endl;
+        std::cout << mech << std::endl;
+        std::cout << "-----------------------------" << std::endl;
+        std::cout << to_string(m_fin) << std::endl;
+        std::cout << "-----------------------------" << std::endl;
+        std::cout << std::endl;
     }
 }
+
+/// TODO bugs:
+/// object fields aren't being resolved correctly (durng opt)

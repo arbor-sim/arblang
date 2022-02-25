@@ -11,13 +11,6 @@
 namespace al {
 namespace resolved_ir {
 
-std::optional<resolved_let> get_let(const r_expr& expr) {
-    if (auto let = std::get_if<resolved_let>(expr.get())) {
-        return *let;
-    }
-    return std::nullopt;
-}
-
 // Canonicalize
 resolved_mechanism canonicalize(const resolved_mechanism& e) {
     std::unordered_set<std::string> reserved;

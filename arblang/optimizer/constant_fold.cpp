@@ -376,14 +376,16 @@ std::pair<r_expr, bool> constant_fold(const resolved_binary& e,
                 case binary_op::div:  return {make_rexpr<resolved_int>(0, e.type, e.loc), true};
                 case binary_op::land: return {make_rexpr<resolved_int>(0, e.type, e.loc), true};
                 case binary_op::lor:  return {rhs_arg.first, true};
+                case binary_op::pow:  return {make_rexpr<resolved_int>(0, e.type, e.loc), true};
                 default: break;
             }
         }
         else if (lhs == 1) {
             switch (e.op) {
-                case binary_op::mul:  return {rhs_arg.first, true};
+                // TODO 1 * x. Can't be simplified yet, because they alter the unit
                 case binary_op::land: return {rhs_arg.first, true};
                 case binary_op::lor:  return {make_rexpr<resolved_int>(1, e.type, e.loc), true};
+                case binary_op::pow:  return {make_rexpr<resolved_int>(1, e.type, e.loc), true};
                 default: break;
             }
         }
@@ -399,15 +401,16 @@ std::pair<r_expr, bool> constant_fold(const resolved_binary& e,
                                                                           to_string(location_of(e.lhs))));
                 case binary_op::land: return {make_rexpr<resolved_int>(0, e.type, e.loc), true};
                 case binary_op::lor:  return {lhs_arg.first, true};
+                case binary_op::pow:  return {make_rexpr<resolved_int>(1, e.type, e.loc), true};
                 default: break;
             }
         }
         else if (rhs == 1) {
+            // TODO x * 1 and x / 1. Can't be simplified yet, because they alter the unit
             switch (e.op) {
-                case binary_op::mul:  return {lhs_arg.first, true};
-                case binary_op::div:  return {lhs_arg.first, true};
                 case binary_op::land: return {lhs_arg.first, true};
                 case binary_op::lor:  return {make_rexpr<resolved_int>(1, e.type, e.loc), true};
+                case binary_op::pow:  return {lhs_arg.first, true};
                 default: break;
             }
         }

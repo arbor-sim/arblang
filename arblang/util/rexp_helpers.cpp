@@ -20,5 +20,13 @@ void set_innermost_body(resolved_let* const let, const r_expr& body) {
     }
     let_last->body = body;
 }
+
+std::optional<resolved_let> get_let(const r_expr& expr) {
+    if (auto let = std::get_if<resolved_let>(expr.get())) {
+        return *let;
+    }
+    return std::nullopt;
+}
+
 } // namespace resolved_ir
 } // namespace al
