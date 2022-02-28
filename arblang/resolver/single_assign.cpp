@@ -188,14 +188,11 @@ r_expr single_assign(const resolved_object& e,
                      std::unordered_set<std::string>& reserved,
                      std::unordered_map<std::string, r_expr>& rewrites)
 {
-    std::vector<r_expr> fields_ssa, args_ssa;
-    for (const auto& a: e.record_fields) {
+    std::vector<r_expr> fields_ssa;
+    for (const auto& a: e.field_values()) {
         fields_ssa.push_back(single_assign(a, reserved, rewrites));
     }
-    for (const auto& a: e.record_values) {
-        args_ssa.push_back(single_assign(a, reserved, rewrites));
-    }
-    return make_rexpr<resolved_object>(fields_ssa, args_ssa, e.type, e.loc);
+    return make_rexpr<resolved_object>(e.field_names(), fields_ssa, e.type, e.loc);
 }
 
 r_expr single_assign(const resolved_let& e,

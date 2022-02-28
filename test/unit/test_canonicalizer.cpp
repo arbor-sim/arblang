@@ -14,6 +14,7 @@
 #include <arblang/resolver/resolved_types.hpp>
 #include <arblang/resolver/single_assign.hpp>
 #include <arblang/util/custom_hash.hpp>
+#include <arblang/util/pretty_printer.hpp>
 
 #include "../gtest.h"
 
@@ -55,15 +56,16 @@ TEST(canonicalizer, call) {
         auto opt = optimizer(call_ssa);
         auto call_opt = opt.optimize();
 
-        std::cout << to_string(call_opt) << std::endl;
-        std::cout << std::endl;
-        if (auto let = std::get_if<resolved_let>(call_opt.get())) {
-            std::cout << to_string(get_innermost_body(let), false, true, 0) << std::endl;
-            std::cout << std::endl;
-        }
+        std::string expected_opt = "let _t0: real = foo();\n"
+                                   "_t0;";
 
-        // let t0_:real = foo();
-        // t0_;
+        std::string expanded_ans = "(variable _t0\n"
+                                   "  (call foo))";
+
+        EXPECT_EQ(expected_opt, pretty_print(call_opt));
+
+        auto let = std::get_if<resolved_let>(call_opt.get());
+        EXPECT_EQ(expanded_ans, expand(get_innermost_body(let)));
     }
     {
         auto arg0 = make_rexpr<resolved_argument>("a", real_type, loc);
@@ -82,15 +84,18 @@ TEST(canonicalizer, call) {
         auto opt = optimizer(call_ssa);
         auto call_opt = opt.optimize();
 
-        std::cout << to_string(call_opt) << std::endl;
-        std::cout << std::endl;
-        if (auto let = std::get_if<resolved_let>(call_opt.get())) {
-            std::cout << to_string(get_innermost_body(let), false, true, 0) << std::endl;
-            std::cout << std::endl;
-        }
+        std::string expected_opt = "let _t0: real = foo2(2: real, 1: real);\n"
+                                   "_t0;";
 
-        // let t0_:foo2(2, 1);
-        // t0_;
+        std::string expanded_ans = "(variable _t0\n"
+                                   "  (call foo2\n"
+                                   "    (2)\n"
+                                   "    (1)))";
+
+        EXPECT_EQ(expected_opt, pretty_print(call_opt));
+
+        auto var = std::get_if<resolved_let>(call_opt.get());
+        EXPECT_EQ(expanded_ans, expand(get_innermost_body(var)));
     }
     {
         auto arg0 = make_rexpr<resolved_argument>("a", real_type, loc);
@@ -110,15 +115,19 @@ TEST(canonicalizer, call) {
         auto opt = optimizer(call_ssa);
         auto call_opt = opt.optimize();
 
-        std::cout << to_string(call_opt) << std::endl;
-        std::cout << std::endl;
-        if (auto let = std::get_if<resolved_let>(call_opt.get())) {
-            std::cout << to_string(get_innermost_body(let), false, true, 0) << std::endl;
-            std::cout << std::endl;
-        }
+        std::string expected_opt = "let _t1: real = foo_bar(2.5: real, a, -1: current^1);\n"
+                                   "_t1;";
 
-        // let t1_ = foo_bar(2.5, a, -1);
-        // t1_;
+        std::string expanded_ans = "(variable _t1\n"
+                                   "  (call foo_bar\n"
+                                   "    (2.5)\n"
+                                   "    (argument a)\n"
+                                   "    (-1)))";
+
+        EXPECT_EQ(expected_opt, pretty_print(call_opt));
+
+        auto var = std::get_if<resolved_let>(call_opt.get());
+        EXPECT_EQ(expanded_ans, expand(get_innermost_body(var)));
     }
     {
         auto arg0 = make_rexpr<resolved_argument>("a", real_type, loc);
@@ -138,15 +147,20 @@ TEST(canonicalizer, call) {
         auto opt = optimizer(call_ssa);
         auto call_opt = opt.optimize();
 
-        std::cout << to_string(call_opt) << std::endl;
-        std::cout << std::endl;
-        if (auto let = std::get_if<resolved_let>(call_opt.get())) {
-            std::cout << to_string(get_innermost_body(let), false, true, 0) << std::endl;
-            std::cout << std::endl;
-        }
-        // let t1_:real = foo();
-        // let t2_:real = bar(5, t1_);
-        // t2_;
+        std::string expected_opt = "let _t1: real = foo();\n"
+                                   "let _t2: real = bar(5: real, _t1);\n"
+                                   "_t2;";
+
+        std::string expanded_ans = "(variable _t2\n"
+                                   "  (call bar\n"
+                                   "    (5)\n"
+                                   "    (variable _t1\n"
+                                   "      (call foo))))";
+
+        EXPECT_EQ(expected_opt, pretty_print(call_opt));
+
+        auto var = std::get_if<resolved_let>(call_opt.get());
+        EXPECT_EQ(expanded_ans, expand(get_innermost_body(var)));
     }
     {
         auto arg0 = make_rexpr<resolved_argument>("a", voltage_type, loc);
@@ -165,16 +179,22 @@ TEST(canonicalizer, call) {
         auto opt = optimizer(call_ssa);
         auto call_opt = opt.optimize();
 
-        std::cout << to_string(call_opt) << std::endl;
-        std::cout << std::endl;
-        if (auto let = std::get_if<resolved_let>(call_opt.get())) {
-            std::cout << to_string(get_innermost_body(let), false, true, 0) << std::endl;
-            std::cout << std::endl;
-        }
+        std::string expected_opt = "let _t0: real = bar.X;\n"
+                                   "let _t1: real = baz(0.0060000000000000001: length^2 mass^1 time^-3 current^-1, _t0);\n"
+                                   "_t1;";
 
-        // let t0_:real = bar.X;
-        // let t1_:real = baz(0.006, t0_);
-        // t1_;
+        std::string expanded_ans = "(variable _t1\n"
+                                   "  (call baz\n"
+                                   "    (0.0060000000000000001)\n"
+                                   "    (variable _t0\n"
+                                   "      (access\n"
+                                   "        (argument bar)\n"
+                                   "        (X)))))";
+
+        EXPECT_EQ(expected_opt, pretty_print(call_opt));
+
+        auto var = std::get_if<resolved_let>(call_opt.get());
+        EXPECT_EQ(expanded_ans, expand(get_innermost_body(var)));
     }
 }
 
@@ -198,20 +218,11 @@ TEST(canonicalizer, let) {
         auto let_canon = canonicalize(let_resolved);
         auto let_ssa = single_assign(let_canon);
 
-        std::cout << to_string(let_ssa) << std::endl;
-        std::cout << std::endl;
-
         auto opt = optimizer(let_ssa);
         auto let_opt = opt.optimize();
 
-        std::cout << to_string(let_opt) << std::endl;
-        std::cout << std::endl;
-        if (auto let = std::get_if<resolved_let>(let_opt.get())) {
-            std::cout << to_string(get_innermost_body(let), false, true, 0) << std::endl;
-            std::cout << std::endl;
-        }
-
-        // 11:real
+        std::string expected_opt = "11: real";
+        EXPECT_EQ(expected_opt, pretty_print(let_opt));
     }
     {
         in_scope_map scope_map;
@@ -230,19 +241,40 @@ TEST(canonicalizer, let) {
         auto opt = optimizer(let_ssa);
         auto let_opt = opt.optimize();
 
-        std::cout << to_string(let_opt) << std::endl;
-        std::cout << std::endl;
-        if (auto let = std::get_if<resolved_let>(let_opt.get())) {
-            std::cout << to_string(get_innermost_body(let), false, true, 0) << std::endl;
-            std::cout << std::endl;
-        }
+        std::string expected_opt = "let _t0: length^2 mass^1 time^-3 current^-1 = a*5: real;\n"
+                                   "let _t1: length^2 mass^1 time^-3 current^-1 = a+_t0;\n"
+                                   "let _t2: current^1 = _t1*s;\n"
+                                   "let _t3: length^2 mass^1 time^-3 = _t2*a;\n"
+                                   "let _t4: length^4 mass^2 time^-6 current^-1 = _t3*_t1;\n"
+                                   "_t4;";
 
-        // let t0_:voltage = a*5;
-        // let t1_:voltage = a+t0_; // b
-        // let t2_:current = t1_*s; // c
-        // let t3_:power = t2_*a;   // c*a
-        // let t4_:power*voltage = t3_*t1_; // c*a*b
-        // t4_;
+        std::string expanded_ans = "(variable _t4\n"
+                                   "  (*\n"
+                                   "    (variable _t3\n"
+                                   "      (*\n"
+                                   "        (variable _t2\n"
+                                   "          (*\n"
+                                   "            (variable _t1\n"
+                                   "              (+\n"
+                                   "                (argument a)\n"
+                                   "                (variable _t0\n"
+                                   "                  (*\n"
+                                   "                    (argument a)\n"
+                                   "                    (5)))))\n"
+                                   "            (argument s)))\n"
+                                   "        (argument a)))\n"
+                                   "    (variable _t1\n"
+                                   "      (+\n"
+                                   "        (argument a)\n"
+                                   "        (variable _t0\n"
+                                   "          (*\n"
+                                   "            (argument a)\n"
+                                   "            (5)))))))";
+
+        EXPECT_EQ(expected_opt, pretty_print(let_opt));
+
+        auto var = std::get_if<resolved_let>(let_opt.get());
+        EXPECT_EQ(expanded_ans, expand(get_innermost_body(var)));
     }
     {
         in_scope_map scope_map;
@@ -263,22 +295,132 @@ TEST(canonicalizer, let) {
         auto opt = optimizer(let_ssa);
         auto let_opt = opt.optimize();
 
-        std::cout << to_string(let_opt) << std::endl;
-        std::cout << std::endl;
-        if (auto let = std::get_if<resolved_let>(let_opt.get())) {
-            std::cout << to_string(get_innermost_body(let), false, true, 0) << std::endl;
-            std::cout << std::endl;
-        }
-
         // let t1_:voltage = a+0.0025; // x
         // let t2_:current = t1_*s;    // b
         // let t3_:real = foo(t2_);    // foo(b)
         // let t4_:current = a*s;      //
         // let t5_:real = foo(t4_);    // foo(a*s)
         // let t6_:real = t3_*t5_;     // c
-        // let t7_:current = t6_/2.1;  // c/2.1
+        // let t7_:current^-1 = t6_/2.1;  // c/2.1
         // t7_;
 
+        std::string expected_opt = "let _t1: length^2 mass^1 time^-3 current^-1 = a+0.0025000000000000001: length^2 mass^1 time^-3 current^-1;\n"
+                                   "let _t2: current^1 = _t1*s;\n"
+                                   "let _t3: real = foo(_t2);\n"
+                                   "let _t4: current^1 = a*s;\n"
+                                   "let _t5: real = foo(_t4);\n"
+                                   "let _t6: real = _t3*_t5;\n"
+                                   "let _t7: current^-1 = _t6/2.1000000000000001: current^1;\n"
+                                   "_t7;";
+
+        std::string expanded_ans = "(variable _t7\n"
+                                   "  (/\n"
+                                   "    (variable _t6\n"
+                                   "      (*\n"
+                                   "        (variable _t3\n"
+                                   "          (call foo\n"
+                                   "            (variable _t2\n"
+                                   "              (*\n"
+                                   "                (variable _t1\n"
+                                   "                  (+\n"
+                                   "                    (argument a)\n"
+                                   "                    (0.0025000000000000001)))\n"
+                                   "                (argument s)))))\n"
+                                   "        (variable _t5\n"
+                                   "          (call foo\n"
+                                   "            (variable _t4\n"
+                                   "              (*\n"
+                                   "                (argument a)\n"
+                                   "                (argument s)))))))\n"
+                                   "    (2.1000000000000001)))";
+
+        EXPECT_EQ(expected_opt, pretty_print(let_opt));
+
+        auto var = std::get_if<resolved_let>(let_opt.get());
+        EXPECT_EQ(expanded_ans, expand(get_innermost_body(var)));
+    }
+}
+
+TEST(canonicalizer, object) {
+    auto loc = src_location{};
+    auto real_type    = make_rtype<resolved_quantity>(normalized_type(quantity::real), loc);
+    auto real_body    = make_rexpr<resolved_float>(0, real_type, loc);
+    {
+        in_scope_map scope_map;
+        scope_map.func_map.insert(
+                {"foo", make_rexpr<resolved_function>("foo", std::vector<r_expr>{}, real_body, real_type, loc)});
+
+        std::string p_expr = "let q = {a=foo()*3[V]; b=7000[mA];}; "
+                             "q.a/q.b";
+
+        auto p = parser(p_expr);
+        auto obj = p.parse_let();
+
+        auto obj_normal = normalize(obj);
+        auto obj_resolved = resolve(obj_normal, scope_map);
+        auto obj_canon = canonicalize(obj_resolved);
+        auto obj_ssa = single_assign(obj_canon);
+
+        auto opt = optimizer(obj_ssa);
+        auto let_opt = opt.optimize();
+
+        std::string expected_opt = "let _t0: real = foo();\n"
+                                   "let _t1: length^2 mass^1 time^-3 current^-1 = _t0*3: length^2 mass^1 time^-3 current^-1;\n"
+                                   "let _t5: length^2 mass^1 time^-3 current^-2 = _t1/7: current^1;\n"
+                                   "_t5;";
+
+        std::string expanded_ans = "(variable _t5\n"
+                                   "  (/\n"
+                                   "    (variable _t1\n"
+                                   "      (*\n"
+                                   "        (variable _t0\n"
+                                   "          (call foo))\n"
+                                   "        (3)))\n"
+                                   "    (7)))";
+
+        EXPECT_EQ(expected_opt, pretty_print(let_opt));
+
+        auto var = std::get_if<resolved_let>(let_opt.get());
+        EXPECT_EQ(expanded_ans, expand(get_innermost_body(var)));
+    }
+    {
+        in_scope_map scope_map;
+        scope_map.func_map.insert(
+                {"foo", make_rexpr<resolved_function>("foo", std::vector<r_expr>{}, real_body, real_type, loc)});
+
+        std::string p_expr = "let a = 1 + 2 + 3;"
+                             "a + 4";
+
+        auto p = parser(p_expr);
+        auto obj = p.parse_let();
+
+        auto obj_normal = normalize(obj);
+        auto obj_resolved = resolve(obj_normal, scope_map);
+        auto obj_canon = canonicalize(obj_resolved);
+        auto obj_ssa = single_assign(obj_canon);
+
+        std::string expected_opt = "let _t0: real = 1: real+2: real;\n"
+                                   "let _t1: real = _t0+3: real;\n"
+                                   "let a: real = _t1;\n"
+                                   "let _t2: real = a+4: real;\n"
+                                   "_t2;";
+
+        std::string expanded_ans = "(variable _t2\n"
+                                   "  (+\n"
+                                   "    (variable a\n"
+                                   "      (variable _t1\n"
+                                   "        (+\n"
+                                   "          (variable _t0\n"
+                                   "            (+\n"
+                                   "              (1)\n"
+                                   "              (2)))\n"
+                                   "          (3))))\n"
+                                   "    (4)))";
+
+        EXPECT_EQ(expected_opt, pretty_print(obj_ssa));
+
+        auto var = std::get_if<resolved_let>(obj_ssa.get());
+        EXPECT_EQ(expanded_ans, expand(get_innermost_body(var)));
     }
 }
 
@@ -320,21 +462,40 @@ TEST(canonicalizer, with) {
         auto opt = optimizer(let_ssa);
         auto let_opt = opt.optimize();
 
-        std::cout << to_string(let_opt) << std::endl;
-        std::cout << std::endl;
-        if (auto let = std::get_if<resolved_let>(let_opt.get())) {
-            std::cout << to_string(get_innermost_body(let), false, true, 0) << std::endl;
-            std::cout << std::endl;
-        }
+        std::string expected_opt = "let _t0: real = 5: real-q;\n"
+                                   "let _t1: real = t+_t0;\n"
+                                   "let _t2: real = foo();\n"
+                                   "let _t3: current^1 = _t2*1: current^1;\n"
+                                   "let _t10: length^2 mass^1 time^-3 current^-2 = 2: length^2 mass^1 time^-3 current^-1/_t3;\n"
+                                   "let _t13: length^2 mass^1 time^-3 current^-2 = _t1*_t10;\n"
+                                   "let _t14: length^2 mass^1 time^-3 current^-2 = _t13/3: real;\n"
+                                   "_t14;";
 
-        // let t0_:real = 5-q;
-        // let t1_:real = t+t0_;                                                     // B.X
-        // let t2_:real = foo();
-        // let t3_:current = t2_*1;                                                  // B.Y.b
-        // let t10_:resistance = 2/t3_;                                              // r
-        // let t13_:resistance = t1_*t10_;                                           // B.X*r
-        // let t14_:resistance = t13_/3;                                             // B.X*r/3
-        // t14_;
+        std::string expanded_ans = "(variable _t14\n"
+                                   "  (/\n"
+                                   "    (variable _t13\n"
+                                   "      (*\n"
+                                   "        (variable _t1\n"
+                                   "          (+\n"
+                                   "            (argument t)\n"
+                                   "            (variable _t0\n"
+                                   "              (-\n"
+                                   "                (5)\n"
+                                   "                (argument q)))))\n"
+                                   "        (variable _t10\n"
+                                   "          (/\n"
+                                   "            (2)\n"
+                                   "            (variable _t3\n"
+                                   "              (*\n"
+                                   "                (variable _t2\n"
+                                   "                  (call foo))\n"
+                                   "                (1)))))))\n"
+                                   "    (3)))";
+
+        EXPECT_EQ(expected_opt, pretty_print(let_opt));
+
+        auto var = std::get_if<resolved_let>(let_opt.get());
+        EXPECT_EQ(expanded_ans, expand(get_innermost_body(var)));
     }
     {
         in_scope_map scope_map;
@@ -363,10 +524,10 @@ TEST(canonicalizer, with) {
         auto opt = optimizer(let_ssa);
         auto let_opt = opt.optimize();
 
-        std::cout << to_string(let_opt) << std::endl;
+        std::cout << pretty_print(let_opt) << std::endl;
         std::cout << std::endl;
         if (auto let = std::get_if<resolved_let>(let_opt.get())) {
-            std::cout << to_string(get_innermost_body(let), false, true, 0) << std::endl;
+            std::cout << expand(get_innermost_body(let)) << std::endl;
             std::cout << std::endl;
         }
 
@@ -400,10 +561,10 @@ TEST(canonicalizer, with) {
         auto opt = optimizer(let_ssa);
         auto let_opt = opt.optimize();
 
-        std::cout << to_string(let_opt) << std::endl;
+        std::cout << pretty_print(let_opt) << std::endl;
         std::cout << std::endl;
         if (auto let = std::get_if<resolved_let>(let_opt.get())) {
-            std::cout << to_string(get_innermost_body(let), false, true, 0) << std::endl;
+            std::cout << expand(get_innermost_body(let)) << std::endl;
             std::cout << std::endl;
         }
 
@@ -429,10 +590,10 @@ TEST(canonicalizer, with) {
         auto opt = optimizer(let_ssa);
         auto let_opt = opt.optimize();
 
-        std::cout << to_string(let_opt) << std::endl;
+        std::cout << pretty_print(let_opt) << std::endl;
         std::cout << std::endl;
         if (auto let = std::get_if<resolved_let>(let_opt.get())) {
-            std::cout << to_string(get_innermost_body(let), false, true, 0) << std::endl;
+            std::cout << expand(get_innermost_body(let)) << std::endl;
             std::cout << std::endl;
         }
 
@@ -470,10 +631,10 @@ TEST(canonicalizer, conditional) {
         auto opt = optimizer(if_ssa);
         auto if_opt = opt.optimize();
 
-        std::cout << to_string(if_opt) << std::endl;
+        std::cout << pretty_print(if_opt) << std::endl;
         std::cout << std::endl;
         if (auto if_stmt = std::get_if<resolved_let>(if_opt.get())) {
-            std::cout << to_string(get_innermost_body(if_stmt), false, true, 0) << std::endl;
+            std::cout << expand(get_innermost_body(if_stmt)) << std::endl;
             std::cout << std::endl;
         }
 
@@ -500,15 +661,15 @@ TEST(canonicalizer, conditional) {
         auto if_normal = normalize(ifstmt);
         auto if_resolved = resolve(if_normal, scope_map);
         auto if_canon = canonicalize(if_resolved);
-        auto if_ssa = single_assign(if_canon);
+//        auto if_ssa = single_assign(if_canon);
 
-        auto opt = optimizer(if_ssa);
-        auto if_opt = opt.optimize();
+//        auto opt = optimizer(if_ssa);
+//        auto if_opt = opt.optimize();
 
-        std::cout << to_string(if_opt) << std::endl;
+        std::cout << pretty_print(if_canon) << std::endl;
         std::cout << std::endl;
-        if (auto if_stmt = std::get_if<resolved_let>(if_opt.get())) {
-            std::cout << to_string(get_innermost_body(if_stmt), false, true, 0) << std::endl;
+        if (auto if_stmt = std::get_if<resolved_let>(if_canon.get())) {
+            std::cout << expand(get_innermost_body(if_stmt)) << std::endl;
             std::cout << std::endl;
         }
 
@@ -576,10 +737,10 @@ TEST(cse, let) {
         auto opt = optimizer(let_ssa);
         auto let_opt = opt.optimize();
 
-        std::cout << to_string(let_opt) << std::endl;
+        std::cout << pretty_print(let_opt) << std::endl;
         std::cout << std::endl;
         if (auto if_stmt = std::get_if<resolved_let>(let_opt.get())) {
-            std::cout << to_string(get_innermost_body(if_stmt), false, true, 0) << std::endl;
+            std::cout << expand(get_innermost_body(if_stmt)) << std::endl;
             std::cout << std::endl;
         }
 
@@ -612,10 +773,10 @@ TEST(cse, let) {
         auto opt = optimizer(let_ssa);
         auto let_opt = opt.optimize();
 
-        std::cout << to_string(let_opt) << std::endl;
+        std::cout << pretty_print(let_opt) << std::endl;
         std::cout << std::endl;
         if (auto if_stmt = std::get_if<resolved_let>(let_opt.get())) {
-            std::cout << to_string(get_innermost_body(if_stmt), false, true, 0) << std::endl;
+            std::cout << expand(get_innermost_body(if_stmt)) << std::endl;
             std::cout << std::endl;
         }
 
@@ -646,10 +807,10 @@ TEST(cse, let) {
         auto opt = optimizer(let_ssa);
         auto let_opt = opt.optimize();
 
-        std::cout << to_string(let_opt) << std::endl;
+        std::cout << pretty_print(let_opt) << std::endl;
         std::cout << std::endl;
         if (auto if_stmt = std::get_if<resolved_let>(let_opt.get())) {
-            std::cout << to_string(get_innermost_body(if_stmt), false, true, 0) << std::endl;
+            std::cout << expand(get_innermost_body(if_stmt)) << std::endl;
             std::cout << std::endl;
         }
 
@@ -676,10 +837,10 @@ TEST(cse, let) {
         auto opt = optimizer(let_ssa);
         auto let_opt = opt.optimize();
 
-        std::cout << to_string(let_opt) << std::endl;
+        std::cout << pretty_print(let_opt) << std::endl;
         std::cout << std::endl;
         if (auto if_stmt = std::get_if<resolved_let>(let_opt.get())) {
-            std::cout << to_string(get_innermost_body(if_stmt), false, true, 0) << std::endl;
+            std::cout << expand(get_innermost_body(if_stmt)) << std::endl;
             std::cout << std::endl;
         }
 
@@ -764,10 +925,10 @@ TEST(function_inline, misc) {
         auto l_opt2 = optimizer(let_inlined);
         auto let_opt2 = l_opt2.optimize();
 
-        std::cout << to_string(let_opt2) << std::endl;
+        std::cout << pretty_print(let_opt2) << std::endl;
         std::cout << std::endl;
         if (auto ll = std::get_if<resolved_let>(let_opt2.get())) {
-            std::cout << to_string(get_innermost_body(ll), false, true, 0) << std::endl;
+            std::cout << expand(get_innermost_body(ll)) << std::endl;
             std::cout << std::endl;
         }
     }
@@ -817,7 +978,7 @@ TEST(optimizer, mechanism) {
         std::cout << "-----------------------------" << std::endl;
         std::cout << mech << std::endl;
         std::cout << "-----------------------------" << std::endl;
-        std::cout << to_string(m_fin) << std::endl;
+        std::cout << pretty_print(m_fin) << std::endl;
         std::cout << "-----------------------------" << std::endl;
         std::cout << std::endl;
     }
@@ -900,7 +1061,7 @@ TEST(optimizer, mechanism) {
         std::cout << "-----------------------------" << std::endl;
         std::cout << mech << std::endl;
         std::cout << "-----------------------------" << std::endl;
-        std::cout << to_string(m_fin) << std::endl;
+        std::cout << pretty_print(m_fin) << std::endl;
         std::cout << "-----------------------------" << std::endl;
         std::cout << std::endl;
     }
@@ -967,11 +1128,11 @@ TEST(optimizer, mechanism) {
         std::cout << "-----------------------------" << std::endl;
         std::cout << mech << std::endl;
         std::cout << "-----------------------------" << std::endl;
-        std::cout << to_string(m_fin) << std::endl;
+        std::cout << pretty_print(m_fin) << std::endl;
         std::cout << "-----------------------------" << std::endl;
         std::cout << std::endl;
     }
 }
 
 /// TODO bugs:
-/// object fields aren't being resolved correctly (durng opt)
+/// object fields aren't being resolved correctly (during opt)

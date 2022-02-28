@@ -342,7 +342,7 @@ r_expr resolve(const parsed_object& e, const in_scope_map& map) {
         }
     }
 
-    return make_rexpr<resolved_object>(o_fields, o_values, o_type, e.loc);
+    return make_rexpr<resolved_object>(o_fields, o_type, e.loc);
 }
 
 r_expr resolve(const parsed_let& e, const in_scope_map& map) {

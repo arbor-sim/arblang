@@ -200,7 +200,7 @@ void find_dead_code(const resolved_call& e, std::unordered_set<std::string>& dea
 }
 
 void find_dead_code(const resolved_object& e, std::unordered_set<std::string>& dead_args) {
-    for (const auto& a: e.record_values) {
+    for (const auto& a: e.field_values()) {
         find_dead_code(a, dead_args);
     }
 }

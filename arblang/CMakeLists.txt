@@ -16,8 +16,9 @@ set(arblang-sources
     resolver/resolved_types.cpp
     resolver/canonicalize.cpp
     resolver/single_assign.cpp
+    util/pretty_printer.cpp
     util/rexp_helpers.cpp
-)
+    )
 
 add_library(arblang ${arblang-sources})
 

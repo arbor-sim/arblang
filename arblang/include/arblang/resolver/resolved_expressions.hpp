@@ -246,12 +246,17 @@ struct resolved_call {
 // Object creation
 struct resolved_object {
     std::vector<r_expr> record_fields;
-    std::vector<r_expr> record_values;
     r_type type;
     src_location loc;
 
-    resolved_object(std::vector<r_expr> record_fields, std::vector<r_expr> records_vals, r_type type, const src_location& loc):
-        record_fields(std::move(record_fields)), record_values(std::move(records_vals)), type(std::move(type)), loc(loc) {};
+    resolved_object(std::vector<r_expr> record_fields, r_type type, const src_location& loc):
+        record_fields(std::move(record_fields)), type(std::move(type)), loc(loc) {};
+
+    resolved_object(std::vector<std::string> names, std::vector<r_expr> values, r_type type, const src_location& loc);
+
+    std::vector<r_expr> field_values() const;
+    void field_values(std::vector<r_expr>);
+    std::vector<std::string> field_names() const;
 };
 
 // Let bindings

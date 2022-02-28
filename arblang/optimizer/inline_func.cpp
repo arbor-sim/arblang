@@ -229,14 +229,11 @@ r_expr inline_func(const resolved_object& e,
                    std::unordered_map<std::string, r_expr>& rewrites,
                    std::unordered_map<std::string, r_expr>& avail_funcs)
 {
-    std::vector<r_expr> fields_ssa, args_ssa;
-    for (const auto& a: e.record_fields) {
+    std::vector<r_expr> fields_ssa;
+    for (const auto& a: e.field_values()) {
         fields_ssa.push_back(inline_func(a, reserved, rewrites, avail_funcs));
     }
-    for (const auto& a: e.record_values) {
-        args_ssa.push_back(inline_func(a, reserved, rewrites, avail_funcs));
-    }
-    return make_rexpr<resolved_object>(fields_ssa, args_ssa, e.type, e.loc);
+    return make_rexpr<resolved_object>(e.field_names(), fields_ssa, e.type, e.loc);
 }
 
 r_expr inline_func(const resolved_let& e,

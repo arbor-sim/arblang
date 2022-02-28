@@ -202,12 +202,12 @@ std::pair<r_expr, bool> copy_propagate(const resolved_object& e,
 {
     std::vector<r_expr> values;
     bool made_change = false;
-    for (const auto& a: e.record_values) {
+    for (const auto& a: e.field_values()) {
         auto result = copy_propagate(a, copy_map, rewrites);
         values.push_back(result.first);
         made_change |= result.second;
     }
-    return {make_rexpr<resolved_object>(e.record_fields, values, e.type, e.loc), made_change};
+    return {make_rexpr<resolved_object>(e.field_names(), values, e.type, e.loc), made_change};
 }
 
 std::pair<r_expr, bool> copy_propagate(const resolved_let& e,

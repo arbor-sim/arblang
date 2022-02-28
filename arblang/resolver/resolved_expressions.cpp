@@ -1,4 +1,5 @@
 #include <iomanip>
+#include <cassert>
 #include <string>
 #include <utility>
 #include <variant>
@@ -39,6 +40,55 @@ std::string resolved_let::id_name() const {
         return id->name;
     }
     throw std::runtime_error("internal compiler error: expected resolved_variable at " + to_string(loc));
+}
+
+resolved_object::resolved_object(std::vector<std::string> names,
+                                 std::vector<r_expr> values,
+                                 r_type type,
+                                 const src_location& loc):
+     type(std::move(type)), loc(loc)
+{
+    assert(names.size() == values.size());
+    for (unsigned i = 0; i < names.size(); ++i) {
+        record_fields.push_back(
+                make_rexpr<resolved_variable>(
+                        std::move(names[i]), std::move(values[i]), type_of(values[i]), location_of(values[i])));
+    }
+}
+
+std::vector<r_expr> resolved_object::field_values() const {
+    std::vector<r_expr> vals;
+    for (const auto& field: record_fields) {
+        if (auto id = std::get_if<resolved_variable>(field.get())) {
+            vals.push_back(id->value);
+        } else {
+            throw std::runtime_error("internal compiler error: expected resolved_variable at " + to_string(loc));
+        }
+    }
+    return vals;
+}
+
+void resolved_object::field_values(std::vector<r_expr> vals) {
+    for (unsigned i = 0; i < record_fields.size(); ++i) {
+        auto& field = record_fields[i];
+        if (auto id = std::get_if<resolved_variable>(field.get())) {
+            id->value = std::move(vals[i]);
+        } else {
+            throw std::runtime_error("internal compiler error: expected resolved_variable at " + to_string(loc));
+        }
+    }
+}
+
+std::vector<std::string> resolved_object::field_names() const {
+    std::vector<std::string> names;
+    for (const auto& field: record_fields) {
+        if (auto id = std::get_if<resolved_variable>(field.get())) {
+            names.push_back(id->name);
+        } else {
+            throw std::runtime_error("internal compiler error: expected resolved_variable at " + to_string(loc));
+        }
+    }
+    return names;
 }
 
 
@@ -230,7 +280,7 @@ std::string to_string(const resolved_object& e, bool include_type, bool expand_v
     for (unsigned i = 0; i < e.record_fields.size(); ++i) {
         str += "\n" + double_indent + "(\n";
         str += to_string(e.record_fields[i], false, expand_var, indent+2) + "\n";
-        str += to_string(e.record_values[i], false, expand_var, indent+2) + "\n";
+        str += to_string(e.field_values()[i], false, expand_var, indent+2) + "\n";
         str += double_indent + ")";
     }
     if (include_type) str += "\n" + to_string(e.type, indent+1);

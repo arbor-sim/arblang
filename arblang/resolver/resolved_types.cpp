@@ -252,7 +252,12 @@ std::string to_string(const normalized_type& t, int indent) {
     if (auto val = t.quantity_exponents[3]) str += "current^" +     std::to_string(val) + " ";
     if (auto val = t.quantity_exponents[4]) str += "amount^" +      std::to_string(val) + " ";
     if (auto val = t.quantity_exponents[5]) str += "temperature^" + std::to_string(val) + " ";
-    if (str.empty()) str = "real";
+    if (str.empty()) {
+        str = "real";
+    }
+    else {
+        str.pop_back();
+    }
     return std::string(indent*2, ' ') + str;
 }
 std::string to_string(const resolved_quantity& q, int indent) {

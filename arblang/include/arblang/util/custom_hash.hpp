@@ -199,9 +199,6 @@ struct hash<resolved_object> {
         for (const auto& a: e.record_fields) {
             hash_combine(res, *a);
         }
-        for (const auto& a: e.record_values) {
-            hash_combine(res, *a);
-        }
         return res;
     }
 };
