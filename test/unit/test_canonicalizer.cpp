@@ -30,6 +30,29 @@ r_expr get_innermost_body(resolved_let* const let) {
     return let_last->body;
 }
 
+TEST(custom_hash, map) {
+    auto loc = src_location{};
+    auto real_type    = make_rtype<resolved_quantity>(normalized_type(quantity::real), loc);
+    auto real_body    = make_rexpr<resolved_float>(0, real_type, loc);
+
+    auto t0 = resolved_argument("t", real_type, loc);
+    auto t1 = resolved_argument("t", real_type, loc);
+    auto t2 = resolved_argument("a", real_type, loc);
+    auto t3 = resolved_binary(binary_op::add, make_rexpr<resolved_argument>(t0), make_rexpr<resolved_argument>(t2), real_type, loc);
+    auto t4 = resolved_binary(binary_op::add, make_rexpr<resolved_argument>(t0), make_rexpr<resolved_argument>(t2), real_type, loc);
+    auto t5 = resolved_function("foo", {make_rexpr<resolved_argument>(t0)}, real_body, real_type, loc);
+    auto t6 = resolved_function("foo", {make_rexpr<resolved_argument>(t0)}, real_body, real_type, loc);
+    std::unordered_map<resolved_expr, int> map;
+
+    map.insert({t0, 0});
+    map.insert({t1, 1});
+    map.insert({t2, 2});
+    map.insert({t3, 3});
+    map.insert({t4, 4});
+    map.insert({t5, 5});
+    map.insert({t6, 6});
+}
+
 TEST(canonicalizer, call) {
     in_scope_map scope_map;
     auto loc = src_location{};
@@ -56,7 +79,7 @@ TEST(canonicalizer, call) {
         auto opt = optimizer(call_ssa);
         auto call_opt = opt.optimize();
 
-        std::string expected_opt = "let _t0: real = foo();\n"
+        std::string expected_opt = "let _t0:real = foo();\n"
                                    "_t0;";
 
         std::string expanded_ans = "(variable _t0\n"
@@ -84,7 +107,7 @@ TEST(canonicalizer, call) {
         auto opt = optimizer(call_ssa);
         auto call_opt = opt.optimize();
 
-        std::string expected_opt = "let _t0: real = foo2(2: real, 1: real);\n"
+        std::string expected_opt = "let _t0:real = foo2(2:real, 1:real);\n"
                                    "_t0;";
 
         std::string expanded_ans = "(variable _t0\n"
@@ -115,7 +138,7 @@ TEST(canonicalizer, call) {
         auto opt = optimizer(call_ssa);
         auto call_opt = opt.optimize();
 
-        std::string expected_opt = "let _t1: real = foo_bar(2.5: real, a, -1: current^1);\n"
+        std::string expected_opt = "let _t1:real = foo_bar(2.5:real, a, -1:current^1);\n"
                                    "_t1;";
 
         std::string expanded_ans = "(variable _t1\n"
@@ -147,8 +170,8 @@ TEST(canonicalizer, call) {
         auto opt = optimizer(call_ssa);
         auto call_opt = opt.optimize();
 
-        std::string expected_opt = "let _t1: real = foo();\n"
-                                   "let _t2: real = bar(5: real, _t1);\n"
+        std::string expected_opt = "let _t1:real = foo();\n"
+                                   "let _t2:real = bar(5:real, _t1);\n"
                                    "_t2;";
 
         std::string expanded_ans = "(variable _t2\n"
@@ -167,7 +190,7 @@ TEST(canonicalizer, call) {
         auto arg1 = make_rexpr<resolved_argument>("b", real_type, loc);
         scope_map.func_map.insert({"baz", make_rexpr<resolved_function>("baz", std::vector<r_expr>{arg0, arg1}, real_body, real_type, loc)});
 
-        std::string p_expr = "baz(let b: voltage = 6 [mV]; b, bar.X)";
+        std::string p_expr = "baz(let b:voltage = 6 [mV]; b, bar.X)";
         auto p = parser(p_expr);
         auto call = p.parse_call();
 
@@ -179,8 +202,8 @@ TEST(canonicalizer, call) {
         auto opt = optimizer(call_ssa);
         auto call_opt = opt.optimize();
 
-        std::string expected_opt = "let _t0: real = bar.X;\n"
-                                   "let _t1: real = baz(0.0060000000000000001: length^2 mass^1 time^-3 current^-1, _t0);\n"
+        std::string expected_opt = "let _t0:real = bar.X;\n"
+                                   "let _t1:real = baz(0.0060000000000000001:length^2 mass^1 time^-3 current^-1, _t0);\n"
                                    "_t1;";
 
         std::string expanded_ans = "(variable _t1\n"
@@ -221,7 +244,7 @@ TEST(canonicalizer, let) {
         auto opt = optimizer(let_ssa);
         auto let_opt = opt.optimize();
 
-        std::string expected_opt = "11: real";
+        std::string expected_opt = "11:real";
         EXPECT_EQ(expected_opt, pretty_print(let_opt));
     }
     {
@@ -241,11 +264,11 @@ TEST(canonicalizer, let) {
         auto opt = optimizer(let_ssa);
         auto let_opt = opt.optimize();
 
-        std::string expected_opt = "let _t0: length^2 mass^1 time^-3 current^-1 = a*5: real;\n"
-                                   "let _t1: length^2 mass^1 time^-3 current^-1 = a+_t0;\n"
-                                   "let _t2: current^1 = _t1*s;\n"
-                                   "let _t3: length^2 mass^1 time^-3 = _t2*a;\n"
-                                   "let _t4: length^4 mass^2 time^-6 current^-1 = _t3*_t1;\n"
+        std::string expected_opt = "let _t0:length^2 mass^1 time^-3 current^-1 = a*5:real;\n"
+                                   "let _t1:length^2 mass^1 time^-3 current^-1 = a+_t0;\n"
+                                   "let _t2:current^1 = _t1*s;\n"
+                                   "let _t3:length^2 mass^1 time^-3 = _t2*a;\n"
+                                   "let _t4:length^4 mass^2 time^-6 current^-1 = _t3*_t1;\n"
                                    "_t4;";
 
         std::string expanded_ans = "(variable _t4\n"
@@ -304,13 +327,13 @@ TEST(canonicalizer, let) {
         // let t7_:current^-1 = t6_/2.1;  // c/2.1
         // t7_;
 
-        std::string expected_opt = "let _t1: length^2 mass^1 time^-3 current^-1 = a+0.0025000000000000001: length^2 mass^1 time^-3 current^-1;\n"
-                                   "let _t2: current^1 = _t1*s;\n"
-                                   "let _t3: real = foo(_t2);\n"
-                                   "let _t4: current^1 = a*s;\n"
-                                   "let _t5: real = foo(_t4);\n"
-                                   "let _t6: real = _t3*_t5;\n"
-                                   "let _t7: current^-1 = _t6/2.1000000000000001: current^1;\n"
+        std::string expected_opt = "let _t1:length^2 mass^1 time^-3 current^-1 = a+0.0025000000000000001:length^2 mass^1 time^-3 current^-1;\n"
+                                   "let _t2:current^1 = _t1*s;\n"
+                                   "let _t3:real = foo(_t2);\n"
+                                   "let _t4:current^1 = a*s;\n"
+                                   "let _t5:real = foo(_t4);\n"
+                                   "let _t6:real = _t3*_t5;\n"
+                                   "let _t7:current^-1 = _t6/2.1000000000000001:current^1;\n"
                                    "_t7;";
 
         std::string expanded_ans = "(variable _t7\n"
@@ -364,9 +387,9 @@ TEST(canonicalizer, object) {
         auto opt = optimizer(obj_ssa);
         auto let_opt = opt.optimize();
 
-        std::string expected_opt = "let _t0: real = foo();\n"
-                                   "let _t1: length^2 mass^1 time^-3 current^-1 = _t0*3: length^2 mass^1 time^-3 current^-1;\n"
-                                   "let _t5: length^2 mass^1 time^-3 current^-2 = _t1/7: current^1;\n"
+        std::string expected_opt = "let _t0:real = foo();\n"
+                                   "let _t1:length^2 mass^1 time^-3 current^-1 = _t0*3:length^2 mass^1 time^-3 current^-1;\n"
+                                   "let _t5:length^2 mass^1 time^-3 current^-2 = _t1/7:current^1;\n"
                                    "_t5;";
 
         std::string expanded_ans = "(variable _t5\n"
@@ -399,10 +422,10 @@ TEST(canonicalizer, object) {
         auto obj_canon = canonicalize(obj_resolved);
         auto obj_ssa = single_assign(obj_canon);
 
-        std::string expected_opt = "let _t0: real = 1: real+2: real;\n"
-                                   "let _t1: real = _t0+3: real;\n"
-                                   "let a: real = _t1;\n"
-                                   "let _t2: real = a+4: real;\n"
+        std::string expected_opt = "let _t0:real = 1:real+2:real;\n"
+                                   "let _t1:real = _t0+3:real;\n"
+                                   "let a:real = _t1;\n"
+                                   "let _t2:real = a+4:real;\n"
                                    "_t2;";
 
         std::string expanded_ans = "(variable _t2\n"
@@ -462,13 +485,13 @@ TEST(canonicalizer, with) {
         auto opt = optimizer(let_ssa);
         auto let_opt = opt.optimize();
 
-        std::string expected_opt = "let _t0: real = 5: real-q;\n"
-                                   "let _t1: real = t+_t0;\n"
-                                   "let _t2: real = foo();\n"
-                                   "let _t3: current^1 = _t2*1: current^1;\n"
-                                   "let _t10: length^2 mass^1 time^-3 current^-2 = 2: length^2 mass^1 time^-3 current^-1/_t3;\n"
-                                   "let _t13: length^2 mass^1 time^-3 current^-2 = _t1*_t10;\n"
-                                   "let _t14: length^2 mass^1 time^-3 current^-2 = _t13/3: real;\n"
+        std::string expected_opt = "let _t0:real = 5:real-q;\n"
+                                   "let _t1:real = t+_t0;\n"
+                                   "let _t2:real = foo();\n"
+                                   "let _t3:current^1 = _t2*1:current^1;\n"
+                                   "let _t10:length^2 mass^1 time^-3 current^-2 = 2:length^2 mass^1 time^-3 current^-1/_t3;\n"
+                                   "let _t13:length^2 mass^1 time^-3 current^-2 = _t1*_t10;\n"
+                                   "let _t14:length^2 mass^1 time^-3 current^-2 = _t13/3:real;\n"
                                    "_t14;";
 
         std::string expanded_ans = "(variable _t14\n"
@@ -511,7 +534,7 @@ TEST(canonicalizer, with) {
                              "let r = a/b;\n"
                              "let B:foo = {a = 3[V]; b=-2[A];};\n"
                              "with B;\n"
-                             "X*r/3;\n";
+                             "X*r/a;\n";
 
         auto p = parser(p_expr);
         auto let = p.parse_let();
@@ -524,21 +547,40 @@ TEST(canonicalizer, with) {
         auto opt = optimizer(let_ssa);
         auto let_opt = opt.optimize();
 
-        std::cout << pretty_print(let_opt) << std::endl;
-        std::cout << std::endl;
-        if (auto let = std::get_if<resolved_let>(let_opt.get())) {
-            std::cout << expand(get_innermost_body(let)) << std::endl;
-            std::cout << std::endl;
-        }
+        std::string expected_opt = "let _t0:real = 5:real-q;\n"
+                                   "let _t1:real = t+_t0;\n"
+                                   "let _t2:real = foo();\n"
+                                   "let _t3:current^1 = _t2*1:current^1;\n"
+                                   "let _t12:length^2 mass^1 time^-3 current^-2 = 2:length^2 mass^1 time^-3 current^-1/_t3;\n"
+                                   "let _t17:length^2 mass^1 time^-3 current^-2 = _t1*_t12;\n"
+                                   "let _t18:current^-1 = _t17/3:length^2 mass^1 time^-3 current^-1;\n"
+                                   "_t18;";
 
-        // let t0_:real = 5-q;
-        // let t1_:real = t+t0_;              // t1_ -> B.X
-        // let t2_:real = foo();
-        // let t3_:current = t2_*1;           // t3_ -> B.Y.b
-        // let t12_:resistance = 2/t3_;       // t12_ -> r
-        // let t17_:resistance = t1_*t12_;    // B.X*r
-        // let t18_:resistance = t17_/3;      // B.X*r/3
-        // t18_;
+        std::string expanded_ans = "(variable _t18\n"
+                                   "  (/\n"
+                                   "    (variable _t17\n"
+                                   "      (*\n"
+                                   "        (variable _t1\n"
+                                   "          (+\n"
+                                   "            (argument t)\n"
+                                   "            (variable _t0\n"
+                                   "              (-\n"
+                                   "                (5)\n"
+                                   "                (argument q)))))\n"
+                                   "        (variable _t12\n"
+                                   "          (/\n"
+                                   "            (2)\n"
+                                   "            (variable _t3\n"
+                                   "              (*\n"
+                                   "                (variable _t2\n"
+                                   "                  (call foo))\n"
+                                   "                (1)))))))\n"
+                                   "    (3)))";
+
+        EXPECT_EQ(expected_opt, pretty_print(let_opt));
+
+        auto var = std::get_if<resolved_let>(let_opt.get());
+        EXPECT_EQ(expanded_ans, expand(get_innermost_body(var)));
     }
     {
         in_scope_map scope_map;
@@ -561,14 +603,8 @@ TEST(canonicalizer, with) {
         auto opt = optimizer(let_ssa);
         auto let_opt = opt.optimize();
 
-        std::cout << pretty_print(let_opt) << std::endl;
-        std::cout << std::endl;
-        if (auto let = std::get_if<resolved_let>(let_opt.get())) {
-            std::cout << expand(get_innermost_body(let)) << std::endl;
-            std::cout << std::endl;
-        }
-
-        // 2:voltage
+        std::string expected_opt = "2:length^2 mass^1 time^-3 current^-1";
+        EXPECT_EQ(expected_opt, pretty_print(let_opt));
     }
     {
         in_scope_map scope_map;
@@ -590,14 +626,8 @@ TEST(canonicalizer, with) {
         auto opt = optimizer(let_ssa);
         auto let_opt = opt.optimize();
 
-        std::cout << pretty_print(let_opt) << std::endl;
-        std::cout << std::endl;
-        if (auto let = std::get_if<resolved_let>(let_opt.get())) {
-            std::cout << expand(get_innermost_body(let)) << std::endl;
-            std::cout << std::endl;
-        }
-
-        // 4:resistance
+        std::string expected_opt = "4:length^2 mass^1 time^-3 current^-2";
+        EXPECT_EQ(expected_opt, pretty_print(let_opt));
     }
 }
 
@@ -631,16 +661,23 @@ TEST(canonicalizer, conditional) {
         auto opt = optimizer(if_ssa);
         auto if_opt = opt.optimize();
 
-        std::cout << pretty_print(if_opt) << std::endl;
-        std::cout << std::endl;
-        if (auto if_stmt = std::get_if<resolved_let>(if_opt.get())) {
-            std::cout << expand(get_innermost_body(if_stmt)) << std::endl;
-            std::cout << std::endl;
-        }
+        std::string expected_opt = "let _t0:bool = t==4:real;\n"
+                                   "let _t2:real = _t0? 12:real: 15.5:real;\n"
+                                   "_t2;";
 
-        // let t0_:bool = t==4;
-        // let t2_:real = t0_? 12: 15.5;
-        // t2_;
+        std::string expanded_ans = "(variable _t2\n"
+                                   "  (conditional\n"
+                                   "    (variable _t0\n"
+                                   "      (==\n"
+                                   "        (argument t)\n"
+                                   "        (4)))\n"
+                                   "    (12)\n"
+                                   "    (15.5)))";
+
+        EXPECT_EQ(expected_opt, pretty_print(if_opt));
+
+        auto var = std::get_if<resolved_let>(if_opt.get());
+        EXPECT_EQ(expanded_ans, expand(get_innermost_body(var)));
     }
     {
         in_scope_map scope_map;
@@ -661,55 +698,75 @@ TEST(canonicalizer, conditional) {
         auto if_normal = normalize(ifstmt);
         auto if_resolved = resolve(if_normal, scope_map);
         auto if_canon = canonicalize(if_resolved);
-//        auto if_ssa = single_assign(if_canon);
+        auto if_ssa = single_assign(if_canon);
 
-//        auto opt = optimizer(if_ssa);
-//        auto if_opt = opt.optimize();
+        auto opt = optimizer(if_ssa);
+        auto if_opt = opt.optimize();
 
-        std::cout << pretty_print(if_canon) << std::endl;
-        std::cout << std::endl;
-        if (auto if_stmt = std::get_if<resolved_let>(if_canon.get())) {
-            std::cout << expand(get_innermost_body(if_stmt)) << std::endl;
-            std::cout << std::endl;
-        }
+        std::string expected_opt = "let _t0:bool = t==4:real;\n"
+                                   "let _t1:bool = a>3:real;\n"
+                                   "let _t2:bool = a<4:real;\n"
+                                   "let _t3:bool = _t0? _t1: _t2;\n"
+                                   "let _t4:real = obar.X;\n"
+                                   "let _t5:bool = _t4==5:real;\n"
+                                   "let _t6:{a:length^2 mass^1 time^-3 current^-1; b:current^1;} = obar.Y;\n"
+                                   "let _t8:{a:length^2 mass^1 time^-3 current^-1; b:current^1;} = "
+                                   "_t5? _t6: {a = 3:length^2 mass^1 time^-3 current^-1; b = 0.0050000000000000001:current^1;};\n"
+                                   "let _t9:real = foo();\n"
+                                   "let _t10:length^2 mass^1 time^-3 current^-1 = _t9*3:length^2 mass^1 time^-3 current^-1;\n"
+                                   "let _t12:{a:length^2 mass^1 time^-3 current^-1; b:current^1;} = "
+                                   "_t3? _t8: {a = _t10; b = 7:current^1;};\n"
+                                   "_t12;";
 
-        /// TODO buggy
-        // let t0_:bool = t==4;
-        // let t1_:bool = a>3;
-        // let t2_:bool = a<4;
-        // let t3_:bool = t0_? t1_: t2_;                     // if t == 4 then a>3 else a<4
-        // let t4_:real = obar.X;
-        // let t5_:bool = t4_==5;
-        // let t6_:{a:voltage; b:current} = obar.Y;
-        // let t8_:{a:voltage; b:current} = t5_? t6_: {a=3; b=0.005};   // if obar.X == 5 then obar.Y else {a=3[V]; b=5[mA];}
-        // let t9_:real = foo();
-        // let t10_:voltage = t9_*3;
-        // let t12_:{a:voltage; b:current} = t3_? t8_: {a=t10_; b=7;};
-        // t12_;
+        std::string expanded_ans = "(variable _t12\n"
+                                   "  (conditional\n"
+                                   "    (variable _t3\n"
+                                   "      (conditional\n"
+                                   "        (variable _t0\n"
+                                   "          (==\n"
+                                   "            (argument t)\n"
+                                   "            (4)))\n"
+                                   "        (variable _t1\n"
+                                   "          (>\n"
+                                   "            (argument a)\n"
+                                   "            (3)))\n"
+                                   "        (variable _t2\n"
+                                   "          (<\n"
+                                   "            (argument a)\n"
+                                   "            (4)))))\n"
+                                   "    (variable _t8\n"
+                                   "      (conditional\n"
+                                   "        (variable _t5\n"
+                                   "          (==\n"
+                                   "            (variable _t4\n"
+                                   "              (access\n"
+                                   "                (argument obar)\n"
+                                   "                (X)))\n"
+                                   "            (5)))\n"
+                                   "        (variable _t6\n"
+                                   "          (access\n"
+                                   "            (argument obar)\n"
+                                   "            (Y)))\n"
+                                   "        (object\n"
+                                   "          (variable a\n"
+                                   "            (3))\n"
+                                   "          (variable b\n"
+                                   "            (0.0050000000000000001)))))\n"
+                                   "    (object\n"
+                                   "      (variable a\n"
+                                   "        (variable _t10\n"
+                                   "          (*\n"
+                                   "            (variable _t9\n"
+                                   "              (call foo))\n"
+                                   "            (3))))\n"
+                                   "      (variable b\n"
+                                   "        (7)))))";
+
+        EXPECT_EQ(expected_opt, pretty_print(if_opt));
+
+        auto var = std::get_if<resolved_let>(if_opt.get());
+        EXPECT_EQ(expanded_ans, expand(get_innermost_body(var)));
     }
-}
-
-TEST(custom_hash, map) {
-    auto loc = src_location{};
-    auto real_type    = make_rtype<resolved_quantity>(normalized_type(quantity::real), loc);
-    auto real_body    = make_rexpr<resolved_float>(0, real_type, loc);
-
-    auto t0 = resolved_argument("t", real_type, loc);
-    auto t1 = resolved_argument("t", real_type, loc);
-    auto t2 = resolved_argument("a", real_type, loc);
-    auto t3 = resolved_binary(binary_op::add, make_rexpr<resolved_argument>(t0), make_rexpr<resolved_argument>(t2), real_type, loc);
-    auto t4 = resolved_binary(binary_op::add, make_rexpr<resolved_argument>(t0), make_rexpr<resolved_argument>(t2), real_type, loc);
-    auto t5 = resolved_function("foo", {make_rexpr<resolved_argument>(t0)}, real_body, real_type, loc);
-    auto t6 = resolved_function("foo", {make_rexpr<resolved_argument>(t0)}, real_body, real_type, loc);
-    std::unordered_map<resolved_expr, int> map;
-
-    map.insert({t0, 0});
-    map.insert({t1, 1});
-    map.insert({t2, 2});
-    map.insert({t3, 3});
-    map.insert({t4, 4});
-    map.insert({t5, 5});
-    map.insert({t6, 6});
 }
 
 TEST(cse, let) {
@@ -737,19 +794,33 @@ TEST(cse, let) {
         auto opt = optimizer(let_ssa);
         auto let_opt = opt.optimize();
 
-        std::cout << pretty_print(let_opt) << std::endl;
-        std::cout << std::endl;
-        if (auto if_stmt = std::get_if<resolved_let>(let_opt.get())) {
-            std::cout << expand(get_innermost_body(if_stmt)) << std::endl;
-            std::cout << std::endl;
-        }
+        std::string expected_opt = "let _t0:length^2 mass^1 time^-3 current^-1 = a*5:real;\n"
+                                   "let _t1:length^2 mass^1 time^-3 current^-1 = a+_t0;\n"
+                                   "let _t2:current^1 = _t1*s;\n"
+                                   "let _t4:length^2 mass^1 time^-3 = _t2*_t0;\n"
+                                   "_t4;";
 
-        // let t0_:voltage = a*5;
-        // let t1_:voltage = a+t0_; // b
-        // let t2_:current = t1_*s; // c
-        // let t4_:power = t2_*t0_;
-        // t4_;
+        std::string expanded_ans = "(variable _t4\n"
+                                   "  (*\n"
+                                   "    (variable _t2\n"
+                                   "      (*\n"
+                                   "        (variable _t1\n"
+                                   "          (+\n"
+                                   "            (argument a)\n"
+                                   "            (variable _t0\n"
+                                   "              (*\n"
+                                   "                (argument a)\n"
+                                   "                (5)))))\n"
+                                   "        (argument s)))\n"
+                                   "    (variable _t0\n"
+                                   "      (*\n"
+                                   "        (argument a)\n"
+                                   "        (5)))))";
 
+        EXPECT_EQ(expected_opt, pretty_print(let_opt));
+
+        auto var = std::get_if<resolved_let>(let_opt.get());
+        EXPECT_EQ(expanded_ans, expand(get_innermost_body(var)));
     }
     {
         in_scope_map scope_map;
@@ -773,23 +844,52 @@ TEST(cse, let) {
         auto opt = optimizer(let_ssa);
         auto let_opt = opt.optimize();
 
-        std::cout << pretty_print(let_opt) << std::endl;
-        std::cout << std::endl;
-        if (auto if_stmt = std::get_if<resolved_let>(let_opt.get())) {
-            std::cout << expand(get_innermost_body(if_stmt)) << std::endl;
-            std::cout << std::endl;
-        }
+        std::string expected_opt = "let _t1:length^2 mass^1 time^-3 current^-1 = a+0.0025000000000000001:length^2 mass^1 time^-3 current^-1;\n"
+                                   "let _t2:current^1 = _t1*s;\n"
+                                   "let _t3:real = foo(_t2);\n"
+                                   "let _t4:current^1 = a*s;\n"
+                                   "let _t5:real = foo(_t4);\n"
+                                   "let _t6:real = _t3*_t5;\n"
+                                   "let _t8:current^1 = _t3*1:current^1;\n"
+                                   "let _t9:current^-1 = _t6/_t8;\n"
+                                   "_t9;";
 
-        // let t1_:voltage = a+0.0025[V]; // x
-        // let t2_:current = t1_*s;       // b
-        // let t3_:real = foo(t2_);       // foo(b)
-        // let t4_:current = a*s;
-        // let t5_:real = foo(t4_);       // foo(a*s)
-        // let t6_:real = t3_*t5_;        // c
-        // let t8_:current = t3_*1[A];    // foo(b)*1[A]
-        // let t9_:a/current = t6_/t8_;   // c/foo(b)*1[A]
-        // t9_
+        std::string expanded_ans = "(variable _t9\n"
+                                   "  (/\n"
+                                   "    (variable _t6\n"
+                                   "      (*\n"
+                                   "        (variable _t3\n"
+                                   "          (call foo\n"
+                                   "            (variable _t2\n"
+                                   "              (*\n"
+                                   "                (variable _t1\n"
+                                   "                  (+\n"
+                                   "                    (argument a)\n"
+                                   "                    (0.0025000000000000001)))\n"
+                                   "                (argument s)))))\n"
+                                   "        (variable _t5\n"
+                                   "          (call foo\n"
+                                   "            (variable _t4\n"
+                                   "              (*\n"
+                                   "                (argument a)\n"
+                                   "                (argument s)))))))\n"
+                                   "    (variable _t8\n"
+                                   "      (*\n"
+                                   "        (variable _t3\n"
+                                   "          (call foo\n"
+                                   "            (variable _t2\n"
+                                   "              (*\n"
+                                   "                (variable _t1\n"
+                                   "                  (+\n"
+                                   "                    (argument a)\n"
+                                   "                    (0.0025000000000000001)))\n"
+                                   "                (argument s)))))\n"
+                                   "        (1)))))";
 
+        EXPECT_EQ(expected_opt, pretty_print(let_opt));
+
+        auto var = std::get_if<resolved_let>(let_opt.get());
+        EXPECT_EQ(expanded_ans, expand(get_innermost_body(var)));
     }
     {
         in_scope_map scope_map;
@@ -807,14 +907,8 @@ TEST(cse, let) {
         auto opt = optimizer(let_ssa);
         auto let_opt = opt.optimize();
 
-        std::cout << pretty_print(let_opt) << std::endl;
-        std::cout << std::endl;
-        if (auto if_stmt = std::get_if<resolved_let>(let_opt.get())) {
-            std::cout << expand(get_innermost_body(if_stmt)) << std::endl;
-            std::cout << std::endl;
-        }
-
-        // 6:real
+        std::string expected_opt = "6:real";
+        EXPECT_EQ(expected_opt, pretty_print(let_opt));
     }
     {
         in_scope_map scope_map;
@@ -837,14 +931,8 @@ TEST(cse, let) {
         auto opt = optimizer(let_ssa);
         auto let_opt = opt.optimize();
 
-        std::cout << pretty_print(let_opt) << std::endl;
-        std::cout << std::endl;
-        if (auto if_stmt = std::get_if<resolved_let>(let_opt.get())) {
-            std::cout << expand(get_innermost_body(if_stmt)) << std::endl;
-            std::cout << std::endl;
-        }
-
-        // 1:real
+        std::string expected_opt = "1:real";
+        EXPECT_EQ(expected_opt, pretty_print(let_opt));
     }
 }
 
@@ -925,21 +1013,45 @@ TEST(function_inline, misc) {
         auto l_opt2 = optimizer(let_inlined);
         auto let_opt2 = l_opt2.optimize();
 
-        std::cout << pretty_print(let_opt2) << std::endl;
-        std::cout << std::endl;
-        if (auto ll = std::get_if<resolved_let>(let_opt2.get())) {
-            std::cout << expand(get_innermost_body(ll)) << std::endl;
-            std::cout << std::endl;
-        }
-    }
+        std::string expected_opt = "let _t0:real = x+y;\n"
+                                   "let _t1:real = _t0+z;\n"
+                                   "let _t2:real = _t1*z;\n"
+                                   "let _f0:real = 2:real*_t2;\n"
+                                   "let _f1:real = _f0^2:real;\n"
+                                   "let _t4:real = _f1*_t1;\n"
+                                   "_t4;";
 
-    // let _t0:real = x+y;
-    // let _t1:real = _t0+z;   // foo::x
-    // let _t2:real = _t1*z;   // foo::y
-    // let _r0:real = 2*_t2;   // bar::x
-    // let _r1:real = _r0^2;   // bar
-    // let _t4:real = _r1*_t1; // foo
-    // _t4;
+        std::string expanded_ans = "(variable _t4\n"
+                                   "  (*\n"
+                                   "    (variable _f1\n"
+                                   "      (^\n"
+                                   "        (variable _f0\n"
+                                   "          (*\n"
+                                   "            (2)\n"
+                                   "            (variable _t2\n"
+                                   "              (*\n"
+                                   "                (variable _t1\n"
+                                   "                  (+\n"
+                                   "                    (variable _t0\n"
+                                   "                      (+\n"
+                                   "                        (argument x)\n"
+                                   "                        (argument y)))\n"
+                                   "                    (argument z)))\n"
+                                   "                (argument z)))))\n"
+                                   "        (2)))\n"
+                                   "    (variable _t1\n"
+                                   "      (+\n"
+                                   "        (variable _t0\n"
+                                   "          (+\n"
+                                   "            (argument x)\n"
+                                   "            (argument y)))\n"
+                                   "        (argument z)))))";
+
+        EXPECT_EQ(expected_opt, pretty_print(let_opt2));
+
+        auto var = std::get_if<resolved_let>(let_opt2.get());
+        EXPECT_EQ(expanded_ans, expand(get_innermost_body(var)));
+    }
 }
 
 TEST(optimizer, mechanism) {
@@ -975,12 +1087,20 @@ TEST(optimizer, mechanism) {
         auto opt_1 = optimizer(m_inlined);
         auto m_fin = opt_1.optimize();
 
-        std::cout << "-----------------------------" << std::endl;
-        std::cout << mech << std::endl;
-        std::cout << "-----------------------------" << std::endl;
-        std::cout << pretty_print(m_fin) << std::endl;
-        std::cout << "-----------------------------" << std::endl;
-        std::cout << std::endl;
+        std::string expected_opt = "CaDynamics{\n"
+                                   "bind flux:length^-2 time^-1 amount^1 = molar_flux[ca];\n"
+                                   "bind cai:length^-3 amount^1 = internal_concentration[ca];\n"
+                                   "effect molar_flux[ca]:length^-2 time^-1 amount^1 =\n"
+                                   "let _t0:length^-2 time^-1 amount^1 = 0.050000000000000003:real*flux;\n"
+                                   "let _t1:length^-3 amount^1 = cai-1.0000000000000001e-07:length^-3 amount^1;\n"
+                                   "let _t2:length^-2 amount^1 = 9.9999999999999995e-08:length^1*_t1;\n"
+                                   "let _t3:length^-2 time^-1 amount^1 = _t2/0.080000000000000002:time^1;\n"
+                                   "let _t4:length^-2 time^-1 amount^1 = _t0-_t3;\n"
+                                   "let _t5:length^-2 time^-1 amount^1 = -_t4;\n"
+                                   "_t5;\n"
+                                   "}";
+
+        EXPECT_EQ(expected_opt, pretty_print(m_fin));
     }
     {
         std::string mech =
@@ -1058,12 +1178,55 @@ TEST(optimizer, mechanism) {
         auto opt_1 = optimizer(m_inlined);
         auto m_fin = opt_1.optimize();
 
-        std::cout << "-----------------------------" << std::endl;
-        std::cout << mech << std::endl;
-        std::cout << "-----------------------------" << std::endl;
-        std::cout << pretty_print(m_fin) << std::endl;
-        std::cout << "-----------------------------" << std::endl;
-        std::cout << std::endl;
+        std::string expected_opt =
+            "expsyn_stdp{\n"
+            "state expsyn:{"
+            "g:length^-2 mass^-1 time^3 current^2; "
+            "apre:length^-2 mass^-1 time^3 current^2; "
+            "apost:length^-2 mass^-1 time^3 current^2; "
+            "w_plastic:length^-2 mass^-1 time^3 current^2;"
+            "};\n"
+            "bind v:length^2 mass^1 time^-3 current^-1 = membrane_potential;\n"
+            "initial expsyn:{"
+            "g:length^-2 mass^-1 time^3 current^2; "
+            "apre:length^-2 mass^-1 time^3 current^2; "
+            "apost:length^-2 mass^-1 time^3 current^2; "
+            "w_plastic:length^-2 mass^-1 time^3 current^2;"
+            "} =\n"
+            "{"
+            "g = 0:length^-2 mass^-1 time^3 current^2; "
+            "apre = 0:length^-2 mass^-1 time^3 current^2; "
+            "apost = 0:length^-2 mass^-1 time^3 current^2; "
+            "w_plastic = 0:length^-2 mass^-1 time^3 current^2;"
+            "};\n"
+            "evolve expsyn:{"
+            "g':length^-2 mass^-1 time^2 current^2; "
+            "apre':length^-2 mass^-1 time^2 current^2; "
+            "apost':length^-2 mass^-1 time^2 current^2; "
+            "w_plastic':length^-2 mass^-1 time^2 current^2;"
+            "} =\n"
+            "let _t0:length^-2 mass^-1 time^3 current^2 = expsyn.g;\n"
+            "let _t1:length^-2 mass^-1 time^3 current^2 = -_t0;\n"
+            "let _t2:length^-2 mass^-1 time^2 current^2 = _t1/0.002:time^1;\n"
+            "let _t3:length^-2 mass^-1 time^3 current^2 = expsyn.apre;\n"
+            "let _t4:length^-2 mass^-1 time^3 current^2 = -_t3;\n"
+            "let _t5:length^-2 mass^-1 time^2 current^2 = _t4/0.01:time^1;\n"
+            "let _t6:length^-2 mass^-1 time^3 current^2 = expsyn.apost;\n"
+            "let _t7:length^-2 mass^-1 time^3 current^2 = -_t6;\n"
+            "let _t8:length^-2 mass^-1 time^2 current^2 = _t7/0.01:time^1;\n"
+            "{"
+            "g' = _t2; "
+            "apre' = _t5; "
+            "apost' = _t8; "
+            "w_plastic' = 0:length^-2 mass^-1 time^2 current^2;"
+            "};\n"
+            "effect current:current^1 =\n"
+            "let _t0:length^-2 mass^-1 time^3 current^2 = expsyn.g;\n"
+            "let _t2:current^1 = _t0*v;\n"
+            "_t2;\n"
+            "}";
+
+        EXPECT_EQ(expected_opt, pretty_print(m_fin));
     }
     {
         std::string mech =
@@ -1125,14 +1288,55 @@ TEST(optimizer, mechanism) {
         auto opt_1 = optimizer(m_inlined);
         auto m_fin = opt_1.optimize();
 
-        std::cout << "-----------------------------" << std::endl;
-        std::cout << mech << std::endl;
-        std::cout << "-----------------------------" << std::endl;
-        std::cout << pretty_print(m_fin) << std::endl;
-        std::cout << "-----------------------------" << std::endl;
-        std::cout << std::endl;
+        std::string expected_opt =
+            "Kd{\n"
+            "parameter gbar:length^-4 mass^-1 time^3 current^2 =\n"
+            "0.10000000000000001:length^-4 mass^-1 time^3 current^2;\n"
+            "state s:{m:real; h:real;};\n"
+            "bind v:length^2 mass^1 time^-3 current^-1 = membrane_potential;\n"
+            "initial s:{m:real; h:real;} =\n"
+            "let _t0:length^2 mass^1 time^-3 current^-1 = v+0.043000000000000003:length^2 mass^1 time^-3 current^-1;\n"
+            "let _t1:real = _t0/0.0080000000000000002:length^2 mass^1 time^-3 current^-1;\n"
+            "let _t2:real = exp(_t1);\n"
+            "let _t3:real = 1:real+_t2;\n"
+            "let _t4:real = 1:real/_t3;\n"
+            "let _t5:real = 1:real-_t4;\n"
+            "let _f1:length^2 mass^1 time^-3 current^-1 = v+0.067000000000000004:length^2 mass^1 time^-3 current^-1;\n"
+            "let _f2:real = _f1/0.0073000000000000001:length^2 mass^1 time^-3 current^-1;\n"
+            "let _f3:real = exp(_f2);\n"
+            "let _f4:real = 1:real+_f3;\n"
+            "let _f5:real = 1:real/_f4;\n"
+            "{m = _t5; h = _f5;};\n"
+            "evolve s:{m':time^-1; h':time^-1;} =\n"
+            "let _t0:real = s.m;\n"
+            "let _f0:length^2 mass^1 time^-3 current^-1 = v+0.043000000000000003:length^2 mass^1 time^-3 current^-1;\n"
+            "let _t1:real = _f0/0.0080000000000000002:length^2 mass^1 time^-3 current^-1;\n"
+            "let _t2:real = exp(_t1);\n"
+            "let _t3:real = 1:real+_t2;\n"
+            "let _t4:real = 1:real/_t3;\n"
+            "let _t5:real = 1:real-_t4;\n"
+            "let _f2:real = _t0-_t5;\n"
+            "let _f3:time^-1 = _f2/0.001:time^1;\n"
+            "let _f4:real = s.h;\n"
+            "let _f5:length^2 mass^1 time^-3 current^-1 = v+0.067000000000000004:length^2 mass^1 time^-3 current^-1;\n"
+            "let _f6:real = _f5/0.0073000000000000001:length^2 mass^1 time^-3 current^-1;\n"
+            "let _f7:real = exp(_f6);\n"
+            "let _f8:real = 1:real+_f7;\n"
+            "let _f9:real = 1:real/_f8;\n"
+            "let _t6:real = _f4-_f9;\n"
+            "let _t7:time^-1 = _t6/1.5:time^1;\n"
+            "{m' = _f3; h' = _t7;};\n"
+            "effect current_density[k]:length^-2 current^1 =\n"
+            "let _t0:length^2 mass^1 time^-3 current^-1 = v--0.076999999999999999:length^2 mass^1 time^-3 current^-1;\n"
+            "let _f0:real = s.m;\n"
+            "let _t1:length^-4 mass^-1 time^3 current^2 = gbar*_f0;\n"
+            "let _t2:real = s.h;\n"
+            "let _t3:length^-4 mass^-1 time^3 current^2 = _t1*_t2;\n"
+            "let _t4:length^-2 current^1 = _t3*_t0;\n"
+            "_t4;\n"
+            "export gbar:length^-4 mass^-1 time^3 current^2;\n"
+            "}";
+
+        EXPECT_EQ(expected_opt, pretty_print(m_fin));
     }
 }
-
-/// TODO bugs:
-/// object fields aren't being resolved correctly (during opt)

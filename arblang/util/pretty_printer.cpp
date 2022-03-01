@@ -11,49 +11,53 @@ using namespace resolved_ir;
 std::string pretty_print(const resolved_mechanism& e) {
     std::string str = e.name + "{\n";
     for (const auto& p: e.parameters) {
-        str += to_string(p) + "\n";
+        str += pretty_print(p) + "\n";
     }
     for (const auto& p: e.constants) {
-        str += to_string(p) + "\n";
+        str += pretty_print(p) + "\n";
     }
     for (const auto& p: e.states) {
-        str += to_string(p) + "\n";
+        str += pretty_print(p) + "\n";
     }
     for (const auto& p: e.bindings) {
-        str += to_string(p) + "\n";
+        str += pretty_print(p) + "\n";
     }
     for (const auto& p: e.functions) {
-        str += to_string(p) + "\n";
+        str += pretty_print(p) + "\n";
     }
     for (const auto& p: e.initializations) {
-        str += to_string(p) + "\n";
+        str += pretty_print(p) + "\n";
     }
     for (const auto& p: e.evolutions) {
-        str += to_string(p) + "\n";
+        str += pretty_print(p) + "\n";
     }
     for (const auto& p: e.effects) {
-        str += to_string(p) + "\n";
+        str += pretty_print(p) + "\n";
     }
     for (const auto& p: e.exports) {
-        str += to_string(p) + "\n";
+        str += pretty_print(p) + "\n";
     }
     return str + "}";
 }
 
 std::string pretty_print(const resolved_parameter& e) {
-    return "parameter " + e.name + ": " + pretty_print(e.type) + " = " + pretty_print(e.value) + ";";
+    std::string str =  "parameter " + e.name + ":" + pretty_print(e.type) + " =\n" + pretty_print(e.value);
+    if (str.back() != ';') str += ";";
+    return str;
 }
 
 std::string pretty_print(const resolved_constant& e) {
-    return "constant " + e.name + ": " + pretty_print(e.type) + " = " + pretty_print(e.value) + ";";
+    std::string str = "constant " + e.name + ":" + pretty_print(e.type) + " =\n" + pretty_print(e.value);
+    if (str.back() != ';') str += ";";
+    return str;
 }
 
 std::string pretty_print(const resolved_state& e) {
-    return "state " + e.name + ": " + pretty_print(e.type) + ";";
+    return "state " + e.name + ":" + pretty_print(e.type) + ";";
 }
 
 std::string pretty_print(const resolved_record_alias& e) {
-    return "record" + e.name + ": " + pretty_print(e.type) + ";";
+    return "record" + e.name + ":" + pretty_print(e.type) + ";";
 }
 
 std::string pretty_print(const resolved_function& e) {
@@ -61,16 +65,16 @@ std::string pretty_print(const resolved_function& e) {
     bool first = true;
     for (const auto& f: e.args) {
         if (!first) str += ", ";
-        str += pretty_print(f) + ": " + pretty_print(type_of(f));
+        str += pretty_print(f) + ":" + pretty_print(type_of(f));
         first = false;
     }
-    str += "): " + pretty_print(e.type) + "{\n";
+    str += "):" + pretty_print(e.type) + "{\n";
     str += pretty_print(e.body) + "\n};";
     return str;
 }
 
 std::string pretty_print(const resolved_bind& e) {
-    std::string str = "bind " + e.name + ": " + pretty_print(e.type) + " = " + to_string(e.bind);
+    std::string str = "bind " + e.name + ":" + pretty_print(e.type) + " = " + to_string(e.bind);
     if (e.ion) {
         str += ("[" + e.ion.value() + "]");
     }
@@ -78,13 +82,17 @@ std::string pretty_print(const resolved_bind& e) {
 }
 
 std::string pretty_print(const resolved_initial& e) {
-    return "initial " + pretty_print(e.identifier) + ": " + pretty_print(e.type) +
-           " = " + pretty_print(e.value) + ";";
+    std::string str = "initial " + pretty_print(e.identifier) + ":" + pretty_print(e.type) +
+                    " =\n" + pretty_print(e.value);
+    if (str.back() != ';') str += ";";
+    return str;
 }
 
 std::string pretty_print(const resolved_evolve& e) {
-    return "evolve " + pretty_print(e.identifier) + ": " + pretty_print(e.type) +
-           " = " + pretty_print(e.value) + ";";
+    std::string str = "evolve " + pretty_print(e.identifier) + ":" + pretty_print(e.type) +
+                      " =\n" + pretty_print(e.value);
+    if (str.back() != ';') str += ";";
+    return str;
 }
 
 std::string pretty_print(const resolved_effect& e) {
@@ -92,11 +100,13 @@ std::string pretty_print(const resolved_effect& e) {
     if (e.ion) {
         str += ("[" + e.ion.value() + "]");
     }
-    return str + ": " + pretty_print(e.type) + " = " + pretty_print(e.value) + ";";
+    str += ":" + pretty_print(e.type) + " =\n" + pretty_print(e.value);
+    if (str.back() != ';') str += ";";
+    return str;
 }
 
 std::string pretty_print(const resolved_export& e) {
-    return "export " + pretty_print(e.identifier) + ": " + pretty_print(e.type) + ";";
+    return "export " + pretty_print(e.identifier) + ":" + pretty_print(e.type) + ";";
 }
 
 std::string pretty_print(const resolved_call& e) {
@@ -115,31 +125,34 @@ std::string pretty_print(const resolved_object& e) {
 
     auto names = e.field_names();
     auto values = e.field_values();
+    bool first = true;
     for (unsigned i = 0; i < names.size(); ++i) {
-        str += names[i] + " = " + pretty_print(values[i]) + "; ";
+        if (!first) str += " ";
+        str += names[i] + " = " + pretty_print(values[i]) + ";";
+        first = false;
     }
     return str + "}";
 }
 
 std::string pretty_print(const resolved_let& e) {
-    std::string str = "let " + e.id_name() + ": " + pretty_print(type_of(e.id_value())) + " = " +
+    std::string str = "let " + e.id_name() + ":" + pretty_print(type_of(e.id_value())) + " = " +
                       pretty_print(e.id_value()) + ";\n" + pretty_print(e.body);
     if (str.back() != ';') str += ";";
     return str;
 }
 
 std::string pretty_print(const resolved_conditional& e) {
-    return pretty_print(e.condition) + "? "+ pretty_print(e.value_true) + ": " + pretty_print(e.value_true);
+    return pretty_print(e.condition) + "? "+ pretty_print(e.value_true) + ": " + pretty_print(e.value_false);
 }
 
 std::string pretty_print(const resolved_float& e) {
     std::ostringstream os;
     os << std::setprecision(std::numeric_limits<double>::max_digits10) << e.value;
-    return os.str() + ": " + pretty_print(e.type);
+    return os.str() + ":" + pretty_print(e.type);
 }
 
 std::string pretty_print(const resolved_int& e) {
-    return std::to_string(e.value) + ": " + pretty_print(e.type);
+    return std::to_string(e.value) + ":" + pretty_print(e.type);
 }
 
 std::string pretty_print(const resolved_unary& e) {
@@ -201,8 +214,11 @@ std::string pretty_print(const resolved_boolean& q) {
 std::string pretty_print(const resolved_record& q) {
 
     std::string str = "{";
+    bool first = true;
     for (const auto& f: q.fields) {
-        str += f.first + ": " + pretty_print(f.second) + ";";
+        if (!first) str += " ";
+        str += f.first + ":" + pretty_print(f.second) + ";";
+        first = false;
     }
     return str + "}";
 }
@@ -307,11 +323,12 @@ std::string expand(const resolved_object& e, int indent) {
     auto single_indent = std::string(indent*2, ' ');
     auto double_indent = single_indent + "  ";
 
-    std::string str = single_indent + "(object";
+    std::string str = single_indent + "(object\n";
+    bool first = true;
     for (unsigned i = 0; i < e.record_fields.size(); ++i) {
-        str += "\n" + double_indent + "(\n";
-        str += expand(e.record_fields[i]) + "\n";
-        str += expand(e.field_values()[i]) + ")";
+        if (!first) str += "\n";
+        str += expand(e.record_fields[i], indent + 1);
+        first = false;
     }
     return str + ")";
 }
@@ -320,7 +337,6 @@ std::string expand(const resolved_let& e, int indent) {
     auto single_indent = std::string(indent*2, ' ');
     std::string str = single_indent + "(let\n";
     str += expand(e.identifier, indent+1) + "\n";
-    str += expand(e.id_value(), indent+1) + "\n";
     str += expand(e.body, indent+1);
     return str + ")";
 }
