@@ -73,8 +73,8 @@ TEST(canonicalizer, call) {
 
         auto call_normal = normalize(call);
         auto call_resolved = resolve(call_normal, scope_map);
-        auto call_canon = canonicalize(call_resolved);
-        auto call_ssa = single_assign(call_canon);
+        auto call_canon = canonicalize(call_resolved, "t");
+        auto call_ssa = single_assign(call_canon, "r");
 
         auto opt = optimizer(call_ssa);
         auto call_opt = opt.optimize();
@@ -101,8 +101,8 @@ TEST(canonicalizer, call) {
 
         auto call_normal = normalize(call);
         auto call_resolved = resolve(call_normal, scope_map);
-        auto call_canon = canonicalize(call_resolved);
-        auto call_ssa = single_assign(call_canon);
+        auto call_canon = canonicalize(call_resolved, "t");
+        auto call_ssa = single_assign(call_canon, "r");
 
         auto opt = optimizer(call_ssa);
         auto call_opt = opt.optimize();
@@ -132,8 +132,8 @@ TEST(canonicalizer, call) {
 
         auto call_normal = normalize(call);
         auto call_resolved = resolve(call_normal, scope_map);
-        auto call_canon = canonicalize(call_resolved);
-        auto call_ssa = single_assign(call_canon);
+        auto call_canon = canonicalize(call_resolved, "t");
+        auto call_ssa = single_assign(call_canon, "r");
 
         auto opt = optimizer(call_ssa);
         auto call_opt = opt.optimize();
@@ -164,8 +164,8 @@ TEST(canonicalizer, call) {
 
         auto call_normal = normalize(call);
         auto call_resolved = resolve(call_normal, scope_map);
-        auto call_canon = canonicalize(call_resolved);
-        auto call_ssa = single_assign(call_canon);
+        auto call_canon = canonicalize(call_resolved, "t");
+        auto call_ssa = single_assign(call_canon, "r");
 
         auto opt = optimizer(call_ssa);
         auto call_opt = opt.optimize();
@@ -196,8 +196,8 @@ TEST(canonicalizer, call) {
 
         auto call_normal = normalize(call);
         auto call_resolved = resolve(call_normal, scope_map);
-        auto call_canon = canonicalize(call_resolved);
-        auto call_ssa = single_assign(call_canon);
+        auto call_canon = canonicalize(call_resolved, "t");
+        auto call_ssa = single_assign(call_canon, "r");
 
         auto opt = optimizer(call_ssa);
         auto call_opt = opt.optimize();
@@ -238,8 +238,8 @@ TEST(canonicalizer, let) {
 
         auto let_normal = normalize(let);
         auto let_resolved = resolve(let_normal, scope_map);
-        auto let_canon = canonicalize(let_resolved);
-        auto let_ssa = single_assign(let_canon);
+        auto let_canon = canonicalize(let_resolved, "t");
+        auto let_ssa = single_assign(let_canon, "r");
 
         auto opt = optimizer(let_ssa);
         auto let_opt = opt.optimize();
@@ -258,8 +258,8 @@ TEST(canonicalizer, let) {
 
         auto let_normal = normalize(let);
         auto let_resolved = resolve(let_normal, scope_map);
-        auto let_canon = canonicalize(let_resolved);
-        auto let_ssa = single_assign(let_canon);
+        auto let_canon = canonicalize(let_resolved, "t");
+        auto let_ssa = single_assign(let_canon, "r");
 
         auto opt = optimizer(let_ssa);
         auto let_opt = opt.optimize();
@@ -312,8 +312,8 @@ TEST(canonicalizer, let) {
 
         auto let_normal = normalize(let);
         auto let_resolved = resolve(let_normal, scope_map);
-        auto let_canon = canonicalize(let_resolved);
-        auto let_ssa = single_assign(let_canon);
+        auto let_canon = canonicalize(let_resolved, "t");
+        auto let_ssa = single_assign(let_canon, "r");
 
         auto opt = optimizer(let_ssa);
         auto let_opt = opt.optimize();
@@ -381,8 +381,8 @@ TEST(canonicalizer, object) {
 
         auto obj_normal = normalize(obj);
         auto obj_resolved = resolve(obj_normal, scope_map);
-        auto obj_canon = canonicalize(obj_resolved);
-        auto obj_ssa = single_assign(obj_canon);
+        auto obj_canon = canonicalize(obj_resolved, "t");
+        auto obj_ssa = single_assign(obj_canon, "r");
 
         auto opt = optimizer(obj_ssa);
         auto let_opt = opt.optimize();
@@ -419,8 +419,8 @@ TEST(canonicalizer, object) {
 
         auto obj_normal = normalize(obj);
         auto obj_resolved = resolve(obj_normal, scope_map);
-        auto obj_canon = canonicalize(obj_resolved);
-        auto obj_ssa = single_assign(obj_canon);
+        auto obj_canon = canonicalize(obj_resolved, "t");
+        auto obj_ssa = single_assign(obj_canon, "r");
 
         std::string expected_opt = "let _t0:real = 1:real+2:real;\n"
                                    "let _t1:real = _t0+3:real;\n"
@@ -479,8 +479,8 @@ TEST(canonicalizer, with) {
 
         auto let_normal = normalize(let);
         auto let_resolved = resolve(let_normal, scope_map);
-        auto let_canon = canonicalize(let_resolved);
-        auto let_ssa = single_assign(let_canon);
+        auto let_canon = canonicalize(let_resolved, "t");
+        auto let_ssa = single_assign(let_canon, "r");
 
         auto opt = optimizer(let_ssa);
         auto let_opt = opt.optimize();
@@ -541,8 +541,8 @@ TEST(canonicalizer, with) {
 
         auto let_normal = normalize(let);
         auto let_resolved = resolve(let_normal, scope_map);
-        auto let_canon = canonicalize(let_resolved);
-        auto let_ssa = single_assign(let_canon);
+        auto let_canon = canonicalize(let_resolved, "t");
+        auto let_ssa = single_assign(let_canon, "r");
 
         auto opt = optimizer(let_ssa);
         auto let_opt = opt.optimize();
@@ -597,8 +597,8 @@ TEST(canonicalizer, with) {
 
         auto let_normal = normalize(let);
         auto let_resolved = resolve(let_normal, scope_map);
-        auto let_canon = canonicalize(let_resolved);
-        auto let_ssa = single_assign(let_canon);
+        auto let_canon = canonicalize(let_resolved, "t");
+        auto let_ssa = single_assign(let_canon, "r");
 
         auto opt = optimizer(let_ssa);
         auto let_opt = opt.optimize();
@@ -620,8 +620,8 @@ TEST(canonicalizer, with) {
 
         auto let_normal = normalize(let);
         auto let_resolved = resolve(let_normal, scope_map);
-        auto let_canon = canonicalize(let_resolved);
-        auto let_ssa = single_assign(let_canon);
+        auto let_canon = canonicalize(let_resolved, "t");
+        auto let_ssa = single_assign(let_canon, "r");
 
         auto opt = optimizer(let_ssa);
         auto let_opt = opt.optimize();
@@ -655,8 +655,8 @@ TEST(canonicalizer, conditional) {
 
         auto if_normal = normalize(ifstmt);
         auto if_resolved = resolve(if_normal, scope_map);
-        auto if_canon = canonicalize(if_resolved);
-        auto if_ssa = single_assign(if_canon);
+        auto if_canon = canonicalize(if_resolved, "t");
+        auto if_ssa = single_assign(if_canon, "r");
 
         auto opt = optimizer(if_ssa);
         auto if_opt = opt.optimize();
@@ -697,8 +697,8 @@ TEST(canonicalizer, conditional) {
 
         auto if_normal = normalize(ifstmt);
         auto if_resolved = resolve(if_normal, scope_map);
-        auto if_canon = canonicalize(if_resolved);
-        auto if_ssa = single_assign(if_canon);
+        auto if_canon = canonicalize(if_resolved, "t");
+        auto if_ssa = single_assign(if_canon, "r");
 
         auto opt = optimizer(if_ssa);
         auto if_opt = opt.optimize();
@@ -788,8 +788,8 @@ TEST(cse, let) {
 
         auto let_normal = normalize(let);
         auto let_resolved = resolve(let_normal, scope_map);
-        auto let_canon = canonicalize(let_resolved);
-        auto let_ssa = single_assign(let_canon);
+        auto let_canon = canonicalize(let_resolved, "t");
+        auto let_ssa = single_assign(let_canon, "r");
 
         auto opt = optimizer(let_ssa);
         auto let_opt = opt.optimize();
@@ -838,8 +838,8 @@ TEST(cse, let) {
 
         auto let_normal = normalize(let);
         auto let_resolved = resolve(let_normal, scope_map);
-        auto let_canon = canonicalize(let_resolved);
-        auto let_ssa = single_assign(let_canon);
+        auto let_canon = canonicalize(let_resolved, "t");
+        auto let_ssa = single_assign(let_canon, "r");
 
         auto opt = optimizer(let_ssa);
         auto let_opt = opt.optimize();
@@ -901,8 +901,8 @@ TEST(cse, let) {
 
         auto let_normal = normalize(let);
         auto let_resolved = resolve(let_normal, scope_map);
-        auto let_canon = canonicalize(let_resolved);
-        auto let_ssa = single_assign(let_canon);
+        auto let_canon = canonicalize(let_resolved, "t");
+        auto let_ssa = single_assign(let_canon, "r");
 
         auto opt = optimizer(let_ssa);
         auto let_opt = opt.optimize();
@@ -925,8 +925,8 @@ TEST(cse, let) {
 
         auto let_normal = normalize(let);
         auto let_resolved = resolve(let_normal, scope_map);
-        auto let_canon = canonicalize(let_resolved);
-        auto let_ssa = single_assign(let_canon);
+        auto let_canon = canonicalize(let_resolved, "t");
+        auto let_ssa = single_assign(let_canon, "r");
 
         auto opt = optimizer(let_ssa);
         auto let_opt = opt.optimize();
@@ -966,8 +966,8 @@ TEST(function_inline, misc) {
 
         auto bar_normal = normalize(bar);
         auto bar_resolved = resolve(bar_normal, bar_scope_map);
-        auto bar_canon = canonicalize(bar_resolved);
-        auto bar_ssa = single_assign(bar_canon);
+        auto bar_canon = canonicalize(bar_resolved, "t");
+        auto bar_ssa = single_assign(bar_canon, "r");
 
         auto b_opt = optimizer(bar_ssa);
         auto bar_opt = b_opt.optimize();
@@ -981,8 +981,8 @@ TEST(function_inline, misc) {
 
         auto foo_normal = normalize(foo);
         auto foo_resolved = resolve(foo_normal, foo_scope_map);
-        auto foo_canon = canonicalize(foo_resolved);
-        auto foo_ssa = single_assign(foo_canon);
+        auto foo_canon = canonicalize(foo_resolved, "t");
+        auto foo_ssa = single_assign(foo_canon, "r");
 
         auto f_opt = optimizer(foo_ssa);
         auto foo_opt = f_opt.optimize();
@@ -1001,14 +1001,14 @@ TEST(function_inline, misc) {
 
         auto let_normal = normalize(let);
         auto let_resolved = resolve(let_normal, let_scope_map);
-        auto let_canon = canonicalize(let_resolved);
-        auto let_ssa = single_assign(let_canon);
+        auto let_canon = canonicalize(let_resolved, "t");
+        auto let_ssa = single_assign(let_canon, "r");
 
         auto l_opt = optimizer(let_ssa);
         auto let_opt = l_opt.optimize();
 
         std::unordered_map<std::string, r_expr> avail_funcs = {{"foo", foo_opt}, {"bar", bar_opt}};
-        auto let_inlined = inline_func(let_opt, avail_funcs);
+        auto let_inlined = inline_func(let_opt, avail_funcs, "f");
 
         auto l_opt2 = optimizer(let_inlined);
         auto let_opt2 = l_opt2.optimize();

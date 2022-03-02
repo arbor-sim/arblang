@@ -16,6 +16,7 @@ set(arblang-sources
     resolver/resolved_types.cpp
     resolver/canonicalize.cpp
     resolver/single_assign.cpp
+    solvers/solve_ode.cpp
     util/pretty_printer.cpp
     util/rexp_helpers.cpp
     )

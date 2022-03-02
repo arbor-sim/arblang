@@ -15,51 +15,52 @@ namespace resolved_ir {
 resolved_mechanism canonicalize(const resolved_mechanism& e) {
     std::unordered_set<std::string> reserved;
     std::unordered_map<std::string, r_expr> rewrites;
+    std::string pref = "t";
     resolved_mechanism mech;
     for (const auto& c: e.constants) {
         reserved.clear();
         rewrites.clear();
-        mech.constants.push_back(canonicalize(c, reserved, rewrites));
+        mech.constants.push_back(canonicalize(c, reserved, rewrites, pref));
     }
     for (const auto& c: e.parameters) {
         reserved.clear();
         rewrites.clear();
-        mech.parameters.push_back(canonicalize(c, reserved, rewrites));
+        mech.parameters.push_back(canonicalize(c, reserved, rewrites, pref));
     }
     for (const auto& c: e.bindings) {
         reserved.clear();
         rewrites.clear();
-        mech.bindings.push_back(canonicalize(c, reserved, rewrites));
+        mech.bindings.push_back(canonicalize(c, reserved, rewrites, pref));
     }
     for (const auto& c: e.states) {
         reserved.clear();
         rewrites.clear();
-        mech.states.push_back(canonicalize(c, reserved, rewrites));
+        mech.states.push_back(canonicalize(c, reserved, rewrites, pref));
     }
     for (const auto& c: e.functions) {
         reserved.clear();
         rewrites.clear();
-        mech.functions.push_back(canonicalize(c, reserved, rewrites));
+        mech.functions.push_back(canonicalize(c, reserved, rewrites, pref));
     }
     for (const auto& c: e.initializations) {
         reserved.clear();
         rewrites.clear();
-        mech.initializations.push_back(canonicalize(c, reserved, rewrites));
+        mech.initializations.push_back(canonicalize(c, reserved, rewrites, pref));
     }
     for (const auto& c: e.evolutions) {
         reserved.clear();
         rewrites.clear();
-        mech.evolutions.push_back(canonicalize(c, reserved, rewrites));
+        mech.evolutions.push_back(canonicalize(c, reserved, rewrites, pref));
     }
     for (const auto& c: e.effects) {
         reserved.clear();
         rewrites.clear();
-        mech.effects.push_back(canonicalize(c, reserved, rewrites));
+        mech.effects.push_back(canonicalize(c, reserved, rewrites, pref));
     }
     for (const auto& c: e.exports) {
         reserved.clear();
         rewrites.clear();
-        mech.exports.push_back(canonicalize(c, reserved, rewrites));
+        mech.exports.push_back(canonicalize(c, reserved, rewrites, pref));
     }
     mech.name = e.name;
     mech.loc = e.loc;
@@ -69,7 +70,8 @@ resolved_mechanism canonicalize(const resolved_mechanism& e) {
 
 r_expr canonicalize(const resolved_record_alias& e,
                     std::unordered_set<std::string>& reserved,
-                    std::unordered_map<std::string, r_expr>& rewrites)
+                    std::unordered_map<std::string, r_expr>& rewrites,
+                    const std::string& pref)
 {
     throw std::runtime_error("Internal compiler error, didn't expect a resolved_record_alias at "
                              "this stage in the compilation.");
@@ -77,14 +79,16 @@ r_expr canonicalize(const resolved_record_alias& e,
 
 r_expr canonicalize(const resolved_argument& e,
                     std::unordered_set<std::string>& reserved,
-                    std::unordered_map<std::string, r_expr>& rewrites)
+                    std::unordered_map<std::string, r_expr>& rewrites,
+                    const std::string& pref)
 {
     return make_rexpr<resolved_argument>(e);
 }
 
 r_expr canonicalize(const resolved_variable& e,
                     std::unordered_set<std::string>& reserved,
-                    std::unordered_map<std::string, r_expr>& rewrites)
+                    std::unordered_map<std::string, r_expr>& rewrites,
+                    const std::string& pref)
 {
     if (rewrites.count(e.name)) {
         return rewrites.at(e.name);
@@ -94,76 +98,86 @@ r_expr canonicalize(const resolved_variable& e,
 
 r_expr canonicalize(const resolved_parameter& e,
                     std::unordered_set<std::string>& reserved,
-                    std::unordered_map<std::string, r_expr>& rewrites)
+                    std::unordered_map<std::string, r_expr>& rewrites,
+                    const std::string& pref)
 {
-    auto val_canon = canonicalize(e.value, reserved, rewrites);
+    auto val_canon = canonicalize(e.value, reserved, rewrites, pref);
     return make_rexpr<resolved_parameter>(e.name, val_canon, e.type, e.loc);
 }
 
 r_expr canonicalize(const resolved_constant& e,
                     std::unordered_set<std::string>& reserved,
-                    std::unordered_map<std::string, r_expr>& rewrites)
+                    std::unordered_map<std::string, r_expr>& rewrites,
+                    const std::string& pref)
 {
-    auto val_canon = canonicalize(e.value, reserved, rewrites);
+    auto val_canon = canonicalize(e.value, reserved, rewrites, pref);
     return make_rexpr<resolved_constant>(e.name, val_canon, e.type, e.loc);
 }
 
 r_expr canonicalize(const resolved_state& e,
                     std::unordered_set<std::string>& reserved,
-                    std::unordered_map<std::string, r_expr>& rewrites)
+                    std::unordered_map<std::string, r_expr>& rewrites,
+                    const std::string& pref)
 {
     return make_rexpr<resolved_state>(e);
 }
 
 r_expr canonicalize(const resolved_function& e,
                     std::unordered_set<std::string>& reserved,
-                    std::unordered_map<std::string, r_expr>& rewrites)
+                    std::unordered_map<std::string, r_expr>& rewrites,
+                    const std::string& pref)
 {
-    auto body_canon = canonicalize(e.body, reserved, rewrites);
+    auto body_canon = canonicalize(e.body, reserved, rewrites, pref);
     return make_rexpr<resolved_function>(e.name, e.args, body_canon, e.type, e.loc);
 }
 
 r_expr canonicalize(const resolved_bind& e,
                     std::unordered_set<std::string>& reserved,
-                    std::unordered_map<std::string, r_expr>& rewrites)
+                    std::unordered_map<std::string, r_expr>& rewrites,
+                    const std::string& pref)
 {
     return make_rexpr<resolved_bind>(e);
 }
 
 r_expr canonicalize(const resolved_initial& e,
                     std::unordered_set<std::string>& reserved,
-                    std::unordered_map<std::string, r_expr>& rewrites)
+                    std::unordered_map<std::string, r_expr>& rewrites,
+                    const std::string& pref)
 {
-    auto val_canon = canonicalize(e.value, reserved, rewrites);
+    auto val_canon = canonicalize(e.value, reserved, rewrites, pref);
     return make_rexpr<resolved_initial>(e.identifier, val_canon, e.type, e.loc);
 }
 
 r_expr canonicalize(const resolved_evolve& e,
                     std::unordered_set<std::string>& reserved,
-                    std::unordered_map<std::string, r_expr>& rewrites)
+                    std::unordered_map<std::string, r_expr>& rewrites,
+                    const std::string& pref)
 {
-    auto val_canon = canonicalize(e.value, reserved, rewrites);
+    auto val_canon = canonicalize(e.value, reserved, rewrites, pref);
     return make_rexpr<resolved_evolve>(e.identifier, val_canon, e.type, e.loc);
 }
 
 r_expr canonicalize(const resolved_effect& e,
                     std::unordered_set<std::string>& reserved,
-                    std::unordered_map<std::string, r_expr>& rewrites)
+                    std::unordered_map<std::string, r_expr>& rewrites,
+                    const std::string& pref)
 {
-    auto val_canon = canonicalize(e.value, reserved, rewrites);
+    auto val_canon = canonicalize(e.value, reserved, rewrites, pref);
     return make_rexpr<resolved_effect>(e.effect, e.ion, val_canon, e.type, e.loc);
 }
 
 r_expr canonicalize(const resolved_export& e,
                     std::unordered_set<std::string>& reserved,
-                    std::unordered_map<std::string, r_expr>& rewrites)
+                    std::unordered_map<std::string, r_expr>& rewrites,
+                    const std::string& pref)
 {
     return make_rexpr<resolved_export>(e);
 }
 
 r_expr canonicalize(const resolved_call& e,
                     std::unordered_set<std::string>& reserved,
-                    std::unordered_map<std::string, r_expr>& rewrites)
+                    std::unordered_map<std::string, r_expr>& rewrites,
+                    const std::string& pref)
 {
     // Canonicalize the arguments of the function call.
     // If an argument is a let statement:
@@ -183,7 +197,7 @@ r_expr canonicalize(const resolved_call& e,
     bool has_let = false;
     resolved_let let_outer;
     for (const auto& arg: e.call_args) {
-        auto arg_canon = canonicalize(arg, reserved, rewrites);
+        auto arg_canon = canonicalize(arg, reserved, rewrites, pref);
         if (auto let_opt = get_let(arg_canon)) {
             auto let_arg = let_opt.value();
 
@@ -216,7 +230,7 @@ r_expr canonicalize(const resolved_call& e,
     // This is done so that any other expressions using _tx can refer
     // to its value if needed.
 
-    auto temp_expr = make_rexpr<resolved_variable>(unique_local_name(reserved), call_canon, e.type, e.loc);
+    auto temp_expr = make_rexpr<resolved_variable>(unique_local_name(reserved, pref), call_canon, e.type, e.loc);
     auto let_wrapper = make_rexpr<resolved_let>(temp_expr, temp_expr, e.type, e.loc);
 
     if (!has_let) return let_wrapper;
@@ -228,7 +242,8 @@ r_expr canonicalize(const resolved_call& e,
 
 r_expr canonicalize(const resolved_object& e,
                     std::unordered_set<std::string>& reserved,
-                    std::unordered_map<std::string, r_expr>& rewrites)
+                    std::unordered_map<std::string, r_expr>& rewrites,
+                    const std::string& pref)
 {
     // Canonicalize the fields of an object.
     // If the value of a field is a let statement:
@@ -247,7 +262,7 @@ r_expr canonicalize(const resolved_object& e,
     bool has_let = false;
     resolved_let let_outer;
     for (const auto& arg: e.field_values()) {
-        auto arg_canon = canonicalize(arg, reserved, rewrites);
+        auto arg_canon = canonicalize(arg, reserved, rewrites, pref);
         if (auto let_opt = get_let(arg_canon)) {
             auto let_val = let_opt.value();
 
@@ -277,7 +292,7 @@ r_expr canonicalize(const resolved_object& e,
     // This is done so that any other expressions using _tx can refer
     // to its value if needed.
     auto object_canon = make_rexpr<resolved_object>(e.field_names(), values_canon, e.type, e.loc);
-    auto temp_expr = make_rexpr<resolved_variable>(unique_local_name(reserved), object_canon, e.type, e.loc);
+    auto temp_expr = make_rexpr<resolved_variable>(unique_local_name(reserved, pref), object_canon, e.type, e.loc);
     auto let_wrapper = make_rexpr<resolved_let>(temp_expr, temp_expr, e.type, e.loc);
 
     if (!has_let) return let_wrapper;
@@ -288,7 +303,8 @@ r_expr canonicalize(const resolved_object& e,
 
 r_expr canonicalize(const resolved_let& e,
                     std::unordered_set<std::string>& reserved,
-                    std::unordered_map<std::string, r_expr>& rewrites)
+                    std::unordered_map<std::string, r_expr>& rewrites,
+                    const std::string& pref)
 {
     // Canonicalize the value and body of a let statement.
     // If the canonicalized value is a let statement:
@@ -302,13 +318,13 @@ r_expr canonicalize(const resolved_let& e,
     // 2. To canonicalize 'let x = (let _t0 = a+b; let _t1 = _t0+c; _t1;); x;' perform the
     //    procedure outlined above to get 'let _t0 = a+b; let _t1 = _t0+c; let x = _t1; x;'
 
-    auto val_canon = canonicalize(e.id_value(), reserved, rewrites);
+    auto val_canon = canonicalize(e.id_value(), reserved, rewrites, pref);
 
     auto var_name = e.id_name();
     auto var_canon = make_rexpr<resolved_variable>(e.id_name(), val_canon, type_of(val_canon), location_of(val_canon));
     rewrites.insert({var_name, var_canon});
 
-    auto body_canon = canonicalize(e.body, reserved, rewrites);
+    auto body_canon = canonicalize(e.body, reserved, rewrites, pref);
 
     auto let_outer = resolved_let(var_canon, body_canon, e.type, e.loc);
 
@@ -326,7 +342,8 @@ r_expr canonicalize(const resolved_let& e,
 
 r_expr canonicalize(const resolved_conditional& e,
                     std::unordered_set<std::string>& reserved,
-                    std::unordered_map<std::string, r_expr>& rewrites)
+                    std::unordered_map<std::string, r_expr>& rewrites,
+                    const std::string& pref)
 {
     // Canonicalize the condition, true value and false value of a conditional statement.
     // If any of the canonicalized values is a let statement:
@@ -342,9 +359,9 @@ r_expr canonicalize(const resolved_conditional& e,
     // 4. 'if a < b; then x/y; else y/x;' is canonicalized into
     //    'let _t0 = a<b; let _t1 = x/y; let _t2 = y/x; let t3_ = (if _t0; then _t1; else _t2;); _t3;'
 
-    auto cond_canon = canonicalize(e.condition, reserved, rewrites);
-    auto true_canon = canonicalize(e.value_true, reserved, rewrites);
-    auto false_canon = canonicalize(e.value_false, reserved, rewrites);
+    auto cond_canon = canonicalize(e.condition, reserved, rewrites, pref);
+    auto true_canon = canonicalize(e.value_true, reserved, rewrites, pref);
+    auto false_canon = canonicalize(e.value_false, reserved, rewrites, pref);
 
     resolved_let let_outer;
     bool has_let = false;
@@ -376,7 +393,7 @@ r_expr canonicalize(const resolved_conditional& e,
     }
 
     auto if_canon = make_rexpr<resolved_conditional>(cond_canon, true_canon, false_canon, e.type, e.loc);
-    auto temp_expr = make_rexpr<resolved_variable>(unique_local_name(reserved), if_canon, e.type, e.loc);
+    auto temp_expr = make_rexpr<resolved_variable>(unique_local_name(reserved, pref), if_canon, e.type, e.loc);
     auto let_wrapper = make_rexpr<resolved_let>(temp_expr, temp_expr, e.type, e.loc);
 
     if (!has_let) return let_wrapper;
@@ -387,21 +404,24 @@ r_expr canonicalize(const resolved_conditional& e,
 
 r_expr canonicalize(const resolved_float& e,
                     std::unordered_set<std::string>& reserved,
-                    std::unordered_map<std::string, r_expr>& rewrites)
+                    std::unordered_map<std::string, r_expr>& rewrites,
+                    const std::string& pref)
 {
     return make_rexpr<resolved_float>(e);
 }
 
 r_expr canonicalize(const resolved_int& e,
                     std::unordered_set<std::string>& reserved,
-                    std::unordered_map<std::string, r_expr>& rewrites)
+                    std::unordered_map<std::string, r_expr>& rewrites,
+                    const std::string& pref)
 {
     return make_rexpr<resolved_int>(e);
 }
 
 r_expr canonicalize(const resolved_unary& e,
                     std::unordered_set<std::string>& reserved,
-                    std::unordered_map<std::string, r_expr>& rewrites)
+                    std::unordered_map<std::string, r_expr>& rewrites,
+                    const std::string& pref)
 {
     // Canonicalize the argument of a unary expression.
     // If the canonicalized argument is a let statement:
@@ -415,7 +435,7 @@ r_expr canonicalize(const resolved_unary& e,
     // 1. 'a+b' is canonicalized into 'let _t0 = a+b; _t0;'
     // 2. 'exp(a+b)' is canonicalized into 'let _t0 = a+b; let _t1 = exp(_t0); _t1;'
 
-    auto arg_canon = canonicalize(e.arg, reserved, rewrites);
+    auto arg_canon = canonicalize(e.arg, reserved, rewrites, pref);
 
     resolved_let let_outer;
     bool has_let = false;
@@ -426,7 +446,7 @@ r_expr canonicalize(const resolved_unary& e,
         has_let = true;
     }
     auto unary_canon = make_rexpr<resolved_unary>(e.op, arg_canon, e.type, e.loc);
-    auto temp_expr = make_rexpr<resolved_variable>(unique_local_name(reserved), unary_canon, e.type, e.loc);
+    auto temp_expr = make_rexpr<resolved_variable>(unique_local_name(reserved, pref), unary_canon, e.type, e.loc);
     auto let_wrapper = make_rexpr<resolved_let>(temp_expr, temp_expr, e.type, e.loc);
 
     if (!has_let) return let_wrapper;
@@ -437,7 +457,8 @@ r_expr canonicalize(const resolved_unary& e,
 
 r_expr canonicalize(const resolved_binary& e,
                     std::unordered_set<std::string>& reserved,
-                    std::unordered_map<std::string, r_expr>& rewrites)
+                    std::unordered_map<std::string, r_expr>& rewrites,
+                    const std::string& pref)
 {
     // Canonicalize the lhs and rhs of a binary expression.
     // If the canonicalized lhs is a let statement:
@@ -460,8 +481,8 @@ r_expr canonicalize(const resolved_binary& e,
     // 3. 'foo() + exp(a)' is canonicalized into
     //    'let _t0=foo(); let _t1=exp(a); let _t2=_t0+_t1; _t2'
 
-    auto lhs_canon = canonicalize(e.lhs, reserved, rewrites);
-    auto rhs_canon = canonicalize(e.rhs, reserved, rewrites);
+    auto lhs_canon = canonicalize(e.lhs, reserved, rewrites, pref);
+    auto rhs_canon = canonicalize(e.rhs, reserved, rewrites, pref);
 
     resolved_let let_outer;
     bool has_let = false;
@@ -484,7 +505,7 @@ r_expr canonicalize(const resolved_binary& e,
     }
 
     auto binary_canon = make_rexpr<resolved_binary>(e.op, lhs_canon, rhs_canon, e.type, e.loc);
-    auto temp_expr = make_rexpr<resolved_variable>(unique_local_name(reserved), binary_canon, e.type, e.loc);
+    auto temp_expr = make_rexpr<resolved_variable>(unique_local_name(reserved, pref), binary_canon, e.type, e.loc);
     auto let_wrapper = make_rexpr<resolved_let>(temp_expr, temp_expr, e.type, e.loc);
 
     if (!has_let) return let_wrapper;
@@ -495,7 +516,8 @@ r_expr canonicalize(const resolved_binary& e,
 
 r_expr canonicalize(const resolved_field_access& e,
                     std::unordered_set<std::string>& reserved,
-                    std::unordered_map<std::string, r_expr>& rewrites)
+                    std::unordered_map<std::string, r_expr>& rewrites,
+                    const std::string& pref)
 {
     // Canonicalize the object of a field access expression.
     // If the canonicalized object is a let statement:
@@ -509,7 +531,7 @@ r_expr canonicalize(const resolved_field_access& e,
     // 1. 'foo(a)' is canonicalized into 'let _t0 = foo(a); _t0;'
     // 2. 'foo(a).m' is canonicalized into 'let _t0 = foo(a); let _t1 = _t0.m; _t1;'
 
-    auto obj_canon = canonicalize(e.object, reserved, rewrites);
+    auto obj_canon = canonicalize(e.object, reserved, rewrites, pref);
 
     resolved_let let_outer;
     bool has_let = false;
@@ -521,7 +543,7 @@ r_expr canonicalize(const resolved_field_access& e,
     }
 
     auto access_canon = make_rexpr<resolved_field_access>(obj_canon, e.field, e.type, e.loc);
-    auto temp_expr = make_rexpr<resolved_variable>(unique_local_name(reserved), access_canon, e.type, e.loc);
+    auto temp_expr = make_rexpr<resolved_variable>(unique_local_name(reserved, pref), access_canon, e.type, e.loc);
     auto let_wrapper = make_rexpr<resolved_let>(temp_expr, temp_expr, e.type, e.loc);
 
     if (!has_let) return let_wrapper;
@@ -532,15 +554,16 @@ r_expr canonicalize(const resolved_field_access& e,
 
 r_expr canonicalize(const r_expr& e,
                     std::unordered_set<std::string>& reserved,
-                    std::unordered_map<std::string, r_expr>& rewrites)
+                    std::unordered_map<std::string, r_expr>& rewrites,
+                    const std::string& pref)
 {
-    return std::visit([&](auto& c) {return canonicalize(c, reserved, rewrites);}, *e);
+    return std::visit([&](auto& c) {return canonicalize(c, reserved, rewrites, pref);}, *e);
 }
 
-r_expr canonicalize(const r_expr& e) {
+r_expr canonicalize(const r_expr& e, const std::string& pref) {
     std::unordered_set<std::string> reserved;
     std::unordered_map<std::string, r_expr> rewrites;
-    return canonicalize(e, reserved, rewrites);
+    return canonicalize(e, reserved, rewrites, pref);
 }
 
 } // namespace resolved_ir
