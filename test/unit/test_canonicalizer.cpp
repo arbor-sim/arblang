@@ -13,6 +13,7 @@
 #include <arblang/resolver/resolved_expressions.hpp>
 #include <arblang/resolver/resolved_types.hpp>
 #include <arblang/resolver/single_assign.hpp>
+#include <arblang/solver/solve_ode.hpp>
 #include <arblang/util/custom_hash.hpp>
 #include <arblang/util/pretty_printer.hpp>
 
@@ -1338,5 +1339,8 @@ TEST(optimizer, mechanism) {
             "}";
 
         EXPECT_EQ(expected_opt, pretty_print(m_fin));
+
+        auto ev = std::get<resolved_evolve>(*(m_fin.evolutions.front()));
+        solve_ode(ev);
     }
 }

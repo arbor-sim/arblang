@@ -506,7 +506,7 @@ r_expr resolve(const parsed_binary& e, const in_scope_map& map) {
             throw std::runtime_error(fmt::format("argument {} doesn't match any of the record fields, at {}",
                                                  rhs_id, to_string(lhs_loc)));
         } else {
-            // If the lhs doesn't have a record type, throw an esception
+            // If the lhs doesn't have a record type, throw an exception
             throw std::runtime_error(fmt::format("lhs of dot operator {} doesn't have a record type, at {}",
                                                  to_string(lhs_v), to_string(lhs_loc)));
         }

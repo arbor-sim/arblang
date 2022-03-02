@@ -239,7 +239,7 @@ std::pair<r_expr, bool> copy_propagate(const resolved_conditional& e,
             cond.second||tval.second||fval.second};
 }
 
-std::pair<r_expr, bool>  copy_propagate(const resolved_float& e,
+std::pair<r_expr, bool> copy_propagate(const resolved_float& e,
                                        std::unordered_map<std::string, r_expr>& copy_map,
                                        std::unordered_map<std::string, r_expr>& rewrites)
 {

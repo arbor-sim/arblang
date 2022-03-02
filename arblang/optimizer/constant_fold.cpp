@@ -372,6 +372,7 @@ std::pair<r_expr, bool> constant_fold(const resolved_binary& e,
         if (lhs == 0) {
             switch (e.op) {
                 case binary_op::add:  return {rhs_arg.first, true};
+                case binary_op::sub:  return {make_rexpr<resolved_unary>(unary_op::neg, rhs_arg.first, e.type, e.loc), true};
                 case binary_op::mul:  return {make_rexpr<resolved_int>(0, e.type, e.loc), true};
                 case binary_op::div:  return {make_rexpr<resolved_int>(0, e.type, e.loc), true};
                 case binary_op::land: return {make_rexpr<resolved_int>(0, e.type, e.loc), true};
