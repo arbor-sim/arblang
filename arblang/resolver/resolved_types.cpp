@@ -69,21 +69,21 @@ bool operator==(const normalized_type& lhs, const normalized_type& rhs) {
 bool operator!=(const normalized_type& lhs, const normalized_type& rhs) {
     return !(lhs.quantity_exponents == rhs.quantity_exponents);
 }
-normalized_type operator*(normalized_type& lhs, normalized_type& rhs) {
+normalized_type operator*(const normalized_type& lhs, const normalized_type& rhs) {
     normalized_type t = lhs;
     for (unsigned i = 0; i < 6; ++i) {
         t.quantity_exponents[i] += rhs.quantity_exponents[i];
     }
     return t;
 }
-normalized_type operator/(normalized_type& lhs, normalized_type& rhs) {
+normalized_type operator/(const normalized_type& lhs, const normalized_type& rhs) {
     normalized_type t = lhs;
     for (unsigned i = 0; i < 6; ++i) {
         t.quantity_exponents[i] -= rhs.quantity_exponents[i];
     }
     return t;
 }
-normalized_type operator^(normalized_type& lhs, int rhs) {
+normalized_type operator^(const normalized_type& lhs, int rhs) {
     normalized_type t = lhs;
     for (unsigned i = 0; i < 6; ++i) {
         t.quantity_exponents[i] *= rhs;

@@ -379,6 +379,7 @@ r_expr canonicalize(const resolved_conditional& e,
         else {
             set_innermost_body(&let_outer, true_canon);
         }
+        has_let = true;
         true_canon = get_innermost_body(&let_true);
     }
     if (auto let_opt = get_let(false_canon)) {
@@ -389,6 +390,7 @@ r_expr canonicalize(const resolved_conditional& e,
         else {
             set_innermost_body(&let_outer, false_canon);
         }
+        has_let = true;
         false_canon = get_innermost_body(&let_false);
     }
 

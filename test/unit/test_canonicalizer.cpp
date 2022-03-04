@@ -334,11 +334,11 @@ TEST(canonicalizer, let) {
                                    "let _t4:current^1 = a*s;\n"
                                    "let _t5:real = foo(_t4);\n"
                                    "let _t6:real = _t3*_t5;\n"
-                                   "let _t7:current^-1 = _t6/2.1000000000000001:current^1;\n"
+                                   "let _t7:current^-1 = _t6*0.47619047619047616:current^-1;\n"
                                    "_t7;";
 
         std::string expanded_ans = "(variable _t7\n"
-                                   "  (/\n"
+                                   "  (*\n"
                                    "    (variable _t6\n"
                                    "      (*\n"
                                    "        (variable _t3\n"
@@ -356,7 +356,7 @@ TEST(canonicalizer, let) {
                                    "              (*\n"
                                    "                (argument a)\n"
                                    "                (argument s)))))))\n"
-                                   "    (2.1000000000000001)))";
+                                   "    (0.47619047619047616)))";
 
         EXPECT_EQ(expected_opt, pretty_print(let_opt));
 
@@ -390,17 +390,17 @@ TEST(canonicalizer, object) {
 
         std::string expected_opt = "let _t0:real = foo();\n"
                                    "let _t1:length^2 mass^1 time^-3 current^-1 = _t0*3:length^2 mass^1 time^-3 current^-1;\n"
-                                   "let _t5:length^2 mass^1 time^-3 current^-2 = _t1/7:current^1;\n"
+                                   "let _t5:length^2 mass^1 time^-3 current^-2 = _t1*0.14285714285714285:current^-1;\n"
                                    "_t5;";
 
         std::string expanded_ans = "(variable _t5\n"
-                                   "  (/\n"
+                                   "  (*\n"
                                    "    (variable _t1\n"
                                    "      (*\n"
                                    "        (variable _t0\n"
                                    "          (call foo))\n"
                                    "        (3)))\n"
-                                   "    (7)))";
+                                   "    (0.14285714285714285)))";
 
         EXPECT_EQ(expected_opt, pretty_print(let_opt));
 
@@ -492,11 +492,11 @@ TEST(canonicalizer, with) {
                                    "let _t3:current^1 = _t2*1:current^1;\n"
                                    "let _t10:length^2 mass^1 time^-3 current^-2 = 2:length^2 mass^1 time^-3 current^-1/_t3;\n"
                                    "let _t13:length^2 mass^1 time^-3 current^-2 = _t1*_t10;\n"
-                                   "let _t14:length^2 mass^1 time^-3 current^-2 = _t13/3:real;\n"
+                                   "let _t14:length^2 mass^1 time^-3 current^-2 = _t13*0.33333333333333331:real;\n"
                                    "_t14;";
 
         std::string expanded_ans = "(variable _t14\n"
-                                   "  (/\n"
+                                   "  (*\n"
                                    "    (variable _t13\n"
                                    "      (*\n"
                                    "        (variable _t1\n"
@@ -514,7 +514,7 @@ TEST(canonicalizer, with) {
                                    "                (variable _t2\n"
                                    "                  (call foo))\n"
                                    "                (1)))))))\n"
-                                   "    (3)))";
+                                   "    (0.33333333333333331)))";
 
         EXPECT_EQ(expected_opt, pretty_print(let_opt));
 
@@ -554,11 +554,11 @@ TEST(canonicalizer, with) {
                                    "let _t3:current^1 = _t2*1:current^1;\n"
                                    "let _t12:length^2 mass^1 time^-3 current^-2 = 2:length^2 mass^1 time^-3 current^-1/_t3;\n"
                                    "let _t17:length^2 mass^1 time^-3 current^-2 = _t1*_t12;\n"
-                                   "let _t18:current^-1 = _t17/3:length^2 mass^1 time^-3 current^-1;\n"
+                                   "let _t18:current^-1 = _t17*0.33333333333333331:length^-2 mass^-1 time^3 current^1;\n"
                                    "_t18;";
 
         std::string expanded_ans = "(variable _t18\n"
-                                   "  (/\n"
+                                   "  (*\n"
                                    "    (variable _t17\n"
                                    "      (*\n"
                                    "        (variable _t1\n"
@@ -576,7 +576,7 @@ TEST(canonicalizer, with) {
                                    "                (variable _t2\n"
                                    "                  (call foo))\n"
                                    "                (1)))))))\n"
-                                   "    (3)))";
+                                   "    (0.33333333333333331)))";
 
         EXPECT_EQ(expected_opt, pretty_print(let_opt));
 
@@ -1095,7 +1095,7 @@ TEST(optimizer, mechanism) {
                                    "let _t0:length^-2 time^-1 amount^1 = 0.050000000000000003:real*flux;\n"
                                    "let _t1:length^-3 amount^1 = cai-1.0000000000000001e-07:length^-3 amount^1;\n"
                                    "let _t2:length^-2 amount^1 = 9.9999999999999995e-08:length^1*_t1;\n"
-                                   "let _t3:length^-2 time^-1 amount^1 = _t2/0.080000000000000002:time^1;\n"
+                                   "let _t3:length^-2 time^-1 amount^1 = _t2*12.5:time^-1;\n"
                                    "let _t4:length^-2 time^-1 amount^1 = _t0-_t3;\n"
                                    "let _t5:length^-2 time^-1 amount^1 = -_t4;\n"
                                    "_t5;\n"
@@ -1208,13 +1208,13 @@ TEST(optimizer, mechanism) {
             "} =\n"
             "let _t0:length^-2 mass^-1 time^3 current^2 = expsyn.g;\n"
             "let _t1:length^-2 mass^-1 time^3 current^2 = -_t0;\n"
-            "let _t2:length^-2 mass^-1 time^2 current^2 = _t1/0.002:time^1;\n"
+            "let _t2:length^-2 mass^-1 time^2 current^2 = _t1*500:time^-1;\n"
             "let _t3:length^-2 mass^-1 time^3 current^2 = expsyn.apre;\n"
             "let _t4:length^-2 mass^-1 time^3 current^2 = -_t3;\n"
-            "let _t5:length^-2 mass^-1 time^2 current^2 = _t4/0.01:time^1;\n"
+            "let _t5:length^-2 mass^-1 time^2 current^2 = _t4*100:time^-1;\n"
             "let _t6:length^-2 mass^-1 time^3 current^2 = expsyn.apost;\n"
             "let _t7:length^-2 mass^-1 time^3 current^2 = -_t6;\n"
-            "let _t8:length^-2 mass^-1 time^2 current^2 = _t7/0.01:time^1;\n"
+            "let _t8:length^-2 mass^-1 time^2 current^2 = _t7*100:time^-1;\n"
             "{"
             "g' = _t2; "
             "apre' = _t5; "
@@ -1297,13 +1297,13 @@ TEST(optimizer, mechanism) {
             "bind v:length^2 mass^1 time^-3 current^-1 = membrane_potential;\n"
             "initial s:{m:real; h:real;} =\n"
             "let _t0:length^2 mass^1 time^-3 current^-1 = v+0.043000000000000003:length^2 mass^1 time^-3 current^-1;\n"
-            "let _t1:real = _t0/0.0080000000000000002:length^2 mass^1 time^-3 current^-1;\n"
+            "let _t1:real = _t0*125:length^-2 mass^-1 time^3 current^1;\n"
             "let _t2:real = exp(_t1);\n"
             "let _t3:real = 1:real+_t2;\n"
             "let _t4:real = 1:real/_t3;\n"
             "let _t5:real = 1:real-_t4;\n"
             "let _f1:length^2 mass^1 time^-3 current^-1 = v+0.067000000000000004:length^2 mass^1 time^-3 current^-1;\n"
-            "let _f2:real = _f1/0.0073000000000000001:length^2 mass^1 time^-3 current^-1;\n"
+            "let _f2:real = _f1*136.98630136986301:length^-2 mass^-1 time^3 current^1;\n"
             "let _f3:real = exp(_f2);\n"
             "let _f4:real = 1:real+_f3;\n"
             "let _f5:real = 1:real/_f4;\n"
@@ -1311,21 +1311,21 @@ TEST(optimizer, mechanism) {
             "evolve s:{m':time^-1; h':time^-1;} =\n"
             "let _t0:real = s.m;\n"
             "let _f0:length^2 mass^1 time^-3 current^-1 = v+0.043000000000000003:length^2 mass^1 time^-3 current^-1;\n"
-            "let _t1:real = _f0/0.0080000000000000002:length^2 mass^1 time^-3 current^-1;\n"
+            "let _t1:real = _f0*125:length^-2 mass^-1 time^3 current^1;\n"
             "let _t2:real = exp(_t1);\n"
             "let _t3:real = 1:real+_t2;\n"
             "let _t4:real = 1:real/_t3;\n"
             "let _t5:real = 1:real-_t4;\n"
             "let _f2:real = _t0-_t5;\n"
-            "let _f3:time^-1 = _f2/0.001:time^1;\n"
+            "let _f3:time^-1 = _f2*1000:time^-1;\n"
             "let _f4:real = s.h;\n"
             "let _f5:length^2 mass^1 time^-3 current^-1 = v+0.067000000000000004:length^2 mass^1 time^-3 current^-1;\n"
-            "let _f6:real = _f5/0.0073000000000000001:length^2 mass^1 time^-3 current^-1;\n"
+            "let _f6:real = _f5*136.98630136986301:length^-2 mass^-1 time^3 current^1;\n"
             "let _f7:real = exp(_f6);\n"
             "let _f8:real = 1:real+_f7;\n"
             "let _f9:real = 1:real/_f8;\n"
             "let _t6:real = _f4-_f9;\n"
-            "let _t7:time^-1 = _t6/1.5:time^1;\n"
+            "let _t7:time^-1 = _t6*0.66666666666666663:time^-1;\n"
             "{m' = _f3; h' = _t7;};\n"
             "effect current_density[k]:length^-2 current^1 =\n"
             "let _t0:length^2 mass^1 time^-3 current^-1 = v--0.076999999999999999:length^2 mass^1 time^-3 current^-1;\n"
@@ -1340,7 +1340,11 @@ TEST(optimizer, mechanism) {
 
         EXPECT_EQ(expected_opt, pretty_print(m_fin));
 
-        auto ev = std::get<resolved_evolve>(*(m_fin.evolutions.front()));
-        solve_ode(ev);
+        for (auto& ev: m_fin.evolutions) {
+            auto r_ev = std::get<resolved_evolve>(*ev);
+            ev = make_rexpr<resolved_evolve>(solve_ode(r_ev));
+
+            std::cout << std::endl << std::endl << pretty_print(ev) << std::endl;
+        }
     }
 }

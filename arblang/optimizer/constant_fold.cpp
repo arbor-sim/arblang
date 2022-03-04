@@ -7,18 +7,10 @@
 #include <arblang/optimizer/constant_fold.hpp>
 #include <arblang/util/custom_hash.hpp>
 
+#include "../util/rexp_helpers.hpp"
+
 namespace al {
 namespace resolved_ir {
-
-std::optional<double> as_number(const r_expr& e) {
-    if (auto v = std::get_if<resolved_float>(e.get())) {
-        return v->value;
-    }
-    if (auto v = std::get_if<resolved_int>(e.get())) {
-        return v->value;
-    }
-    return {};
-}
 
 bool is_integer(double v) {
     return std::floor(v) == v;
@@ -413,6 +405,17 @@ std::pair<r_expr, bool> constant_fold(const resolved_binary& e,
                 case binary_op::lor:  return {make_rexpr<resolved_int>(1, e.type, e.loc), true};
                 case binary_op::pow:  return {lhs_arg.first, true};
                 default: break;
+            }
+        } else {
+            if (e.op == binary_op::div) {
+                if (auto q = std::get_if<resolved_quantity>(type_of(e.rhs).get())) {
+                    auto q_inv = normalized_type(quantity::real) / q->type;
+                    auto rhs_inv = make_rexpr<resolved_float>(1/rhs, make_rtype<resolved_quantity>(q_inv, q->loc), location_of(e.rhs));
+                    return {make_rexpr<resolved_binary>(binary_op::mul, e.lhs, rhs_inv, e.type, e.loc), true};
+                } else {
+                    throw std::runtime_error(fmt::format("Internal compiler error: unexpected type or rhs argument of {} op at {}.",
+                                                         to_string(e.op), to_string(e.loc)));
+                }
             }
         }
     }

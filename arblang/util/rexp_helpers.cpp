@@ -28,5 +28,15 @@ std::optional<resolved_let> get_let(const r_expr& expr) {
     return std::nullopt;
 }
 
+std::optional<double> as_number(const r_expr& e) {
+    if (auto v = std::get_if<resolved_float>(e.get())) {
+        return v->value;
+    }
+    if (auto v = std::get_if<resolved_int>(e.get())) {
+        return v->value;
+    }
+    return {};
+}
+
 } // namespace resolved_ir
 } // namespace al

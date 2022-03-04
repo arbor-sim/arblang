@@ -36,9 +36,9 @@ struct normalized_type {
 bool operator==(const normalized_type& lhs, const normalized_type& rhs);
 bool operator!=(const normalized_type& lhs, const normalized_type& rhs);
 
-normalized_type operator*(normalized_type& lhs, normalized_type& rhs);
-normalized_type operator/(normalized_type& lhs, normalized_type& rhs);
-normalized_type operator^(normalized_type& lhs, int rhs);
+normalized_type operator*(const normalized_type& lhs, const normalized_type& rhs);
+normalized_type operator/(const normalized_type& lhs, const normalized_type& rhs);
+normalized_type operator^(const normalized_type& lhs, int rhs);
 
 struct resolved_quantity {
     normalized_type type;
