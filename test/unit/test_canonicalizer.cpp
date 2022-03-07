@@ -1342,7 +1342,8 @@ TEST(optimizer, mechanism) {
 
         for (auto& ev: m_fin.evolutions) {
             auto r_ev = std::get<resolved_evolve>(*ev);
-            ev = make_rexpr<resolved_evolve>(solve_ode(r_ev));
+            auto s = solver(r_ev);
+            ev = make_rexpr<resolved_evolve>(s.solve());
 
             std::cout << std::endl << std::endl << pretty_print(ev) << std::endl;
         }

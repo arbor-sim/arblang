@@ -319,6 +319,8 @@ struct resolved_unary {
 
     resolved_unary(unary_op op, r_expr arg, r_type type, const src_location& loc):
         op(op), arg(std::move(arg)), type(std::move(type)), loc(loc) {};
+
+    resolved_unary(unary_op op, r_expr arg, const src_location& loc);
 };
 
 // Both boolean and arithmetic operations
@@ -331,6 +333,8 @@ struct resolved_binary {
 
     resolved_binary(binary_op op, r_expr lhs, r_expr rhs, r_type type, const src_location& loc):
         op(op), lhs(std::move(lhs)), rhs(std::move(rhs)), type(std::move(type)), loc(loc) {}
+
+    resolved_binary(binary_op op, r_expr lhs, r_expr rhs, const src_location& loc);
 };
 
 bool operator==(const resolved_argument& lhs, const resolved_argument& rhs);

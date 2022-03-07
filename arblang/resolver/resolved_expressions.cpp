@@ -91,6 +91,114 @@ std::vector<std::string> resolved_object::field_names() const {
     return names;
 }
 
+resolved_binary::resolved_binary(binary_op op, r_expr l, r_expr r, const src_location& loc):
+    op(op), lhs(std::move(l)), rhs(std::move(r)), loc(loc)
+{
+    auto lhs_q = std::get_if<resolved_quantity>(type_of(lhs).get());
+    auto rhs_q = std::get_if<resolved_quantity>(type_of(rhs).get());
+
+    auto lhs_b = std::get_if<resolved_boolean>(type_of(lhs).get());
+    auto rhs_b = std::get_if<resolved_boolean>(type_of(rhs).get());
+
+    bool is_bool = (lhs_b && rhs_b);
+    bool is_quantity = (lhs_q && rhs_q);
+
+    auto incompatible_op = [&]() {
+        throw std::runtime_error(fmt::format("Internal compiler error: cannot apply operand {} to types {} and {} at {}",
+                                             to_string(op), to_string(type_of(lhs)), to_string(type_of(rhs)), to_string(loc)));
+    };
+    auto incompatible_args = [&]() {
+        throw std::runtime_error(fmt::format("Internal compiler error: binary operand {} lhs and rhs types "
+                                             "don't match at {}", to_string(op), to_string(loc)));
+    };
+
+    if (!is_bool && !is_quantity) incompatible_op();
+
+    switch (op) {
+        case binary_op::add:
+        case binary_op::sub:
+        case binary_op::lt:
+        case binary_op::le:
+        case binary_op::gt:
+        case binary_op::ge:
+        case binary_op::eq:
+        case binary_op::ne:
+        case binary_op::min:
+        case binary_op::max: {
+            if (is_bool) incompatible_op();
+            if (lhs_q->type != rhs_q->type) incompatible_args();
+            type = type_of(lhs);
+            break;
+        }
+        case binary_op::land:
+        case binary_op::lor: {
+            if (is_bool) {
+                type = make_rtype<resolved_boolean>(loc);
+                break;
+            }
+            if (lhs_q->type != rhs_q->type) incompatible_args();
+            type = type_of(lhs);
+            break;
+        }
+        case binary_op::dot:
+            if (is_bool) incompatible_op();
+            type = type_of(rhs);
+            break;
+        case binary_op::mul:
+            if (is_bool) incompatible_op();
+            type = make_rtype<resolved_quantity>(lhs_q->type*rhs_q->type, loc);
+            break;
+        case binary_op::div:
+            if (is_bool) incompatible_op();
+            type = make_rtype<resolved_quantity>(lhs_q->type/rhs_q->type, loc);
+            break;
+        case binary_op::pow: {
+            if (is_bool) incompatible_op();
+            auto rhs_int = std::get_if<resolved_int>(rhs.get());
+            if (!rhs_int) {
+                throw std::runtime_error(fmt::format("Internal compiler error: operator {} rhs is not a resolved_int "
+                                                     "at {}", to_string(op), to_string(loc)));
+            }
+            type = make_rtype<resolved_quantity>(lhs_q->type^rhs_int->value, loc);
+            break;
+        }
+    }
+}
+
+resolved_unary::resolved_unary(unary_op op, r_expr a, const src_location& loc):
+    op(op),
+    arg(std::move(a)),
+    loc(loc)
+{
+    auto arg_q = std::get_if<resolved_quantity>(type_of(arg).get());
+    auto arg_b = std::get_if<resolved_boolean>(type_of(arg).get());
+
+    auto incompatible_op = [&]() {
+        throw std::runtime_error(fmt::format("Internal compiler error: cannot apply operand {} to type {} at {}",
+                                             to_string(op), to_string(type_of(arg)), to_string(loc)));
+    };
+
+    if (!arg_q && !arg_b) incompatible_op();
+
+    bool is_real = (arg_q && arg_q->type.is_real());
+
+    switch (op) {
+        case unary_op::exp:
+        case unary_op::log:
+        case unary_op::cos:
+        case unary_op::sin:
+        case unary_op::abs:
+        case unary_op::exprelr: {
+            if (!is_real) incompatible_op();
+            type = type_of(arg);
+            break;
+        }
+        case unary_op::lnot:
+        case unary_op::neg: {
+            type = type_of(arg);
+        }
+    }
+}
 
 std::string to_string(const resolved_mechanism& e, bool include_type, bool expand_var, int indent) {
     auto indent_str = std::string(indent*2, ' ');

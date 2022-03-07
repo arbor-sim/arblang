@@ -81,39 +81,55 @@ r_expr sym_diff(const resolved_variable& e, const std::string& state, const std:
 }
 
 r_expr sym_diff(const resolved_argument& e, const std::string& state, const std::optional<std::string>& field) {
-    if (!field && e.name == state) {
-        return make_rexpr<resolved_int>(1, e.type, e.loc);
+    auto dtype = derive(e.type);
+    if (!dtype) {
+        throw std::runtime_error(fmt::format("Internal compiler error: cannot differentiate resolved_argument {} "
+                                             "with type {} at {}", e.name, to_string(e.type), to_string(e.loc)));
     }
-    return make_rexpr<resolved_int>(0, e.type, e.loc);
+    if (!field && e.name == state) {
+        return make_rexpr<resolved_int>(1, dtype.value(), e.loc);
+    }
+    return make_rexpr<resolved_int>(0, dtype.value(), e.loc);
 }
 
 r_expr sym_diff(const resolved_float& e, const std::string& state, const std::optional<std::string>& field) {
-    return make_rexpr<resolved_int>(0, e.type, e.loc);
+    auto dtype = derive(e.type);
+    if (!dtype) {
+        throw std::runtime_error(fmt::format("Internal compiler error: cannot differentiate resolved_float {} with type "
+                                             "{} at {}", std::to_string(e.value), to_string(e.type), to_string(e.loc)));
+    }
+    return make_rexpr<resolved_int>(0, dtype.value(), e.loc);
 }
 
 r_expr sym_diff(const resolved_int& e, const std::string& state, const std::optional<std::string>& field) {
-    return make_rexpr<resolved_int>(0, e.type, e.loc);
+    auto dtype = derive(e.type);
+    if (!dtype) {
+        throw std::runtime_error(fmt::format("Internal compiler error: cannot differentiate resolved_int {} with type "
+                                             "{} at {}", std::to_string(e.value), to_string(e.type), to_string(e.loc)));
+    }
+    return make_rexpr<resolved_int>(0, dtype.value(), e.loc);
 }
 
 r_expr sym_diff(const resolved_unary& e, const std::string& state, const std::optional<std::string>& field) {
     switch(e.op) {
         case unary_op::exp: {
-            return make_rexpr<resolved_binary>(binary_op::mul, sym_diff(e.arg, state, field), make_rexpr<resolved_unary>(e), e.type, e.loc);
+            return make_rexpr<resolved_binary>(binary_op::mul, sym_diff(e.arg, state, field), make_rexpr<resolved_unary>(e), e.loc);
         }
         case unary_op::log: {
-            return make_rexpr<resolved_binary>(binary_op::div, sym_diff(e.arg, state, field), e.arg, e.type, e.loc);
+            return make_rexpr<resolved_binary>(binary_op::div, sym_diff(e.arg, state, field), e.arg, e.loc);
         }
         case unary_op::cos: {
-            auto minus_u_prime = make_rexpr<resolved_unary>(unary_op::neg, sym_diff(e.arg, state, field), e.type, e.loc);
-            auto sin_u = make_rexpr<resolved_unary>(unary_op::sin, e.arg, e.type, e.loc);
-            return make_rexpr<resolved_binary>(binary_op::mul, minus_u_prime, sin_u, e.type, e.loc);
+            auto minus_u_prime = make_rexpr<resolved_unary>(unary_op::neg, sym_diff(e.arg, state, field), e.loc);
+            auto sin_u = make_rexpr<resolved_unary>(unary_op::sin, e.arg, e.loc);
+            return make_rexpr<resolved_binary>(binary_op::mul, minus_u_prime, sin_u, e.loc);
         }
         case unary_op::sin: {
-            auto cos_u = make_rexpr<resolved_unary>(unary_op::cos, e.arg, e.type, e.loc);
-            return make_rexpr<resolved_binary>(binary_op::mul, sym_diff(e.arg, state, field), cos_u, e.type, e.loc);
+            auto cos_u = make_rexpr<resolved_unary>(unary_op::cos, e.arg, e.loc);
+            return make_rexpr<resolved_binary>(binary_op::mul, sym_diff(e.arg, state, field), cos_u, e.loc);
         }
         case unary_op::neg: {
-            return make_rexpr<resolved_unary>(unary_op::neg, sym_diff(e.arg, state, field), e.type, e.loc);
+            auto sd = sym_diff(e.arg, state, field);
+            return make_rexpr<resolved_unary>(unary_op::neg, sd, e.loc);
         }
         default: {
             throw std::runtime_error(fmt::format("Internal compiler error, operator {} can't be differentiated.", to_string(e.op)));
@@ -125,36 +141,48 @@ r_expr sym_diff(const resolved_binary& e, const std::string& state, const std::o
     switch(e.op) {
         case binary_op::add:
         case binary_op::sub: {
-            return make_rexpr<resolved_binary>(e.op, sym_diff(e.lhs, state, field), sym_diff(e.rhs, state, field), e.type, e.loc);
+            auto dlhs = sym_diff(e.lhs, state, field);
+            auto drhs = sym_diff(e.rhs, state, field);
+            return make_rexpr<resolved_binary>(e.op, dlhs, drhs, type_of(dlhs), e.loc);
         }
         case binary_op::mul: {
-            auto u_prime_v = make_rexpr<resolved_binary>(binary_op::mul, sym_diff(e.lhs, state, field), e.rhs, e.type, e.loc);
-            auto v_prime_u = make_rexpr<resolved_binary>(binary_op::mul, e.lhs, sym_diff(e.rhs, state, field), e.type, e.loc);
-            return make_rexpr<resolved_binary>(binary_op::add, u_prime_v, v_prime_u, e.type, e.loc);
+            auto dlhs = sym_diff(e.lhs, state, field);
+            auto drhs = sym_diff(e.rhs, state, field);
+
+
+            auto u_prime_v = make_rexpr<resolved_binary>(binary_op::mul, dlhs, e.rhs, e.loc);
+            auto v_prime_u = make_rexpr<resolved_binary>(binary_op::mul, e.lhs, drhs, e.loc);
+            return make_rexpr<resolved_binary>(binary_op::add, u_prime_v, v_prime_u, e.loc);
         }
         case binary_op::div: {
-            auto u_prime_v = make_rexpr<resolved_binary>(binary_op::mul, sym_diff(e.lhs, state, field), e.rhs, e.type, e.loc);
-            auto v_prime_u = make_rexpr<resolved_binary>(binary_op::mul, e.lhs, sym_diff(e.rhs, state, field), e.type, e.loc);
-            auto numerator = make_rexpr<resolved_binary>(binary_op::sub, u_prime_v, v_prime_u, e.type, e.loc);
-            auto denominator = make_rexpr<resolved_binary>(binary_op::mul, e.rhs, e.rhs, e.type, e.loc);
-            return make_rexpr<resolved_binary>(binary_op::div, numerator, denominator, e.type, e.loc);
+            auto u_prime_v = make_rexpr<resolved_binary>(binary_op::mul, sym_diff(e.lhs, state, field), e.rhs, e.loc);
+            auto v_prime_u = make_rexpr<resolved_binary>(binary_op::mul, e.lhs, sym_diff(e.rhs, state, field), e.loc);
+            auto numerator = make_rexpr<resolved_binary>(binary_op::sub, u_prime_v, v_prime_u, e.loc);
+            auto denominator = make_rexpr<resolved_binary>(binary_op::mul, e.rhs, e.rhs, e.loc);
+            return make_rexpr<resolved_binary>(binary_op::div, numerator, denominator, e.loc);
         }
         default: {
-            throw std::runtime_error(fmt::format("Internal compiler error, operator {} can't be differentiated.", to_string(e.op)));
+            throw std::runtime_error(fmt::format("Internal compiler error, operator {} can't be differentiated.",
+                                                 to_string(e.op)));
         }
     }
 }
 
 r_expr sym_diff(const resolved_field_access& e, const std::string& state, const std::optional<std::string>& field) {
+    auto dtype = derive(e.type);
+    if (!dtype) {
+        throw std::runtime_error(fmt::format("Internal compiler error: cannot differentiate resolved_field_access with type "
+                                             "{} at {}", to_string(e.type), to_string(e.loc)));
+    }
     if (!field) {
-        return make_rexpr<resolved_int>(0, e.type, e.loc);
+        return make_rexpr<resolved_int>(0, dtype.value(), e.loc);
     }
 
     if (auto arg = std::get_if<resolved_argument>(e.object.get())) {
         if (arg->name == state && e.field == field.value()) {
-            return make_rexpr<resolved_int>(1, e.type, e.loc);
+            return make_rexpr<resolved_int>(1, dtype.value(), e.loc);
         }
-        return make_rexpr<resolved_int>(0, e.type, e.loc);
+        return make_rexpr<resolved_int>(0, dtype.value(), e.loc);
     }
 
     throw std::runtime_error(fmt::format("Internal compiler error, expected resolved_argument representing a "
