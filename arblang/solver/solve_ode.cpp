@@ -30,57 +30,11 @@ solver::solver(const resolved_evolve& e):
 
     record_state = std::get_if<resolved_record>(state_type.get());
 
-    // Before we do anything, we need to normalize the type of the state_deriv
-    // At the moment it has type = type_of(state)/s
-    // We need to change the type to type_of(state) for symbolic differentiation to work
-
-    auto time_type = make_rtype<resolved_quantity>(normalized_type(quantity::time), src_location{});
-    auto unit_time = make_rexpr<resolved_int>(1, time_type, src_location{});
-
-    auto deriv = e.value;
-    auto deriv_body = deriv;
-    if (auto let = std::get_if<resolved_let>(deriv.get())) {
-        deriv_body = get_innermost_body(let);
+    state_deriv = e.value;
+    state_deriv_body = state_deriv;
+    if (auto let = std::get_if<resolved_let>(state_deriv.get())) {
+        state_deriv_body = get_innermost_body(let);
     }
-
-    if (record_state) {
-        auto obj = std::get_if<resolved_object>(deriv_body.get());
-        if (!obj) {
-            throw std::runtime_error("Internal compiler error, expected a resolved_object as the "
-                                     "result of the resolved_evolve at " + to_string(state_loc));
-        }
-
-        std::vector<r_expr> norm_fields;
-        auto f_names = obj->field_names();
-        auto f_values = obj->field_values();
-        for (unsigned i = 0; i < f_names.size(); ++i) {
-            auto f_val = f_values[i];
-            auto val = make_rexpr<resolved_binary>(binary_op::mul, f_val, unit_time, location_of(f_val));
-            norm_fields.push_back(make_rexpr<resolved_variable>(f_names[i], val, type_of(val), location_of(val)));
-        }
-        deriv_body = make_rexpr<resolved_object>(norm_fields, obj->type, obj->loc);
-    }
-    else {
-        deriv_body = make_rexpr<resolved_binary>(binary_op::mul, deriv_body, unit_time, location_of(deriv_body));
-    }
-
-    // set the innermost body of state_deriv
-    if (auto let = std::get_if<resolved_let>(deriv.get())) {
-        set_innermost_body(let, deriv_body);
-    } else {
-        deriv = deriv_body;
-    }
-
-    // Recanonicalize deriv with a new prefix to avoid name collisions.
-    deriv = canonicalize(deriv, "n");
-
-    // Reoptimize the obtained expressions.
-    deriv = optimizer(deriv).optimize();
-
-    state_deriv = deriv;
-    state_deriv_body = deriv_body;
-
-    evolve.value = state_deriv;
 }
 
 r_expr solver::make_zero_state() {

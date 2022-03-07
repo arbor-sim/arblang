@@ -81,33 +81,18 @@ r_expr sym_diff(const resolved_variable& e, const std::string& state, const std:
 }
 
 r_expr sym_diff(const resolved_argument& e, const std::string& state, const std::optional<std::string>& field) {
-    auto dtype = derive(e.type);
-    if (!dtype) {
-        throw std::runtime_error(fmt::format("Internal compiler error: cannot differentiate resolved_argument {} "
-                                             "with type {} at {}", e.name, to_string(e.type), to_string(e.loc)));
-    }
     if (!field && e.name == state) {
-        return make_rexpr<resolved_int>(1, dtype.value(), e.loc);
+        return make_rexpr<resolved_int>(1, e.type, e.loc);
     }
-    return make_rexpr<resolved_int>(0, dtype.value(), e.loc);
+    return make_rexpr<resolved_int>(0, e.type, e.loc);
 }
 
 r_expr sym_diff(const resolved_float& e, const std::string& state, const std::optional<std::string>& field) {
-    auto dtype = derive(e.type);
-    if (!dtype) {
-        throw std::runtime_error(fmt::format("Internal compiler error: cannot differentiate resolved_float {} with type "
-                                             "{} at {}", std::to_string(e.value), to_string(e.type), to_string(e.loc)));
-    }
-    return make_rexpr<resolved_int>(0, dtype.value(), e.loc);
+    return make_rexpr<resolved_int>(0, e.type, e.loc);
 }
 
 r_expr sym_diff(const resolved_int& e, const std::string& state, const std::optional<std::string>& field) {
-    auto dtype = derive(e.type);
-    if (!dtype) {
-        throw std::runtime_error(fmt::format("Internal compiler error: cannot differentiate resolved_int {} with type "
-                                             "{} at {}", std::to_string(e.value), to_string(e.type), to_string(e.loc)));
-    }
-    return make_rexpr<resolved_int>(0, dtype.value(), e.loc);
+    return make_rexpr<resolved_int>(0, e.type, e.loc);
 }
 
 r_expr sym_diff(const resolved_unary& e, const std::string& state, const std::optional<std::string>& field) {
@@ -169,20 +154,15 @@ r_expr sym_diff(const resolved_binary& e, const std::string& state, const std::o
 }
 
 r_expr sym_diff(const resolved_field_access& e, const std::string& state, const std::optional<std::string>& field) {
-    auto dtype = derive(e.type);
-    if (!dtype) {
-        throw std::runtime_error(fmt::format("Internal compiler error: cannot differentiate resolved_field_access with type "
-                                             "{} at {}", to_string(e.type), to_string(e.loc)));
-    }
     if (!field) {
-        return make_rexpr<resolved_int>(0, dtype.value(), e.loc);
+        return make_rexpr<resolved_int>(0, e.type, e.loc);
     }
 
     if (auto arg = std::get_if<resolved_argument>(e.object.get())) {
         if (arg->name == state && e.field == field.value()) {
-            return make_rexpr<resolved_int>(1, dtype.value(), e.loc);
+            return make_rexpr<resolved_int>(1, e.type, e.loc);
         }
-        return make_rexpr<resolved_int>(0, dtype.value(), e.loc);
+        return make_rexpr<resolved_int>(0, e.type, e.loc);
     }
 
     throw std::runtime_error(fmt::format("Internal compiler error, expected resolved_argument representing a "
