@@ -147,7 +147,15 @@ r_expr solver::generate_solution(const r_expr& a, const r_expr& b, const r_expr&
 
     auto b_div_a  = make_rexpr<resolved_binary>(binary_op::div, b, a, empty_loc);
     auto a_mul_dt = make_rexpr<resolved_binary>(binary_op::mul, a, dt, empty_loc);
-    auto exp_term = make_rexpr<resolved_unary>(unary_op::exp, a_mul_dt, empty_loc);
+
+    // instead of exp use the pade approxiamtion: exp(t) = (1+0.5*t)/(1-0.5*t)
+    auto half           = make_rexpr<resolved_float>(0.5, make_rtype<resolved_quantity>(quantity::real, empty_loc), empty_loc);
+    auto half_a_mul_dt  = make_rexpr<resolved_binary>(binary_op::mul, half, a_mul_dt, empty_loc);
+    auto one            = make_rexpr<resolved_float>(1., type_of(half_a_mul_dt), empty_loc);
+    auto one_minus_term = make_rexpr<resolved_binary>(binary_op::sub, one, half_a_mul_dt, empty_loc);
+    auto one_plus_term  = make_rexpr<resolved_binary>(binary_op::add, one, half_a_mul_dt, empty_loc);
+    auto exp_term = make_rexpr<resolved_binary>(binary_op::div, one_plus_term, one_minus_term, empty_loc);
+
     auto add_term = make_rexpr<resolved_binary>(binary_op::add, x, b_div_a, empty_loc);
     auto mul_term = make_rexpr<resolved_binary>(binary_op::mul, add_term, exp_term, empty_loc);
     auto neg_term = make_rexpr<resolved_unary>(unary_op::neg, b_div_a, empty_loc);

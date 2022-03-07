@@ -61,7 +61,7 @@ struct hash<resolved_variable> {
     inline size_t operator()(const resolved_variable& e) const {
         std::size_t res = 0;
         hash_combine(res, e.name);
-        hash_combine(res, e.value);
+        hash_combine(res, *e.value);
         hash_combine(res, *e.type);
         return res;
     }

@@ -1,3 +1,4 @@
+#include <iostream>
 #include <string>
 #include <unordered_set>
 
@@ -199,6 +200,10 @@ std::pair<r_expr, bool> cse(const resolved_let& e,
     bool made_change = false;
 
     auto val = e.id_value();
+    if (auto bin = std::get_if<resolved_binary>(val.get())) {
+        auto hush = std::hash<resolved_binary>()(*bin);
+    }
+
     if (!expr_map.insert({*val, e.identifier}).second) {
         val = expr_map[*val];
         made_change = true;
