@@ -9,6 +9,12 @@
 namespace al {
 namespace resolved_ir {
 
+// Very basic solver for ODEs or systems of ODEs that are diagonal linear.
+// This is not necessarily true nor is it checked that this is true.
+// Only works on resolved_evolve. However, resolved_effect can also be used to
+// describe ODEs and those ODEs also need to be solved. This class can
+// be written to be more generic and work on resolved_effect as well as
+// resolved_evolve.
 class solver {
 private:
     resolved_evolve evolve; // modified resolved_evolve

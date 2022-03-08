@@ -21,12 +21,15 @@ enum class mechanism_kind {
 enum class bindable {
     membrane_potential, temperature, current_density,
     molar_flux, charge,
-    internal_concentration, external_concentration, nernst_potential
+    internal_concentration, external_concentration, nernst_potential,
+    dt
 };
 
 enum class affectable {
     current_density, current, molar_flux, molar_flow_rate,
-    internal_concentration_rate, external_concentration_rate
+    internal_concentration_rate, external_concentration_rate,
+    current_density_pair, // current density + conductivity
+    current_pair          // current + conductance
 };
 
 static std::string to_string(const binary_op& op) {

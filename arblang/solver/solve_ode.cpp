@@ -124,7 +124,9 @@ r_expr solver::get_a() {
 r_expr solver::generate_solution(const r_expr& a, const r_expr& b, const r_expr& x) {
     // Solving x' = x*a + b
 
-    // TODO, check monolinearity!
+    // TODO, check monolinearity! This is needed to make sure we don't attempt to
+    // solve systems of ODEs that are not diagonal linear
+
     auto a_opt = as_number(a);
     auto b_opt = as_number(b);
 

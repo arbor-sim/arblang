@@ -14,6 +14,7 @@
 #include <arblang/resolver/resolved_types.hpp>
 #include <arblang/resolver/single_assign.hpp>
 #include <arblang/solver/solve_ode.hpp>
+#include <arblang/solver/solve.hpp>
 #include <arblang/util/custom_hash.hpp>
 #include <arblang/util/pretty_printer.hpp>
 
@@ -1340,12 +1341,7 @@ TEST(optimizer, mechanism) {
 
         EXPECT_EQ(expected_opt, pretty_print(m_fin));
 
-        for (auto& ev: m_fin.evolutions) {
-            auto r_ev = std::get<resolved_evolve>(*ev);
-            auto s = solver(r_ev);
-            ev = make_rexpr<resolved_evolve>(s.solve());
-
-            std::cout << std::endl << std::endl << pretty_print(ev) << std::endl;
-        }
+        m_fin = solve(m_fin);
+        std::cout << pretty_print(m_fin) << std::endl;
     }
 }

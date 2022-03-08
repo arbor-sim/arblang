@@ -89,7 +89,7 @@ bool parsed_binary_quantity_type::verify() const {
 
     auto is_allowed = [](const p_type& t) {
         return std::visit(al::util::overloaded {
-                [&](const parsed_bool_type& t)         {return false;},
+                [&](const parsed_bool_type& t)            {return false;},
                 [&](const parsed_record_type& t)          {return false;},
                 [&](const parsed_record_alias_type& t)    {return false;},
                 [&](const parsed_quantity_type& t)        {return true;},
