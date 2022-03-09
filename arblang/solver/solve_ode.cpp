@@ -172,10 +172,7 @@ resolved_evolve solver::solve() {
     // resolved_evolve statement is expected to be and ODE of the form x' = x*a + b
 
     auto b_expr = get_b();
-    std::cout << "b_expr:\n" << pretty_print(b_expr) << std::endl;
-
     auto a_expr = get_a();
-    std::cout << "a_expr:\n" << pretty_print(a_expr) << std::endl;
 
     // a and b ae expected to be either a single expression or a list of nested let statements.
     // We can extract the innermost results representing a and b, and concatenate the surrounding lets.

@@ -28,8 +28,9 @@ enum class bindable {
 enum class affectable {
     current_density, current, molar_flux, molar_flow_rate,
     internal_concentration_rate, external_concentration_rate,
-    current_density_pair, // current density + conductivity
-    current_pair          // current + conductance
+    conductance, conductivity,
+    current_density_pair, // current density + conductivity - placeholder
+    current_pair          // current + conductance          - placeholder
 };
 
 static std::string to_string(const binary_op& op) {
@@ -69,7 +70,7 @@ static std::string to_string(const unary_op& op) {
 
 static std::string to_string(const mechanism_kind& op) {
     switch (op) {
-        case mechanism_kind::density:       return "denity";
+        case mechanism_kind::density:       return "density";
         case mechanism_kind::concentration: return "concentration";
         case mechanism_kind::junction:      return "junction";
         case mechanism_kind::point:         return "point";

@@ -9,7 +9,7 @@ using namespace resolved_ir;
 
 //r_expr
 std::string pretty_print(const resolved_mechanism& e) {
-    std::string str = e.name + "{\n";
+    std::string str = e.name + " " + to_string(e.kind) + " {\n";
     for (const auto& p: e.parameters) {
         str += pretty_print(p) + "\n";
     }

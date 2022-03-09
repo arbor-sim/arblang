@@ -1089,7 +1089,7 @@ TEST(optimizer, mechanism) {
         auto opt_1 = optimizer(m_inlined);
         auto m_fin = opt_1.optimize();
 
-        std::string expected_opt = "CaDynamics{\n"
+        std::string expected_opt = "CaDynamics concentration {\n"
                                    "bind flux:length^-2 time^-1 amount^1 = molar_flux[ca];\n"
                                    "bind cai:length^-3 amount^1 = internal_concentration[ca];\n"
                                    "effect molar_flux[ca]:length^-2 time^-1 amount^1 =\n"
@@ -1181,7 +1181,7 @@ TEST(optimizer, mechanism) {
         auto m_fin = opt_1.optimize();
 
         std::string expected_opt =
-            "expsyn_stdp{\n"
+            "expsyn_stdp point {\n"
             "state expsyn:{"
             "g:length^-2 mass^-1 time^3 current^2; "
             "apre:length^-2 mass^-1 time^3 current^2; "
@@ -1291,7 +1291,7 @@ TEST(optimizer, mechanism) {
         auto m_fin = opt_1.optimize();
 
         std::string expected_opt =
-            "Kd{\n"
+            "Kd density {\n"
             "parameter gbar:length^-4 mass^-1 time^3 current^2 =\n"
             "0.10000000000000001:length^-4 mass^-1 time^3 current^2;\n"
             "state s:{m:real; h:real;};\n"
