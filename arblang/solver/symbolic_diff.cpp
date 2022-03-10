@@ -21,18 +21,18 @@ r_expr sym_diff(const resolved_call& e, const std::string& state, const std::opt
                              "this stage in the compilation (after inlining).");
 }
 
+r_expr sym_diff(const resolved_constant& e, const std::string& state, const std::optional<std::string>& field) {
+    throw std::runtime_error("Internal compiler error, didn't expect a resolved_constant at "
+                             "this stage in the compilation (after optimization and inlining).");
+}
+
 r_expr sym_diff(const resolved_object& e, const std::string& state, const std::optional<std::string>& field) {
-    throw std::runtime_error("Internal compiler error, didn't expect a resolved_function at "
-                             "this stage in the compilation (after inlining and optimization).");
+    throw std::runtime_error("Internal compiler error, didn't expect a resolved_object "
+                             "during symbolic differentiation.");
 }
 
 r_expr sym_diff(const resolved_parameter& e, const std::string& state, const std::optional<std::string>& field) {
     throw std::runtime_error("Internal compiler error, didn't expect a resolved_parameter "
-                             "during symbolic differentiation.");
-}
-
-r_expr sym_diff(const resolved_constant& e, const std::string& state, const std::optional<std::string>& field) {
-    throw std::runtime_error("Internal compiler error, didn't expect a resolved_constant "
                              "during symbolic differentiation.");
 }
 

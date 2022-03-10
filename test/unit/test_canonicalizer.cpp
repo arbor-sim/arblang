@@ -1343,5 +1343,7 @@ TEST(optimizer, mechanism) {
 
         m_fin = solve(m_fin);
         std::cout << pretty_print(m_fin) << std::endl;
+
+        auto m_printable = print_prep(m_fin);
     }
 }

@@ -11,7 +11,7 @@ set(arblang-sources
     parser/parsed_units.cpp
     parser/token.cpp
     parser/normalizer.cpp
-    printer/simplify.cpp
+        printer/printable_mechanism.cpp
     resolver/resolve.cpp
     resolver/resolved_expressions.cpp
     resolver/resolved_types.cpp
@@ -22,8 +22,7 @@ set(arblang-sources
     solver/solve_ode.cpp
     solver/symbolic_diff.cpp
     util/pretty_printer.cpp
-    util/rexp_helpers.cpp
-        include/arblang/printer/printable_mechanism.hpp)
+    util/rexp_helpers.cpp)
 
 add_library(arblang ${arblang-sources})
 
