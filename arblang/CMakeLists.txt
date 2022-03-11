@@ -15,6 +15,7 @@ set(arblang-sources
     pre_printer/get_read_arguments.cpp
     pre_printer/printable_mechanism.cpp
     pre_printer/simplify.cpp
+    printer/print_header.cpp
     resolver/resolve.cpp
     resolver/resolved_expressions.cpp
     resolver/resolved_types.cpp
@@ -25,7 +26,7 @@ set(arblang-sources
     solver/symbolic_diff.cpp
     util/pretty_printer.cpp
     util/rexp_helpers.cpp
-)
+        printer/print_header.cpp include/arblang/printer/print_header.hpp)
 
 add_library(arblang ${arblang-sources})
 

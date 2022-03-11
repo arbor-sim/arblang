@@ -246,12 +246,12 @@ bool operator!=(const resolved_type& lhs, const resolved_type& rhs) {
 // to_string
 std::string to_string(const normalized_type& t, int indent) {
     std::string str;
-    if (auto val = t.quantity_exponents[0]) str += "length^" +      std::to_string(val) + " ";
-    if (auto val = t.quantity_exponents[1]) str += "mass^" +        std::to_string(val) + " ";
-    if (auto val = t.quantity_exponents[2]) str += "time^" +        std::to_string(val) + " ";
-    if (auto val = t.quantity_exponents[3]) str += "current^" +     std::to_string(val) + " ";
-    if (auto val = t.quantity_exponents[4]) str += "amount^" +      std::to_string(val) + " ";
-    if (auto val = t.quantity_exponents[5]) str += "temperature^" + std::to_string(val) + " ";
+    if (auto val = t.quantity_exponents[0]) str += "m^" +      std::to_string(val) + "*";
+    if (auto val = t.quantity_exponents[1]) str += "Kg^" +        std::to_string(val) + "*";
+    if (auto val = t.quantity_exponents[2]) str += "s^" +        std::to_string(val) + "*";
+    if (auto val = t.quantity_exponents[3]) str += "A^" +     std::to_string(val) + "*";
+    if (auto val = t.quantity_exponents[4]) str += "mol^" +      std::to_string(val) + "*";
+    if (auto val = t.quantity_exponents[5]) str += "K^" + std::to_string(val) + "*";
     if (str.empty()) {
         str = "real";
     }
