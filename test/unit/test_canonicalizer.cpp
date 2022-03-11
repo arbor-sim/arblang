@@ -8,6 +8,7 @@
 #include <arblang/parser/token.hpp>
 #include <arblang/parser/parser.hpp>
 #include <arblang/parser/normalizer.hpp>
+#include <arblang/pre_printer/printable_mechanism.hpp>
 #include <arblang/resolver/canonicalize.hpp>
 #include <arblang/resolver/resolve.hpp>
 #include <arblang/resolver/resolved_expressions.hpp>
@@ -1344,6 +1345,6 @@ TEST(optimizer, mechanism) {
         m_fin = solve(m_fin);
         std::cout << pretty_print(m_fin) << std::endl;
 
-        auto m_printable = print_prep(m_fin);
+        auto m_printable = printable_mechanism(m_fin);
     }
 }

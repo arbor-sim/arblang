@@ -100,6 +100,10 @@ static std::string to_string(const affectable& op) {
         case affectable::molar_flow_rate:             return "molar_flow_rate";
         case affectable::internal_concentration_rate: return "internal_concentration_rate";
         case affectable::external_concentration_rate: return "external_concentration_rate";
+        case affectable::current_density_pair:        return "current_density_pair";
+        case affectable::current_pair:                return "current_pair";
+        case affectable::conductance:                 return "conductance";
+        case affectable::conductivity:                return "conductivity";
         default: return {};
     }
 }

@@ -1,7 +1,6 @@
 #pragma once
 
 #include <arblang/resolver/resolved_expressions.hpp>
-
 namespace al {
 namespace resolved_ir {
 

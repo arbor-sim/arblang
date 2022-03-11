@@ -3,7 +3,7 @@
 #include <unordered_set>
 #include <unordered_map>
 
-#include "arblang/resolver/resolved_expressions.hpp"
+#include <arblang/resolver/resolved_expressions.hpp>
 
 namespace al {
 namespace resolved_ir {
@@ -59,7 +59,7 @@ struct printable_mechanism {
 
 private:
     std::string pp_prefix_ = "_pp_";
-    std::string prefix(std::string name) { return pp_prefix_ + name; }
+    std::string prefix(const std::string& n) { return pp_prefix_ + n; }
 
     static state_field_map gen_state_field_map(const std::vector<r_expr>& state_declarations);
 
