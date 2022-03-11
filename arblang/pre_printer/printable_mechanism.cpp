@@ -189,7 +189,7 @@ void printable_mechanism::fill_write_maps(
                                                          "disappointed."));
                 }
                 if (is_state) {
-                    if (!state_field_decoder.count(vname) || state_field_decoder.at(vname).count(field_name)) {
+                    if (!state_field_decoder.count(vname) || !state_field_decoder.at(vname).count(field_name)) {
                         throw std::runtime_error(fmt::format("Internal compiler error: cannot find state {} with field {} "
                                                              "that is being initialized.", vname, field_name));
                     }
@@ -266,7 +266,7 @@ void printable_mechanism::fill_read_maps(const std::unordered_map<std::string, s
         read_arguments(c, read_args);
 
         for (const auto& a: read_args) {
-            if (var_to_source.count(a)) {
+            if (!var_to_source.count(a)) {
                 throw std::runtime_error("Internal compiler error: can not find parameter that is being read.");
             }
             auto source_a = var_to_source.at(a);
@@ -287,7 +287,7 @@ void printable_mechanism::fill_read_maps(const std::unordered_map<std::string, s
         read_arguments(c, read_args);
 
         for (const auto& a: read_args) {
-            if (var_to_source.count(a)) {
+            if (!var_to_source.count(a)) {
                 throw std::runtime_error("Internal compiler error: can not find parameter that is being read.");
             }
             auto source_a = var_to_source.at(a);
@@ -310,7 +310,7 @@ void printable_mechanism::fill_read_maps(const std::unordered_map<std::string, s
         read_arguments(c, read_args);
 
         for (const auto& a: read_args) {
-            if (var_to_source.count(a)) {
+            if (!var_to_source.count(a)) {
                 throw std::runtime_error("Internal compiler error: can not find parameter that is being read.");
             }
             auto source_a = var_to_source.at(a);
@@ -336,7 +336,7 @@ void printable_mechanism::fill_read_maps(const std::unordered_map<std::string, s
         read_arguments(c, read_args);
 
         for (const auto& a: read_args) {
-            if (var_to_source.count(a)) {
+            if (!var_to_source.count(a)) {
                 throw std::runtime_error("Internal compiler error: can not find parameter that is being read.");
             }
             auto source_a = var_to_source.at(a);
