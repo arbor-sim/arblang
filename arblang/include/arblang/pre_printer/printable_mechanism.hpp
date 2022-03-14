@@ -42,9 +42,12 @@ struct printable_mechanism {
     // This needs to be a vector, we rely on it for indexing
     std::vector<ion_info> ionic_fields;
 
-    // Map from parameters, state vars, bindables and affectables names to prefixed pointer names
-    // Current effectables can point to multple pointers (ionic and overall current), so multimap
-    std::unordered_multimap<std::string, std::string> pointer_map;
+    // Map from state vars/affectables being written to prefixed pointer names of the destinations.
+    // Current effectables can write to multiple pointers (ionic and overall current), so multimap
+    std::unordered_multimap<std::string, std::string> dest_pointer_map;
+
+    // Map from parameters/state vars/bindables being read to prefixed pointer names of the sources.
+    std::unordered_map<std::string, std::string> src_pointer_map;
 
     struct read_map {
         // Maps from source (pointer name) to variable name

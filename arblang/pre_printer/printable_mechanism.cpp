@@ -31,21 +31,23 @@ printable_mechanism::printable_mechanism(const resolved_mechanism& m) {
     // Maps used to track the type of a read/write variable
     std::unordered_set<std::string> param_set, state_set, bind_set, effect_set;
 
-    /**** Fill pointer_map and field_pack ****/
+    /**** Fill src_pointer_map, dest_pointer_map and field_pack ****/
     for (const auto& s: m.states) {
         auto state = std::get<resolved_state>(*s);
         auto state_name = state.name;
 
         auto state_rec = std::get_if<resolved_record>(state.type.get());
         if (!state_rec) {
-            pointer_map.insert({state_name, prefix(state_name)});
+            src_pointer_map.insert({state_name, prefix(state_name)});
+            dest_pointer_map.insert({state_name, prefix(state_name)});
             field_pack.state_sources.push_back(state_name);
             state_set.insert(state_name);
         }
         else {
             for (const auto&[field_name, field_type]: state_rec->fields) {
                 auto state_field_name = state_field_decoder.at(state_name).at(field_name);
-                pointer_map.insert({state_field_name, prefix(state_field_name)});
+                src_pointer_map.insert({state_field_name, prefix(state_field_name)});
+                dest_pointer_map.insert({state_field_name, prefix(state_field_name)});
                 field_pack.state_sources.push_back(state_field_name);
                 state_set.insert(state_field_name);
             }
@@ -57,8 +59,8 @@ printable_mechanism::printable_mechanism(const resolved_mechanism& m) {
         auto bind_name = bind.name;
         if (bind.ion) bind_name += ("_" + bind.ion.value());
 
-        pointer_map.insert({bind_name, prefix(bind_name)});
-        field_pack.bind_sources.push_back({bind_name, bind.bind, bind.ion});
+        src_pointer_map.insert({bind_name, prefix(bind_name)});
+        field_pack.bind_sources.emplace_back(bind_name, bind.bind, bind.ion);
         bind_set.insert(bind_name);
 
         if (bind.ion) {
@@ -80,7 +82,7 @@ printable_mechanism::printable_mechanism(const resolved_mechanism& m) {
     }
     for (const auto& c: m.parameters) {
         auto param = std::get<resolved_parameter>(*c);
-        pointer_map.insert({param.name, prefix(param.name)});
+        src_pointer_map.insert({param.name, prefix(param.name)});
 
         double val = NAN;
         if (auto num = std::get_if<resolved_int>(param.value.get())) val = num->value;
@@ -102,13 +104,13 @@ printable_mechanism::printable_mechanism(const resolved_mechanism& m) {
 
         // effects on i(ion or no ion) always affect overall i
         if (!effect_set.count(i_name)) {
-            pointer_map.insert({i_name, prefix(i_name)});
+            dest_pointer_map.insert({i_name, prefix(i_name)});
             field_pack.effect_sources.emplace_back(i_name, i_effect, eff.ion);
             effect_set.insert(i_name);
         }
         // effects on g(ion or no ion) only affect overall g
         if (!effect_set.count(g_name)) {
-            pointer_map.insert({g_name, prefix(g_name)});
+            dest_pointer_map.insert({g_name, prefix(g_name)});
             field_pack.effect_sources.emplace_back(g_name, g_effect, eff.ion);
             effect_set.insert(g_name);
         }
@@ -119,15 +121,15 @@ printable_mechanism::printable_mechanism(const resolved_mechanism& m) {
             if (!effect_set.count(ion_i_name)) {
                 // notice here that the source of i_ion is not only pointing to the current of the ion,
                 // but also the overall current. This is on purpose.
-                pointer_map.insert({ion_i_name, prefix(ion_i_name)});
-                pointer_map.insert({ion_i_name, prefix(i_name)});
+                dest_pointer_map.insert({ion_i_name, prefix(ion_i_name)});
+                dest_pointer_map.insert({ion_i_name, prefix(i_name)});
                 field_pack.effect_sources.emplace_back(ion_i_name, i_effect, eff.ion);
                 effect_set.insert(ion_i_name);
             }
             if (!effect_set.count(ion_g_name)) {
                 // notice here that the source of g_ion is not pointing to the conductance of the ion,
                 // but the overall conductance. This is on purpose.
-                pointer_map.insert({ion_g_name, prefix(g_name)});
+                dest_pointer_map.insert({ion_g_name, prefix(g_name)});
                 effect_set.insert(ion_g_name);
             }
         }
@@ -242,20 +244,20 @@ void printable_mechanism::fill_write_maps(
                                                              "that is being initialized.", vname, field_name));
                     }
                     auto field_mangled_name = state_field_decoder.at(vname).at(field_name);
-                    if (!pointer_map.count(field_mangled_name)) {
+                    if (!dest_pointer_map.count(field_mangled_name)) {
                         throw std::runtime_error(fmt::format("Internal compiler error: cannot find state {} with field {} "
                                                              "that is being initialized.", vname, field_name));
                     }
-                    auto range = pointer_map.equal_range(field_mangled_name);
+                    auto range = dest_pointer_map.equal_range(field_mangled_name);
                     for (auto it = range.first; it != range.second; ++it) {
                         map.insert({it->second, field_value->name});
                     }
                 }
                 else {
-                    if (!pointer_map.count(field_name)) {
+                    if (!dest_pointer_map.count(field_name)) {
                         throw std::runtime_error("Internal compiler error: can not find parameter that is being assigned.");
                     }
-                    auto range = pointer_map.equal_range(field_name);
+                    auto range = dest_pointer_map.equal_range(field_name);
                     for (auto it = range.first; it != range.second; ++it) {
                         map.insert({it->second, field_value->name});
                     }
@@ -267,10 +269,10 @@ void printable_mechanism::fill_write_maps(
                 throw std::runtime_error(fmt::format("Internal compiler error: Expected 1 result when writing {}.",
                                                      vname));
             }
-            if (!pointer_map.count(vname)) {
+            if (!dest_pointer_map.count(vname)) {
                 throw std::runtime_error("Internal compiler error: can not find parameter that is being assigned.");
             }
-            auto range = pointer_map.equal_range(vname);
+            auto range = dest_pointer_map.equal_range(vname);
             for (auto it = range.first; it != range.second; ++it) {
                 map.insert({it->second, results.front().name});
             }
@@ -324,11 +326,10 @@ void printable_mechanism::fill_read_maps(
         read_arguments(c, read_args);
 
         for (const auto& a: read_args) {
-            if (pointer_map.count(a) != 1) {
-                throw std::runtime_error("Internal compiler error: 0 or more than 1 sources found.");
+            if (!src_pointer_map.count(a)) {
+                throw std::runtime_error("Internal compiler error: can not find parameter that is being read.");
             }
-            auto range = pointer_map.equal_range(a);
-            auto source_a = range.first->second;
+            auto source_a = src_pointer_map.at(a);
 
             // Assigned parameters are parts of the initialization
             if (param_set.count(a)) {
@@ -346,11 +347,10 @@ void printable_mechanism::fill_read_maps(
         read_arguments(c, read_args);
 
         for (const auto& a: read_args) {
-            if (pointer_map.count(a) != 1) {
-                throw std::runtime_error("Internal compiler error: 0 or more than 1 sources found.");
+            if (!src_pointer_map.count(a)) {
+                throw std::runtime_error("Internal compiler error: can not find parameter that is being read.");
             }
-            auto range = pointer_map.equal_range(a);
-            auto source_a = range.first->second;
+            auto source_a = src_pointer_map.at(a);
 
             if (param_set.count(a)) {
                 init_read_map.parameter_map.insert({source_a, a});
@@ -370,11 +370,10 @@ void printable_mechanism::fill_read_maps(
         read_arguments(c, read_args);
 
         for (const auto& a: read_args) {
-            if (pointer_map.count(a) != 1) {
-                throw std::runtime_error("Internal compiler error: 0 or more than 1 sources found.");
+            if (!src_pointer_map.count(a)) {
+                throw std::runtime_error("Internal compiler error: can not find parameter that is being read.");
             }
-            auto range = pointer_map.equal_range(a);
-            auto source_a = range.first->second;
+            auto source_a = src_pointer_map.at(a);
 
             if (param_set.count(a)) {
                 evolve_read_map.parameter_map.insert({source_a, a});
@@ -397,11 +396,10 @@ void printable_mechanism::fill_read_maps(
         read_arguments(c, read_args);
 
         for (const auto& a: read_args) {
-            if (pointer_map.count(a) != 1) {
-                throw std::runtime_error("Internal compiler error: 0 or more than 1 sources found.");
+            if (!src_pointer_map.count(a)) {
+                throw std::runtime_error("Internal compiler error: can not find parameter that is being read.");
             }
-            auto range = pointer_map.equal_range(a);
-            auto source_a = range.first->second;
+            auto source_a = src_pointer_map.at(a);
 
             if (param_set.count(a)) {
                 effect_read_map.parameter_map.insert({source_a, a});
