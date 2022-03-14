@@ -98,11 +98,17 @@ resolved_effect get_ig_pair(const resolved_effect& e, const std::string& v) {
     g = make_rexpr<resolved_binary>(binary_op::div, g, unit_voltage, src_location{});
 
     // Combine i and g into a resolved_object
+    std::string i_name = "i";
+    std::string g_name = "g";
+    if (e.ion) {
+        i_name += ("_" + e.ion.value());
+        g_name += ("_" + e.ion.value());
+    }
     auto ig_type = make_rtype<resolved_record>(
-            std::vector<std::pair<std::string, r_type>>{{"i", type_of(i)}, {"g", type_of(g)}}, src_location{});
+            std::vector<std::pair<std::string, r_type>>{{i_name, type_of(i)}, {g_name, type_of(g)}}, src_location{});
     std::vector<r_expr> ig_fields = {
-        make_rexpr<resolved_variable>("i", i, type_of(i), src_location{}),
-        make_rexpr<resolved_variable>("g", g, type_of(g), src_location{})
+        make_rexpr<resolved_variable>(i_name, i, type_of(i), src_location{}),
+        make_rexpr<resolved_variable>(g_name, g, type_of(g), src_location{})
     };
     auto ig_pair = make_rexpr<resolved_object>(ig_fields, ig_type, src_location{});
 

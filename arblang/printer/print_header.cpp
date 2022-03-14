@@ -55,17 +55,17 @@ std::stringstream print_header(
 
     // print parameters:
     out << "    static arb_field_info parameters[] = {\n";
-    for (const auto& [p, val]: mech.field_pack.param_sources) {
-        out << fmt::format("        {{\"{}\", \"{}\", {}, {}, {}}}, \n", p, val.second, val.first, min, max);
+    for (const auto& [p, val, unit]: mech.field_pack.param_sources) {
+        out << fmt::format("        {{\"{}\", \"{}\", {}, {}, {}}}, \n", p, unit, val, min, max);
     }
     out << "    };\n";
     out << "    static arb_size_type n_parameters = " << mech.field_pack.param_sources.size() << ";\n";
 
     // print ions:
     out << "    static arb_ion_info ions[] = {\n";
-    for (const auto& [ion, fields]: mech.ionic_fields) {
+    for (const auto& ion: mech.ionic_fields) {
         out << fmt::format("        {{\"{}\", {}, {}, false, false, {}, false, 0}}, \n",
-                           ion, fields.write_int_concentration, fields.write_int_concentration, fields.read_valence);
+                           ion.ion, ion.write_int_concentration, ion.write_int_concentration, ion.read_valence);
     }
     out << "    };\n";
     out << "    static arb_size_type n_ions = " << mech.ionic_fields.size() << ";\n";

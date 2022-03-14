@@ -28,23 +28,6 @@ void check(const resolved_mechanism& e) {
         throw mech_error(fmt::format("Internal compiler error, expected zero constants after constant propagation"));
     }
 
-        //    std::vector<r_expr> initializations; // expect resolved_initial
-        //    std::vector<r_expr> evolutions;     // expect resolved_evolve
-
-    for (const auto& a: e.bindings) {
-        auto b = std::get_if<resolved_bind>(a.get());
-        if (!b) {
-            throw mech_error(fmt::format("Internal compiler error, expected resolved_bind in "
-                                         "resolved_mechanism::bindings"));
-        }
-        if ((e.kind != mechanism_kind::concentration) &&
-            ((b->bind == bindable::molar_flux) || (b->bind == bindable::current_density)))
-        {
-            throw mech_error(fmt::format("User error: unsupported bindable {} for mechanism kind {} at {}",
-                                         to_string(b->bind), to_string(e.kind), to_string(e.loc)));
-        }
-    }
-
     for (const auto& a: e.states) {
         auto p = std::get_if<resolved_state>(a.get());
         if (!p) {
@@ -110,6 +93,30 @@ void check(const resolved_mechanism& e) {
     if (!const_params.empty()) {
         throw mech_error(fmt::format("Internal compiler error, expected parameter {} to have been constant "
                                      "propagated if not exported", *const_params.begin()));
+    }
+
+    //membrane_potential, temperature, current_density,
+    //    molar_flux, charge,
+    //    internal_concentration, external_concentration, nernst_potential,
+    //    dt
+
+    for (const auto& a: e.bindings) {
+        auto b = std::get_if<resolved_bind>(a.get());
+        if (!b) {
+            throw mech_error(fmt::format("Internal compiler error, expected resolved_bind in "
+                                         "resolved_mechanism::bindings"));
+        }
+        if ((e.kind != mechanism_kind::concentration) &&
+            ((b->bind == bindable::molar_flux) || (b->bind == bindable::current_density)))
+        {
+            throw mech_error(fmt::format("User error: unsupported bindable {} for mechanism kind {} at {}",
+                                         to_string(b->bind), to_string(e.kind), to_string(e.loc)));
+        }
+        if (b->bind == bindable::molar_flux || b->bind == bindable::nernst_potential) {
+            // TODO Add support for molar_flux and nernst potential
+            throw mech_error(fmt::format("Unsupported bindable {} at {}, still a work in progress.",
+                                         to_string(b->bind), to_string(e.loc)));
+        }
     }
 
     for (const auto& a: e.effects) {

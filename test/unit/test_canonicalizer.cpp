@@ -10,6 +10,7 @@
 #include <arblang/parser/normalizer.hpp>
 #include <arblang/pre_printer/printable_mechanism.hpp>
 #include <arblang/printer/print_header.hpp>
+#include <arblang/printer/print_mechanism.hpp>
 #include <arblang/resolver/canonicalize.hpp>
 #include <arblang/resolver/resolve.hpp>
 #include <arblang/resolver/resolved_expressions.hpp>
@@ -1349,5 +1350,7 @@ TEST(optimizer, mechanism) {
         auto m_printable = printable_mechanism(m_fin);
         std::cout << "/**********************************************/" << std::endl;
         std::cout << print_header(m_printable, "namespace").str() << std::endl;
+        std::cout << "/**********************************************/" << std::endl;
+        std::cout << print_mechanism(m_printable, "namespace").str() << std::endl;
     }
 }
