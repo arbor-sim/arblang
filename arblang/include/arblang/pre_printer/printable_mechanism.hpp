@@ -44,24 +44,25 @@ struct printable_mechanism {
 
     // Map from state vars/affectables being written to prefixed pointer names of the destinations.
     // Current effectables can write to multiple pointers (ionic and overall current), so multimap
-    std::unordered_multimap<std::string, std::string> dest_pointer_map;
-
-    // Map from parameters/state vars/bindables being read to prefixed pointer names of the sources.
-    std::unordered_map<std::string, std::string> src_pointer_map;
-
-    struct read_map {
-        // Maps from source (pointer name) to variable name
-        std::unordered_map<std::string, std::string> state_map;
-        std::unordered_map<std::string, std::string> parameter_map;
-        std::unordered_map<std::string, std::string> binding_map;
+    enum class storage_class {
+        internal, // param, state
+        external, // indexed by node_index
+        ionic,    // indexed by ioninc node_index
+    };
+    struct storage_info {
+        std::string pointer_name;
+        storage_class pointer_kind;
+        std::optional<std::string> ion;
     };
 
-    struct write_map {
-        // Maps from target (pointer name) to variable name
-        std::unordered_map<std::string, std::string> state_map;
-        std::unordered_map<std::string, std::string> parameter_map;
-        std::unordered_map<std::string, std::string> effect_map;
-    };
+    std::unordered_multimap<std::string, storage_info> dest_pointer_map;
+
+    // Map from all parameters/state vars/bindables/affectables to prefixed pointer names of the sources.
+    std::unordered_map<std::string, storage_info> source_pointer_map;
+
+    // Map from variable name to source/destination (pointer storage info)
+    using write_map = std::unordered_multimap<std::string, storage_info>;
+    using read_map = std::unordered_map<std::string, storage_info>;
 
     read_map  init_read_map;
     write_map init_write_map;
@@ -80,9 +81,7 @@ private:
     static state_field_map gen_state_field_map(const std::vector<r_expr>& state_declarations);
 
     void fill_write_maps(const std::unordered_map<std::string, std::unordered_map<std::string, std::string>>&);
-    void fill_read_maps(std::unordered_set<std::string> param_set,
-                        std::unordered_set<std::string> state_set,
-                        std::unordered_set<std::string> bind_set);
+    void fill_read_maps();
 };
 
 } // namespace resolved_ir
