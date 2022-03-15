@@ -221,13 +221,25 @@ std::stringstream print_mechanism(const printable_mechanism& mech, const std::st
         for (const auto& [var, ptr]: map) {
             switch (ptr.pointer_kind) {
                 case printable_mechanism::storage_class::ionic:
-                    out << fmt::format("       auto {} = {}[{}{}];\n", var, ptr.pointer_name, ion_idx_var_pref, ptr.ion.value());
+                    if (ptr.scale) {
+                        out << fmt::format("       auto {} = {}[{}{}]*{};\n", var, ptr.pointer_name, ion_idx_var_pref, ptr.ion.value(), ptr.scale.value());
+                    } else {
+                        out << fmt::format("       auto {} = {}[{}{}];\n", var, ptr.pointer_name, ion_idx_var_pref, ptr.ion.value());
+                    }
                     break;
                 case printable_mechanism::storage_class::external:
-                    out << fmt::format("       auto {} = {}[{}];\n", var, ptr.pointer_name, node_idx_var);
+                    if (ptr.scale) {
+                        out << fmt::format("       auto {} = {}[{}]*{};\n", var, ptr.pointer_name, node_idx_var, ptr.scale.value());
+                    } else {
+                        out << fmt::format("       auto {} = {}[{}];\n", var, ptr.pointer_name, node_idx_var);
+                    }
                     break;
                 case printable_mechanism::storage_class::internal:
-                    out << fmt::format("       auto {} = {}[i_];\n", var, ptr.pointer_name);
+                    if (ptr.scale) {
+                        out << fmt::format("       auto {} = {}[i_]*{};\n", var, ptr.pointer_name, ptr.scale.value());
+                    } else {
+                        out << fmt::format("       auto {} = {}[i_];\n", var, ptr.pointer_name);
+                    }
                     break;
             }
         }
@@ -256,15 +268,29 @@ std::stringstream print_mechanism(const printable_mechanism& mech, const std::st
             }
             switch (ptr.pointer_kind) {
                 case printable_mechanism::storage_class::ionic:
-                    out << fmt::format("       {0}[{1}{2}] = fma({3}, {4}, {0}[{1}{2}]);\n",
-                                       ptr.pointer_name, ion_idx_var_pref, ptr.ion.value(), mech_width, var_name);
+                    if (ptr.scale) {
+                        out << fmt::format("       {0}[{1}{2}] = fma({5}*{3}[i_], {4}, {0}[{1}{2}]);\n",
+                                           ptr.pointer_name, ion_idx_var_pref, ptr.ion.value(), mech_node_weight, var_name, ptr.scale.value());
+                    } else {
+                        out << fmt::format("       {0}[{1}{2}] = fma({3}[i_], {4}, {0}[{1}{2}]);\n",
+                                           ptr.pointer_name, ion_idx_var_pref, ptr.ion.value(), mech_node_weight, var_name);
+                    }
                     break;
                 case printable_mechanism::storage_class::external:
-                    out << fmt::format("       {0}[{1}] = fma({2}, {3}, {0}[{1}]);\n",
-                                       ptr.pointer_name, node_idx_var, mech_width, var_name);
+                    if (ptr.scale) {
+                        out << fmt::format("       {0}[{1}] = fma({4}*{2}[i_], {3}, {0}[{1}]);\n",
+                                           ptr.pointer_name, node_idx_var, mech_node_weight, var_name, ptr.scale.value());
+                    } else {
+                        out << fmt::format("       {0}[{1}] = fma({2}[i_], {3}, {0}[{1}]);\n",
+                                           ptr.pointer_name, node_idx_var, mech_node_weight, var_name);
+                    }
                     break;
                 case printable_mechanism::storage_class::internal:
-                    out << fmt::format("       {}[i_] = {};\n", ptr.pointer_name, var_name);
+                    if (ptr.scale) {
+                        out << fmt::format("       {0}[i_] = {2}*{1};\n", ptr.pointer_name, var_name, ptr.scale.value());
+                    } else {
+                        out << fmt::format("       {0}[i_] = {1};\n", ptr.pointer_name, var_name);
+                    }
                     break;
             }
         }

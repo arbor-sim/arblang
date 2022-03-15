@@ -66,8 +66,25 @@ printable_mechanism::printable_mechanism(const resolved_mechanism& m) {
         auto bind_name = bind.name;
         if (bind.ion) bind_name += ("_" + bind.ion.value());
 
+        std::optional<double> scale;
+        switch (bind.bind) {
+            case bindable::temperature:            // input K -> K
+            case bindable::current_density:        // input A/m^2 -> A/m^2
+            case bindable::charge:                 // input real -> real
+            case bindable::internal_concentration: // input mmol/L = mol/m^3 -> mol/m^3
+            case bindable::external_concentration: // input mmol/L = mol/m^3 -> mol/m^3
+            case bindable::nernst_potential:       // still unknown (not implemented)
+            case bindable::molar_flux:             // still unknown (not implemented)
+                break;
+            case bindable::membrane_potential:     // input mV -> V
+            case bindable::dt:                     // input ms -> s
+                scale = 1e-3; break;
+                break;
+            default: break;
+        }
+
         auto storage = bind.ion? storage_class::ionic: storage_class::external;
-        source_pointer_map.insert({bind_name, {prefix(bind_name), storage, bind.ion}});
+        source_pointer_map.insert({bind_name, {prefix(bind_name), storage, bind.ion, scale}});
         field_pack.bind_sources.emplace_back(bind_name, bind.bind, bind.ion);
 
         if (bind.ion) {
@@ -89,26 +106,48 @@ printable_mechanism::printable_mechanism(const resolved_mechanism& m) {
     }
     std::unordered_set<std::string> effect_set;
     for (const auto& c: m.effects) {
+        // TODO handle effects other than current_denisty_pair and current_pair
         auto eff = std::get<resolved_effect>(*c);
+
+        auto get_scale = [](affectable a) {
+            std::optional<double> scale;
+            switch (a) {
+                case affectable::current_density:                   // A/m^2 -> arbor expects A/m^2
+                case affectable::molar_flux:                        // still unknown (not implemented)
+                case affectable::molar_flow_rate:                   // still unknown (not implemented)
+                case affectable::internal_concentration_rate:       // still unknown (not implemented)
+                case affectable::external_concentration_rate:       // still unknown (not implemented)
+                    break;
+                case affectable::current:      scale = 1e9; break;  // A -> arbor expects nA
+                case affectable::conductance:  scale = 1e6; break;  // S -> arbor expects uS
+                case affectable::conductivity: scale = 1e-3; break; // S/m^2 -> arbor expects KS/m^2
+                default: break;
+            }
+            return scale;
+        };
+
         auto i_effect = eff.effect == affectable::current_density_pair?
                 affectable::current_density: affectable::current;
         auto g_effect = eff.effect == affectable::current_density_pair?
                 affectable::conductivity: affectable::conductance;
+
+        auto i_scale = get_scale(i_effect);
+        auto g_scale = get_scale(g_effect);
 
         std::string i_name = "i";
         std::string g_name = "g";
 
         // effects on i(ion or no ion) always affect overall i
         if (!effect_set.count(i_name)) {
-            dest_pointer_map.insert({i_name, {prefix(i_name), storage_class::external}});
-            source_pointer_map.insert({i_name, {prefix(i_name), storage_class::external}});
+            dest_pointer_map.insert({i_name, {prefix(i_name), storage_class::external, std::nullopt, i_scale}});
+            source_pointer_map.insert({i_name, {prefix(i_name), storage_class::external, std::nullopt, i_scale}});
             field_pack.effect_sources.emplace_back(i_name, i_effect, std::nullopt);
             effect_set.insert(i_name);
         }
         // effects on g(ion or no ion) only affect overall g
         if (!effect_set.count(g_name)) {
-            dest_pointer_map.insert({g_name, {prefix(g_name), storage_class::external}});
-            source_pointer_map.insert({g_name, {prefix(g_name), storage_class::external}});
+            dest_pointer_map.insert({g_name, {prefix(g_name), storage_class::external, std::nullopt, g_scale}});
+            source_pointer_map.insert({g_name, {prefix(g_name), storage_class::external, std::nullopt, g_scale}});
             field_pack.effect_sources.emplace_back(g_name, g_effect, std::nullopt);
             effect_set.insert(g_name);
         }
@@ -125,16 +164,16 @@ printable_mechanism::printable_mechanism(const resolved_mechanism& m) {
             if (!effect_set.count(ion_i_name)) {
                 // notice here that the source of i_ion is not only pointing to the current of the ion,
                 // but also the overall current.
-                dest_pointer_map.insert({ion_i_name, {prefix(ion_i_name), storage_class::ionic, ion}});
-                source_pointer_map.insert({ion_i_name, {prefix(ion_i_name), storage_class::ionic, ion}});
-                dest_pointer_map.insert({ion_i_name, {prefix(i_name), storage_class::external}});
+                dest_pointer_map.insert({ion_i_name, {prefix(ion_i_name), storage_class::ionic, ion, i_scale}});
+                source_pointer_map.insert({ion_i_name, {prefix(ion_i_name), storage_class::ionic, ion, i_scale}});
+                dest_pointer_map.insert({ion_i_name, {prefix(i_name), storage_class::external, std::nullopt, i_scale}});
                 field_pack.effect_sources.emplace_back(ion_i_name, i_effect, eff.ion);
                 effect_set.insert(ion_i_name);
             }
             if (!effect_set.count(ion_g_name)) {
                 // notice here that the source of g_ion is not pointing to the conductance of the ion,
                 // but the overall conductance.
-                dest_pointer_map.insert({ion_g_name, {prefix(g_name), storage_class::external}});
+                dest_pointer_map.insert({ion_g_name, {prefix(g_name), storage_class::external, std::nullopt, g_scale}});
                 effect_set.insert(ion_g_name);
             }
         }

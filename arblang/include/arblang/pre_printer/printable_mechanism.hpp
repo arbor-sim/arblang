@@ -53,16 +53,16 @@ struct printable_mechanism {
         std::string pointer_name;
         storage_class pointer_kind;
         std::optional<std::string> ion;
+        std::optional<double> scale;
     };
-
-    std::unordered_multimap<std::string, storage_info> dest_pointer_map;
-
-    // Map from all parameters/state vars/bindables/affectables to prefixed pointer names of the sources.
-    std::unordered_map<std::string, storage_info> source_pointer_map;
 
     // Map from variable name to source/destination (pointer storage info)
     using write_map = std::unordered_multimap<std::string, storage_info>;
     using read_map = std::unordered_map<std::string, storage_info>;
+
+    // Map from all parameters/state vars/bindables/affectables to prefixed pointer names of the destinations/sources.
+    write_map dest_pointer_map;
+    read_map source_pointer_map;
 
     read_map  init_read_map;
     write_map init_write_map;
