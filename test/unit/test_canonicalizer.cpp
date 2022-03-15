@@ -1349,6 +1349,8 @@ TEST(optimizer, mechanism) {
 
         auto m_printable = printable_mechanism(m_fin);
         std::cout << "/**********************************************/" << std::endl;
+        std::cout << mech << std::endl;
+        std::cout << "/**********************************************/" << std::endl;
         std::cout << print_header(m_printable, "namespace").str() << std::endl;
         std::cout << "/**********************************************/" << std::endl;
         std::cout << print_mechanism(m_printable, "namespace").str() << std::endl;

@@ -316,6 +316,13 @@ std::pair<r_expr, bool> constant_fold(const resolved_binary& e,
     auto rhs_arg = constant_fold(e.rhs, constant_map, rewrites);
     auto lhs_opt = as_number(lhs_arg.first);
     auto rhs_opt = as_number(rhs_arg.first);
+
+    auto lhs_ptr = std::get_if<resolved_quantity>(type_of(lhs_arg.first).get());
+    bool lhs_real = lhs_ptr && lhs_ptr->type.is_real();
+
+    auto rhs_ptr = std::get_if<resolved_quantity>(type_of(rhs_arg.first).get());
+    bool rhs_real = rhs_ptr && rhs_ptr->type.is_real();
+
     if (lhs_opt && rhs_opt) {
         auto lhs = lhs_opt.value();
         auto rhs = rhs_opt.value();
@@ -375,10 +382,10 @@ std::pair<r_expr, bool> constant_fold(const resolved_binary& e,
         }
         else if (lhs == 1) {
             switch (e.op) {
-                // TODO 1 * x. Can't be simplified yet, because they alter the unit
                 case binary_op::land: return {rhs_arg.first, true};
                 case binary_op::lor:  return {make_rexpr<resolved_int>(1, e.type, e.loc), true};
                 case binary_op::pow:  return {make_rexpr<resolved_int>(1, e.type, e.loc), true};
+                case binary_op::mul:  if (lhs_real) return {rhs_arg.first, true};
                 default: break;
             }
         }
@@ -399,11 +406,12 @@ std::pair<r_expr, bool> constant_fold(const resolved_binary& e,
             }
         }
         else if (rhs == 1) {
-            // TODO x * 1 and x / 1. Can't be simplified yet, because they alter the unit
             switch (e.op) {
                 case binary_op::land: return {lhs_arg.first, true};
                 case binary_op::lor:  return {make_rexpr<resolved_int>(1, e.type, e.loc), true};
                 case binary_op::pow:  return {lhs_arg.first, true};
+                case binary_op::mul:  if (rhs_real) return {lhs_arg.first, true};
+                case binary_op::div:  if (rhs_real) return {lhs_arg.first, true};
                 default: break;
             }
         } else {
