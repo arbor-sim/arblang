@@ -15,6 +15,7 @@ set(arblang-sources
     pre_printer/get_read_arguments.cpp
     pre_printer/printable_mechanism.cpp
     pre_printer/simplify.cpp
+    printer/print_expressions.cpp
     printer/print_mechanism.cpp
     printer/print_header.cpp
     resolver/resolve.cpp

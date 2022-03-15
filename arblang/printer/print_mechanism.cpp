@@ -4,9 +4,23 @@
 #include <fmt/core.h>
 
 #include <arblang/printer/print_mechanism.hpp>
+#include <arblang/printer/print_expressions.hpp>
+#include <arblang/util/unique_name.hpp>
+
+namespace std {
+template <>
+struct hash<al::resolved_ir::printable_mechanism::storage_info> {
+    std::size_t operator()(const al::resolved_ir::printable_mechanism::storage_info& k) const {
+        return std::hash<std::string>()(k.pointer_name);
+    }
+};
+}
 
 namespace al {
 namespace resolved_ir {
+bool operator==(const printable_mechanism::storage_info& lhs, const printable_mechanism::storage_info& rhs) {
+    return lhs.pointer_name == rhs.pointer_name;
+}
 
 std::stringstream print_mechanism(const printable_mechanism& mech, const std::string& cpp_namespace) {
     std::stringstream out;
@@ -219,18 +233,38 @@ std::stringstream print_mechanism(const printable_mechanism& mech, const std::st
         }
     };
     auto print_write = [&](const auto& map) {
+        // If an external or ionic storage class is written to multiple times,
+        // write the sum of the variables only once.
+        std::unordered_map<printable_mechanism::storage_info, std::vector<std::string>> reduced_map;
         for (const auto& [var, ptr]: map) {
+            reduced_map[ptr].push_back(var);
+        }
+        std::unordered_set<std::string> reserved_names;
+        for (const auto& [ptr, vars]: reduced_map) {
+            std::string var_name = vars.front();
+            if (vars.size() > 1) {
+                // Sum up the contributions
+                var_name = unique_local_name(reserved_names, "sum");
+                out << var_name << " = ";
+                bool first = true;
+                for (const auto& v: vars) {
+                    if (!first) out << " + ";
+                    out << v;
+                    first = false;
+                }
+                out << ";\n";
+            }
             switch (ptr.pointer_kind) {
                 case printable_mechanism::storage_class::ionic:
-                        out << fmt::format("       {0}[{1}{2}] = fma({3}, {4}, {0}[{1}{2}]);\n",
-                                       ptr.pointer_name, ion_idx_var_pref, ptr.ion.value(), mech_width, var);
+                    out << fmt::format("       {0}[{1}{2}] = fma({3}, {4}, {0}[{1}{2}]);\n",
+                                       ptr.pointer_name, ion_idx_var_pref, ptr.ion.value(), mech_width, var_name);
                     break;
                 case printable_mechanism::storage_class::external:
                     out << fmt::format("       {0}[{1}] = fma({2}, {3}, {0}[{1}]);\n",
-                                       ptr.pointer_name, node_idx_var, mech_width, var);
+                                       ptr.pointer_name, node_idx_var, mech_width, var_name);
                     break;
                 case printable_mechanism::storage_class::internal:
-                    out << fmt::format("       {}[i_] = {};\n", ptr.pointer_name, var);
+                    out << fmt::format("       {}[i_] = {};\n", ptr.pointer_name, var_name);
                     break;
             }
         }
@@ -251,7 +285,19 @@ std::stringstream print_mechanism(const printable_mechanism& mech, const std::st
         }
         // print reads
         print_read(mech.init_read_map);
+
+        // print expressions
+        out << "       // Perform memory reads\n";
+        for (const auto& p: mech.procedure_pack.assigned_parameters) {
+            print(p, out, "       ");
+        }
+        for (const auto& p: mech.procedure_pack.initializations) {
+            out << "       // Perform calculations\n";
+            print(p, out, "       ");
+        }
+
         // print writes
+        out << "       // Perform memory writes\n";
         print_write(mech.init_write_map);
 
         out << fmt::format("    }}\n");
@@ -273,8 +319,17 @@ std::stringstream print_mechanism(const printable_mechanism& mech, const std::st
             out << fmt::format("       auto {0}{2} = {1}{2}[i_];\n", ion_idx_var_pref, mech_ion_idx_pref, ion);
         }
         // print reads
+        out << "       // Perform memory reads\n";
         print_read(mech.evolve_read_map);
+
+        // print expressions
+        for (const auto& p: mech.procedure_pack.evolutions) {
+            out << "       // Perform calculations\n";
+            print(p, out, "       ");
+        }
+
         // print writes
+        out << "       // Perform memory writes\n";
         print_write(mech.evolve_write_map);
 
         out << fmt::format("    }}\n");
@@ -295,8 +350,17 @@ std::stringstream print_mechanism(const printable_mechanism& mech, const std::st
             out << fmt::format("       auto {0}{2} = {1}{2}[i_];\n", ion_idx_var_pref, mech_ion_idx_pref, ion);
         }
         // print reads
+        out << "       // Perform memory reads\n";
         print_read(mech.effect_read_map);
+
+        // print expressions
+        for (const auto& p: mech.procedure_pack.effects) {
+            out << "       // Perform calculations\n";
+            print(p, out, "       ");
+        }
+
         // print writes
+        out << "       // Perform memory writes\n";
         print_write(mech.effect_write_map);
 
         out << fmt::format("    }}\n");
