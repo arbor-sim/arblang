@@ -403,6 +403,7 @@ std::stringstream print_mechanism(const printable_mechanism& mech, const std::st
     // undef PPACK_IFACE_BLOCK
 
     // Close namespaces
+    out << "#undef PPACK_IFACE_BLOCK\n";
     out << fmt::format("}} // namespace arb\n");
     out << fmt::format("}} // namespace {} {{\n", cpp_namespace);
     out << fmt::format("}} // namespace kernel_{} {{\n", mech.name);
