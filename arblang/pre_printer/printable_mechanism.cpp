@@ -1,4 +1,5 @@
 #include <string>
+#include <sstream>
 #include <unordered_map>
 
 #include <arblang/optimizer/optimizer.hpp>
@@ -75,9 +76,9 @@ printable_mechanism::printable_mechanism(const resolved_mechanism& m) {
             case bindable::external_concentration: // input mmol/L = mol/m^3 -> mol/m^3
             case bindable::nernst_potential:       // still unknown (not implemented)
             case bindable::molar_flux:             // still unknown (not implemented)
+            case bindable::dt:                     // input ms -> ms (only usd in ode solution)
                 break;
             case bindable::membrane_potential:     // input mV -> V
-            case bindable::dt:                     // input ms -> s
                 scale = 1e-3; break;
                 break;
             default: break;
@@ -134,8 +135,8 @@ printable_mechanism::printable_mechanism(const resolved_mechanism& m) {
         auto i_scale = get_scale(i_effect);
         auto g_scale = get_scale(g_effect);
 
-        std::string i_name = "i";
-        std::string g_name = "g";
+        std::string i_name = "_sim_i";
+        std::string g_name = "_sim_g";
 
         // effects on i(ion or no ion) always affect overall i
         if (!effect_set.count(i_name)) {
@@ -277,9 +278,17 @@ void printable_mechanism::fill_write_maps(
                 // These are object fields, so v.name is the object field name
                 // and the v.value points to another resolved_variable that is the answer
                 auto field_name = v.name;
-                auto field_value = std::get_if<resolved_variable>(v.value.get());
-                if (!field_value) {
-                    throw std::runtime_error(fmt::format("Internal compiler error: Expected a resolved_variable and was "
+                std::string val_name = std::visit(al::util::overloaded {
+                        [&](const resolved_argument& t) {return t.name;},
+                        [&](const resolved_variable& t) {return t.name;},
+                        [&](const resolved_int& t)      {return std::to_string(t.value);},
+                        [&](const resolved_float& t)    {std::ostringstream os; os << t.value; return os.str();},
+                        [&](const auto& t) {return std::string();}
+                }, *v.value);
+
+                if (val_name.empty()) {
+                    throw std::runtime_error(fmt::format("Internal compiler error: Expected a resolved_variable, "
+                                                         "resolved_argument resolved_int or resolved_float and was "
                                                          "disappointed."));
                 }
                 if (is_state) {
@@ -294,7 +303,7 @@ void printable_mechanism::fill_write_maps(
                     }
                     auto range = dest_pointer_map.equal_range(field_mangled_name);
                     for (auto it = range.first; it != range.second; ++it) {
-                        map.insert({field_value->name, it->second});
+                        map.insert({val_name, it->second});
                     }
                 }
                 else {
@@ -303,7 +312,7 @@ void printable_mechanism::fill_write_maps(
                     }
                     auto range = dest_pointer_map.equal_range(field_name);
                     for (auto it = range.first; it != range.second; ++it) {
-                        map.insert({field_value->name, it->second});
+                        map.insert({val_name, it->second});
                     }
                 }
             }

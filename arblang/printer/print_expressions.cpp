@@ -134,7 +134,7 @@ void print(const resolved_unary& e, std::stringstream& out, const std::string& i
             out << ")";
             break;
         case unary_op::exprelr:
-            out << "exprler(";
+            out << "exprelr(";
             print(e.arg, out, indent);
             out << ")";
             break;
@@ -175,7 +175,7 @@ void print(const resolved_binary& e, std::stringstream& out, const std::string& 
             out << "pow(";
             print(e.lhs, out, indent);
             out << ", ";
-            print(e.lhs, out, indent);
+            print(e.rhs, out, indent);
             out << ")";
             break;
         case binary_op::lt:

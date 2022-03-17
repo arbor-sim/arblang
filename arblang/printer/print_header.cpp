@@ -40,11 +40,15 @@ std::stringstream print_header(
                        arb_header_prefix());
 
     out << fmt::format("extern \"C\" {{\n"
-                       "  arb_mechanism_type make_{0}_{1}() {{\n"
+                       "  arb_mechanism_type make_arb_{0}_catalogue_{1}() {{\n"
                        "    // Tables\n",
                        std::regex_replace(cpp_namespace, std::regex{"::"}, "_"),
                        mech.name);
 
+    // print empty globals
+    out << "    static arb_field_info* globals = NULL;\n";
+    out << "    static arb_size_type n_globals = 0;\n";
+    
     // print states:
     out << "    static arb_field_info state_vars[] = {\n";
     for (const auto& p: mech.field_pack.state_sources) {
@@ -94,8 +98,8 @@ std::stringstream print_header(
                        arb_mechanism_kind(mech.kind),
                        false, // TODO: actually check linearity
                        false) // TODO: actually check post_events
-        << fmt::format("  arb_mechanism_interface* make_{0}_{1}_interface_multicore(){2}\n"
-                       "  arb_mechanism_interface* make_{0}_{1}_interface_gpu(){3}\n"
+        << fmt::format("  arb_mechanism_interface* make_arb_{0}_catalogue_{1}_interface_multicore(){2}\n"
+                       "  arb_mechanism_interface* make_arb_{0}_catalogue_{1}_interface_gpu(){3}\n"
                        "}}\n",
                        std::regex_replace(cpp_namespace, std::regex{"::"}, "_"),
                        mech.name,

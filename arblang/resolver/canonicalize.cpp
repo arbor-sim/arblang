@@ -562,6 +562,11 @@ r_expr canonicalize(const r_expr& e,
     return std::visit([&](auto& c) {return canonicalize(c, reserved, rewrites, pref);}, *e);
 }
 
+r_expr canonicalize(const r_expr& e, std::unordered_set<std::string>& reserved, const std::string& pref) {
+    std::unordered_map<std::string, r_expr> rewrites;
+    return canonicalize(e, reserved, rewrites, pref);
+}
+
 r_expr canonicalize(const r_expr& e, const std::string& pref) {
     std::unordered_set<std::string> reserved;
     std::unordered_map<std::string, r_expr> rewrites;

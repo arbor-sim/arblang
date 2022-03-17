@@ -567,21 +567,28 @@ r_expr resolve(const parsed_binary& e, const in_scope_map& map) {
                                                  to_string(e.op), to_string(e.loc)));
         }
         case binary_op::pow: {
-            // Only applicable if neither lhs nor rhs is a boolean type and rhs is a real int type
+            // Only applicable if lhs has a non-real quantity type and rhs is an int that has a real quantity type
+            // OR if both lhs and rhs have real quantity types
+            if (!rhs_q || !rhs_q->type.is_real()) {
+                throw std::runtime_error(fmt::format("incompatible rhs argument type to op {}, at {}",
+                                                     to_string(e.op), to_string(e.loc)));
+            }
+            if (!lhs_q) {
+                throw std::runtime_error(fmt::format("incompatible lhs argument type to op {}, at {}",
+                                                     to_string(e.op), to_string(e.loc)));
+            }
+            if (lhs_q->type.is_real()) {
+                auto real_type = make_rtype<resolved_quantity>(quantity::real, e.loc);
+                return make_rexpr<resolved_binary>(e.op, lhs_v, rhs_v, real_type, e.loc);
+            }
+
             auto rhs_int = std::get_if<resolved_int>(rhs_v.get());
             if (!rhs_int) {
                 throw std::runtime_error(fmt::format("incompatible arguments types to op {}, at {}",
                                                      to_string(e.op), to_string(e.loc)));
             }
-            auto rhs_int_q = std::get_if<resolved_quantity>(rhs_int->type.get());
-            if (!rhs_int_q || !rhs_int_q->type.is_real()) {
-                throw std::runtime_error(fmt::format("incompatible arguments types to op {}, at {}",
-                                                     to_string(e.op), to_string(e.loc)));
-            }
-            if (lhs_q && rhs_q) {
-                auto comb_type = make_rtype<resolved_quantity>(lhs_q->type^rhs_int->value, e.loc);
-                return make_rexpr<resolved_binary>(e.op, lhs_v, rhs_v, comb_type, e.loc);
-            }
+            auto comb_type = make_rtype<resolved_quantity>(lhs_q->type^rhs_int->value, e.loc);
+            return make_rexpr<resolved_binary>(e.op, lhs_v, rhs_v, comb_type, e.loc);
             throw std::runtime_error(fmt::format("incompatible arguments types to op {}, at {}",
                                                  to_string(e.op), to_string(e.loc)));
         }

@@ -14,7 +14,7 @@
 namespace al {
 namespace resolved_ir {
 
-resolved_effect get_ig_pair(const resolved_effect& e, const std::string& v);
+resolved_effect get_ig_pair(const resolved_effect& e, const std::string& v, std::unordered_set<std::string>& temps);
 
 resolved_mechanism solve(const resolved_mechanism& e) {
     resolved_mechanism mech;
@@ -51,13 +51,14 @@ resolved_mechanism solve(const resolved_mechanism& e) {
     mech.bindings.push_back(make_rexpr<resolved_bind>("dt", bindable::dt, std::optional<std::string>{},
                                                       make_rtype<resolved_quantity>(quantity::time, src_location{}),
                                                       src_location{}));
+    std::unordered_set<std::string> temps;
     for (const auto& c: e.effects) {
         // If the effect is a current or current_density affectable, rewrite to
         // current_density_pair or current_pair respectively containing the
         // {current_density, conductivity} and {current, conductance}
         // contributions respectively
         auto effect = std::get<resolved_effect>(*c);
-        mech.effects.push_back(make_rexpr<resolved_effect>(get_ig_pair(effect, v_sym)));
+        mech.effects.push_back(make_rexpr<resolved_effect>(get_ig_pair(effect, v_sym, temps)));
     }
     for (const auto& c: e.exports) {
         mech.exports.push_back(c);
@@ -68,7 +69,7 @@ resolved_mechanism solve(const resolved_mechanism& e) {
     return mech;
 }
 
-resolved_effect get_ig_pair(const resolved_effect& e, const std::string& v) {
+resolved_effect get_ig_pair(const resolved_effect& e, const std::string& v, std::unordered_set<std::string>& temps) {
     if (v.empty()) {
         return e;
     }
@@ -98,8 +99,8 @@ resolved_effect get_ig_pair(const resolved_effect& e, const std::string& v) {
     g = make_rexpr<resolved_binary>(binary_op::div, g, unit_voltage, src_location{});
 
     // Combine i and g into a resolved_object
-    std::string i_name = "i";
-    std::string g_name = "g";
+    std::string i_name = "_sim_i";
+    std::string g_name = "_sim_g";
     if (e.ion) {
         i_name += ("_" + e.ion.value());
         g_name += ("_" + e.ion.value());
@@ -121,7 +122,7 @@ resolved_effect get_ig_pair(const resolved_effect& e, const std::string& v) {
     }
 
     // Recanonicalize the derivatives with a new prefix to avoid name collisions.
-    solution = canonicalize(solution, "i");
+    solution = canonicalize(solution, temps, "i");
 
     // Reoptimize the obtained expressions.
     auto opt = optimizer(solution);

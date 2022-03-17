@@ -257,14 +257,14 @@ std::stringstream print_mechanism(const printable_mechanism& mech, const std::st
             if (vars.size() > 1) {
                 // Sum up the contributions
                 var_name = unique_local_name(reserved_names, "sum");
-                out << var_name << " = ";
+                std::string var_val;
                 bool first = true;
                 for (const auto& v: vars) {
-                    if (!first) out << " + ";
-                    out << v;
+                    if (!first) var_val += " + ";
+                    var_val += v;
                     first = false;
                 }
-                out << ";\n";
+                out << fmt::format("       auto {} = {};\n", var_name, var_val);
             }
             switch (ptr.pointer_kind) {
                 case printable_mechanism::storage_class::ionic:
@@ -296,100 +296,113 @@ std::stringstream print_mechanism(const printable_mechanism& mech, const std::st
         }
     };
     {
-        auto read_access  = check_access(mech.init_read_map);
-        auto write_access = check_access(mech.init_write_map);
         out << fmt::format("static void init(arb_mechanism_ppack* pp) {{\n");
-        out << fmt::format("    PPACK_IFACE_BLOCK;\n");
-        out << fmt::format("    for (arb_size_type i_ = 0; i_ < {}; ++i_) {{\n", mech_width);
-        // print indices
-        if (read_access.external_access || write_access.external_access) {
-            out << fmt::format("       auto {} = {}[i_];\n", node_idx_var, mech_node_index);
-        }
-        read_access.ions_accessed.merge(write_access.ions_accessed);
-        for (const auto& ion: read_access.ions_accessed) {
-            out << fmt::format("       auto {0}{2} = {1}{2}[i_];\n", ion_idx_var_pref, mech_ion_idx_pref, ion);
-        }
-        // print reads
-        print_read(mech.init_read_map);
+        if (!(mech.procedure_pack.assigned_parameters.empty() && mech.procedure_pack.initializations.empty())) {
+            out << fmt::format("    PPACK_IFACE_BLOCK;\n");
+            out << fmt::format("    for (arb_size_type i_ = 0; i_ < {}; ++i_) {{\n", mech_width);
 
-        // print expressions
-        out << "       // Perform memory reads\n";
-        for (const auto& p: mech.procedure_pack.assigned_parameters) {
-            print(p, out, "       ");
-        }
-        for (const auto& p: mech.procedure_pack.initializations) {
-            out << "       // Perform calculations\n";
-            print(p, out, "       ");
-        }
+            auto read_access = check_access(mech.init_read_map);
+            auto write_access = check_access(mech.init_write_map);
 
-        // print writes
-        out << "       // Perform memory writes\n";
-        print_write(mech.init_write_map);
+            // print indices
+            if (read_access.external_access || write_access.external_access) {
+                out << fmt::format("       auto {} = {}[i_];\n", node_idx_var, mech_node_index);
+            }
+            read_access.ions_accessed.merge(write_access.ions_accessed);
+            for (const auto &ion: read_access.ions_accessed) {
+                out << fmt::format("       auto {0}{2} = {1}{2}[i_];\n", ion_idx_var_pref, mech_ion_idx_pref, ion);
+            }
+            // print reads
+            out << "       // Perform memory reads\n";
+            print_read(mech.init_read_map);
 
-        out << fmt::format("    }}\n");
+            // print expressions
+            for (const auto &p: mech.procedure_pack.assigned_parameters) {
+                print(p, out, "       ");
+            }
+            for (const auto &p: mech.procedure_pack.initializations) {
+                out << "       // Perform calculations\n";
+                print(p, out, "       ");
+            }
+
+            // print writes
+            out << "       // Perform memory writes\n";
+            print_write(mech.init_write_map);
+
+            out << fmt::format("    }}\n");
+        }
         out << fmt::format("}}\n");
     }
     // print state
     {
-        auto read_access  = check_access(mech.evolve_read_map);
-        auto write_access = check_access(mech.evolve_write_map);
+
         out << fmt::format("static void advance_state(arb_mechanism_ppack* pp) {{\n");
-        out << fmt::format("    PPACK_IFACE_BLOCK;\n");
-        out << fmt::format("    for (arb_size_type i_ = 0; i_ < {}; ++i_) {{\n", mech_width);
-        // print indices
-        if (read_access.external_access || write_access.external_access) {
-            out << fmt::format("       auto {} = {}[i_];\n", node_idx_var, mech_node_index);
-        }
-        read_access.ions_accessed.merge(write_access.ions_accessed);
-        for (const auto& ion: read_access.ions_accessed) {
-            out << fmt::format("       auto {0}{2} = {1}{2}[i_];\n", ion_idx_var_pref, mech_ion_idx_pref, ion);
-        }
-        // print reads
-        out << "       // Perform memory reads\n";
-        print_read(mech.evolve_read_map);
+        if (!mech.procedure_pack.evolutions.empty()) {
+            out << fmt::format("    PPACK_IFACE_BLOCK;\n");
+            out << fmt::format("    for (arb_size_type i_ = 0; i_ < {}; ++i_) {{\n", mech_width);
 
-        // print expressions
-        for (const auto& p: mech.procedure_pack.evolutions) {
-            out << "       // Perform calculations\n";
-            print(p, out, "       ");
+            auto read_access = check_access(mech.evolve_read_map);
+            auto write_access = check_access(mech.evolve_write_map);
+
+            // print indices
+            if (read_access.external_access || write_access.external_access) {
+                out << fmt::format("       auto {} = {}[i_];\n", node_idx_var, mech_node_index);
+            }
+            read_access.ions_accessed.merge(write_access.ions_accessed);
+            for (const auto &ion: read_access.ions_accessed) {
+                out << fmt::format("       auto {0}{2} = {1}{2}[i_];\n", ion_idx_var_pref, mech_ion_idx_pref, ion);
+            }
+            // print reads
+            out << "       // Perform memory reads\n";
+            print_read(mech.evolve_read_map);
+
+            // print expressions
+            for (const auto &p: mech.procedure_pack.evolutions) {
+                out << "       // Perform calculations\n";
+                print(p, out, "       ");
+            }
+
+            // print writes
+            out << "       // Perform memory writes\n";
+            print_write(mech.evolve_write_map);
+
+            out << fmt::format("    }}\n");
         }
-
-        // print writes
-        out << "       // Perform memory writes\n";
-        print_write(mech.evolve_write_map);
-
-        out << fmt::format("    }}\n");
         out << fmt::format("}}\n");
     }
     // print current
     {
-        auto read_access  = check_access(mech.effect_read_map);
-        auto write_access = check_access(mech.effect_write_map);
-        out << fmt::format("static void compute_current(arb_mechanism_ppack* pp) {{\n");
-        out << fmt::format("    PPACK_IFACE_BLOCK;\n");
-        out << fmt::format("    for (arb_size_type i_ = 0; i_ < {}; ++i_) {{\n", mech_width);
-        if (read_access.external_access || write_access.external_access) {
-            out << fmt::format("       auto {} = {}[i_];\n", node_idx_var, mech_node_index);
-        }
-        read_access.ions_accessed.merge(write_access.ions_accessed);
-        for (const auto& ion: read_access.ions_accessed) {
-            out << fmt::format("       auto {0}{2} = {1}{2}[i_];\n", ion_idx_var_pref, mech_ion_idx_pref, ion);
-        }
-        // print reads
-        out << "       // Perform memory reads\n";
-        print_read(mech.effect_read_map);
+        out << fmt::format("static void compute_currents(arb_mechanism_ppack* pp) {{\n");
+        if (!mech.procedure_pack.effects.empty()) {
+            out << fmt::format("    PPACK_IFACE_BLOCK;\n");
+            out << fmt::format("    for (arb_size_type i_ = 0; i_ < {}; ++i_) {{\n", mech_width);
 
-        // print expressions
-        for (const auto& p: mech.procedure_pack.effects) {
-            out << "       // Perform calculations\n";
-            print(p, out, "       ");
+            auto read_access = check_access(mech.effect_read_map);
+            auto write_access = check_access(mech.effect_write_map);
+
+            if (read_access.external_access || write_access.external_access) {
+                out << fmt::format("       auto {} = {}[i_];\n", node_idx_var, mech_node_index);
+            }
+            read_access.ions_accessed.merge(write_access.ions_accessed);
+            for (const auto &ion: read_access.ions_accessed) {
+                out << fmt::format("       auto {0}{2} = {1}{2}[i_];\n", ion_idx_var_pref, mech_ion_idx_pref, ion);
+            }
+            // print reads
+            out << "       // Perform memory reads\n";
+            print_read(mech.effect_read_map);
+
+            // print expressions
+            for (const auto &p: mech.procedure_pack.effects) {
+                out << "       // Perform calculations\n";
+                print(p, out, "       ");
+            }
+
+            // print writes
+            out << "       // Perform memory writes\n";
+            print_write(mech.effect_write_map);
+
+            out << fmt::format("    }}\n");
         }
-
-        // print writes
-        out << "       // Perform memory writes\n";
-        print_write(mech.effect_write_map);
-
-        out << fmt::format("    }}\n");
         out << fmt::format("}}\n");
     }
     // print write_ions, apply_events, post_events (empty)
@@ -397,7 +410,7 @@ std::stringstream print_mechanism(const printable_mechanism& mech, const std::st
         auto read_access  = check_access(mech.evolve_read_map);
         auto write_access = check_access(mech.evolve_write_map);
         out << fmt::format("static void write_ions(arb_mechanism_ppack*) {{}}\n");
-        out << fmt::format("static void write_ions(arb_mechanism_ppack*, arb_deliverable_event_stream*) {{}}\n");
+        out << fmt::format("static void apply_events(arb_mechanism_ppack*, arb_deliverable_event_stream*) {{}}\n");
         out << fmt::format("static void post_event(arb_mechanism_ppack*) {{}}\n");
     }
     // undef PPACK_IFACE_BLOCK
@@ -411,7 +424,7 @@ std::stringstream print_mechanism(const printable_mechanism& mech, const std::st
     // define extern "C"
     std::string full_namespace = "arb::" + cpp_namespace + "::kernel_" + mech.name;
     out << fmt::format("extern \"C\" {{\n");
-    out << fmt::format("  arb_mechanism_interface* make_{}_{}_interface_multicore() {{\n", cpp_namespace, mech.name);
+    out << fmt::format("  arb_mechanism_interface* make_arb_{}_catalogue_{}_interface_multicore() {{\n", cpp_namespace, mech.name);
     out << fmt::format("    static arb_mechanism_interface result;\n");
     out << fmt::format("    result.partition_width = {}::simd_width_;\n", full_namespace);
     out << fmt::format("    result.backend = arb_backend_kind_cpu;\n");

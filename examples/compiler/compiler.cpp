@@ -57,7 +57,7 @@ int main(int argc, char **argv) {
         mech.assign(std::istreambuf_iterator<char>(fi), std::istreambuf_iterator<char>());
     }
     catch (const std::exception&) {
-        throw std::runtime_error("Failure opening" + opt_input);
+        throw std::runtime_error("Failure opening " + opt_input);
     }
 
     auto p = parser(mech);
@@ -81,10 +81,10 @@ int main(int argc, char **argv) {
 
     std::ofstream fo_hpp, fo_cpp;
     fo_hpp.open(opt_output+".hpp");
-    fo_hpp << print_header(m_printable, "namespace").str();
+    fo_hpp << print_header(m_printable, opt_namespace).str();
     fo_hpp.close();
 
     fo_cpp.open(opt_output+"_cpu.cpp");
-    fo_cpp << print_mechanism(m_printable, "namespace").str();
+    fo_cpp << print_mechanism(m_printable, opt_namespace).str();
     fo_cpp.close();
 }

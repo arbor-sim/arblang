@@ -61,13 +61,9 @@ r_expr solver::get_b() {
     std::unordered_map<std::string, r_expr> copy_map = {{state_name, zero_state}};
     std::unordered_map<std::string, r_expr> rewrite_map = {};
 
-    // Rerun optimizations to propagate the zero constant and simplify the expressions.
+    // Rerun optimizations to propagate the zero constant
     auto e_copy = copy_propagate(state_deriv, copy_map, rewrite_map);
 
-    if (e_copy.second) {
-        auto opt = optimizer(e_copy.first);
-        return opt.optimize();
-    }
     return e_copy.first;
 }
 
@@ -257,14 +253,12 @@ resolved_evolve solver::solve() {
     // Recanonicalize the derivatives with a new prefix to avoid name collisions.
     solution = canonicalize(solution, "s");
 
-    // Reoptimize the obtained expressions.
-    auto opt = optimizer(solution);
-    solution = opt.optimize();
-
-    if (!has_let) return resolved_evolve(state_id, solution, state_type, evolve.loc);
+    // Optimize the obtained expressions before returning.
+    if (!has_let) return resolved_evolve(state_id, optimizer(solution).optimize(), state_type, evolve.loc);
 
     set_innermost_body(&concat_let, solution);
-    return resolved_evolve(state_id, make_rexpr<resolved_let>(concat_let), state_type, evolve.loc);
+    auto opt  = optimizer(make_rexpr<resolved_let>(concat_let));
+    return resolved_evolve(state_id, opt.optimize(), state_type, evolve.loc);
 }
 
 } // namespace resolved_ir

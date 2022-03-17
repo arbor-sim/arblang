@@ -1,5 +1,8 @@
+#include <arblang/optimizer/constant_fold.hpp>
 #include <arblang/resolver/resolved_expressions.hpp>
 #include <arblang/solver/symbolic_diff.hpp>
+
+#include <../util/rexp_helpers.hpp>
 
 #include <fmt/core.h>
 
@@ -116,6 +119,14 @@ r_expr sym_diff(const resolved_unary& e, const std::string& state, const std::op
             auto sd = sym_diff(e.arg, state, field);
             return make_rexpr<resolved_unary>(unary_op::neg, sd, e.loc);
         }
+        case unary_op::exprelr: {
+            // translate to x/(e^x -1)
+            auto exp_arg = make_rexpr<resolved_unary>(unary_op::exp, e.arg, e.type, e.loc);
+            auto one     = make_rexpr<resolved_int>(1, e.type, e.loc);
+            auto sub_one = make_rexpr<resolved_binary>(binary_op::sub, e.arg, one, e.type, e.loc);
+            auto div     = make_rexpr<resolved_binary>(binary_op::div, e.arg, sub_one, e.loc);
+            return sym_diff(div, state, field);
+        }
         default: {
             throw std::runtime_error(fmt::format("Internal compiler error, operator {} can't be differentiated.", to_string(e.op)));
         }
@@ -145,6 +156,27 @@ r_expr sym_diff(const resolved_binary& e, const std::string& state, const std::o
             auto numerator = make_rexpr<resolved_binary>(binary_op::sub, u_prime_v, v_prime_u, e.loc);
             auto denominator = make_rexpr<resolved_binary>(binary_op::mul, e.rhs, e.rhs, e.loc);
             return make_rexpr<resolved_binary>(binary_op::div, numerator, denominator, e.loc);
+        }
+        case binary_op::pow: {
+            // Only works if the rhs is an int
+            // Or id neither lhs nor rhs is a function of the derived value
+            auto lhs_prime = sym_diff(e.lhs, state, field);
+            auto rhs = as_number(e.rhs);
+            if (!rhs) {
+                auto rhs_prime = sym_diff(e.lhs, state, field);
+                auto lhs_num = as_number(constant_fold(lhs_prime).first);
+                auto rhs_num = as_number(constant_fold(rhs_prime).first);
+                if (!lhs_num || !rhs_num || (lhs_num.value() != 0) || (rhs_num.value() != 0)) {
+                    throw std::runtime_error(fmt::format("Internal compiler error, operator {} can't be differentiated.",
+                                                         to_string(e.op)));
+                }
+                return make_rexpr<resolved_int>(0, e.type, e.loc);
+            }
+
+            auto n_sub_1 = make_rexpr<resolved_int>(rhs.value()-1, type_of(e.rhs), location_of(e.rhs));
+            auto u_pow_n_sub_1 = make_rexpr<resolved_binary>(binary_op::pow, e.lhs, n_sub_1, e.type, e.loc);
+            auto n_mul_u_pow_n_sub_1 = make_rexpr<resolved_binary>(binary_op::mul, e.rhs, u_pow_n_sub_1, e.loc);
+            return make_rexpr<resolved_binary>(binary_op::mul, n_mul_u_pow_n_sub_1, lhs_prime, e.loc);
         }
         default: {
             throw std::runtime_error(fmt::format("Internal compiler error, operator {} can't be differentiated.",
