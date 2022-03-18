@@ -85,6 +85,12 @@ std::pair<resolved_mechanism, bool> constant_fold(const resolved_mechanism& e) {
         mech.initializations.push_back(result.first);
         made_changes |= result.second;
     }
+    for (const auto& c: e.on_events) {
+        reset_maps();
+        auto result = constant_fold(c, local_constant_map, rewrites);
+        mech.on_events.push_back(result.first);
+        made_changes |= result.second;
+    }
     for (const auto& c: e.evolutions) {
         reset_maps();
         auto result = constant_fold(c, local_constant_map, rewrites);
@@ -172,6 +178,14 @@ std::pair<r_expr, bool> constant_fold(const resolved_initial& e,
 {
     auto result = constant_fold(e.value, constant_map, rewrites);
     return {make_rexpr<resolved_initial>(e.identifier, result.first, e.type, e.loc), result.second};
+}
+
+std::pair<r_expr, bool> constant_fold(const resolved_on_event& e,
+                                      std::unordered_map<std::string, r_expr>& constant_map,
+                                      std::unordered_map<std::string, r_expr>& rewrites)
+{
+    auto result = constant_fold(e.value, constant_map, rewrites);
+    return {make_rexpr<resolved_on_event>(e.argument, e.identifier, result.first, e.type, e.loc), result.second};
 }
 
 std::pair<r_expr, bool> constant_fold(const resolved_evolve& e,

@@ -59,10 +59,9 @@ r_expr solver::get_b() {
 
     // Use the copy_propagate function to propagate the zero_state.
     std::unordered_map<std::string, r_expr> copy_map = {{state_name, zero_state}};
-    std::unordered_map<std::string, r_expr> rewrite_map = {};
 
     // Rerun optimizations to propagate the zero constant
-    auto e_copy = copy_propagate(state_deriv, copy_map, rewrite_map);
+    auto e_copy = copy_propagate(state_deriv, copy_map);
 
     return e_copy.first;
 }
@@ -99,14 +98,30 @@ r_expr solver::get_a() {
             }
             f_name.pop_back();
 
+            auto f_prime_type = fld->type;
+            auto quantity_type = std::get_if<resolved_quantity>(f_prime_type.get());
+            if (!quantity_type) {
+                throw std::runtime_error("Internal compiler error, expected a quantity_type for the identifier of the "
+                                         "state_field at " + to_string(obj->loc));
+            }
+            auto f_type = make_rtype<resolved_quantity>(quantity_type->type * normalized_type(quantity::time), src_location{});
+
             // For each field, differentiate w.r.t the state name and the field name
-            field_symdiff.push_back(make_rexpr<resolved_variable>(fld->name, sym_diff(fld->value, state_name, f_name),
-                                                                  fld->type, fld->loc));
+            auto f_symdiff = sym_diff(fld->value, state_name, f_name);
+
+            // Divide the answer by a unit of the same quantity of the state to get
+            auto one = make_rexpr<resolved_int>(1, f_type, state_loc);
+            f_symdiff = make_rexpr<resolved_binary>(binary_op::div, f_symdiff, one, location_of(f_symdiff));
+
+            field_symdiff.push_back(make_rexpr<resolved_variable>(fld->name, f_symdiff, fld->type, fld->loc));
         }
         e_symdiff = make_rexpr<resolved_object>(field_symdiff, obj->type, obj->loc);
     }
     else {
         e_symdiff = sym_diff(state_deriv_body, state_name);
+        // Divide the answer by a unit of the same quantity of the state to get
+        auto one = make_rexpr<resolved_int>(1, state_type, state_loc);
+        e_symdiff = make_rexpr<resolved_binary>(binary_op::div, e_symdiff, one, location_of(e_symdiff));
     }
 
     // Recanonicalize the derivatives with a new prefix to avoid name collisions.
@@ -123,8 +138,8 @@ r_expr solver::generate_solution(const r_expr& a, const r_expr& b, const r_expr&
     // TODO, check monolinearity! This is needed to make sure we don't attempt to
     // solve systems of ODEs that are not diagonal linear
 
-    auto a_opt = as_number(a);
-    auto b_opt = as_number(b);
+    auto a_opt = as_number(optimizer(a).optimize());
+    auto b_opt = as_number(optimizer(b).optimize());
 
     auto empty_loc = src_location{};
     auto time_type = make_rtype<resolved_quantity>(normalized_type(quantity::time), empty_loc);

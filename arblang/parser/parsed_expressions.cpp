@@ -184,6 +184,9 @@ std::string to_string(const parsed_mechanism& e, int indent) {
     for (const auto& p: e.initializations) {
         str += to_string(p, indent+1) + "\n";
     }
+    for (const auto& p: e.on_events) {
+        str += to_string(p, indent+1) + "\n";
+    }
     for (const auto& p: e.evolutions) {
         str += to_string(p, indent+1) + "\n";
     }
@@ -315,6 +318,18 @@ std::string to_string(const parsed_effect& e, int indent) {
     if (e.type) {
         str += to_string(e.type.value(), indent+1) + "\n";
     }
+    str += to_string(e.value, indent+1) + "\n";
+    str += double_indent + to_string(e.loc) + ")";
+    return str;
+}
+
+std::string to_string(const parsed_on_event& e, int indent) {
+    auto single_indent = std::string(indent*2, ' ');
+    auto double_indent = single_indent + "  ";
+
+    std::string str = single_indent + "(parsed_on_event\n";
+    str += to_string(e.argument, indent+1) + "\n";
+    str += to_string(e.identifier, indent+1) + "\n";
     str += to_string(e.value, indent+1) + "\n";
     str += double_indent + to_string(e.loc) + ")";
     return str;

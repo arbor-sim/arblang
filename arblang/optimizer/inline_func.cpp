@@ -60,6 +60,11 @@ resolved_mechanism inline_func(const resolved_mechanism& e) {
         rewrites.clear();
         mech.initializations.push_back(inline_func(c, reserved, rewrites, avail_funcs, pref));
     }
+    for (const auto& c: e.on_events) {
+        reserved = globals;
+        rewrites.clear();
+        mech.on_events.push_back(inline_func(c, reserved, rewrites, avail_funcs, pref));
+    }
     for (const auto& c: e.evolutions) {
         reserved = globals;
         rewrites.clear();
@@ -171,6 +176,16 @@ r_expr inline_func(const resolved_initial& e,
 {
     auto val_ssa = inline_func(e.value, reserved, rewrites, avail_funcs, pref);
     return make_rexpr<resolved_initial>(e.identifier, val_ssa, e.type, e.loc);
+}
+
+r_expr inline_func(const resolved_on_event& e,
+                   std::unordered_set<std::string>& reserved,
+                   std::unordered_map<std::string, r_expr>& rewrites,
+                   std::unordered_map<std::string, r_expr>& avail_funcs,
+                   const std::string& pref)
+{
+    auto val_ssa = inline_func(e.value, reserved, rewrites, avail_funcs, pref);
+    return make_rexpr<resolved_on_event>(e.argument, e.identifier, val_ssa, e.type, e.loc);
 }
 
 r_expr inline_func(const resolved_evolve& e,

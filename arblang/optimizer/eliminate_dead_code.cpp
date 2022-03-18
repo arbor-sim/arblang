@@ -19,6 +19,7 @@ std::pair<resolved_mechanism, bool> eliminate_dead_code(const resolved_mechanism
     }
     for (const auto& c: e.parameters) {
         dead_param.insert(std::get<resolved_parameter>(*c).name);
+        find_dead_code(c, dead_param);
     }
     for (const auto& c: e.bindings) {
         dead_param.insert(std::get<resolved_bind>(*c).name);
@@ -30,6 +31,9 @@ std::pair<resolved_mechanism, bool> eliminate_dead_code(const resolved_mechanism
         find_dead_code(c, dead_param);
     }
     for (const auto& c: e.initializations) {
+        find_dead_code(c, dead_param);
+    }
+    for (const auto& c: e.on_events) {
         find_dead_code(c, dead_param);
     }
     for (const auto& c: e.evolutions) {
@@ -113,6 +117,16 @@ std::pair<resolved_mechanism, bool> eliminate_dead_code(const resolved_mechanism
         }
         made_changes |= !dead_code.empty();
     }
+    for (const auto& c: e.on_events) {
+        dead_code.clear();
+        find_dead_code(c, dead_code);
+        if (!dead_code.empty()) {
+            mech.on_events.push_back(remove_dead_code(c, dead_code));
+        } else {
+            mech.on_events.push_back(c);
+        }
+        made_changes |= !dead_code.empty();
+    }
     for (const auto& c: e.evolutions) {
         dead_code.clear();
         find_dead_code(c, dead_code);
@@ -180,6 +194,10 @@ void find_dead_code(const resolved_function& e, std::unordered_set<std::string>&
 void find_dead_code(const resolved_bind& e, std::unordered_set<std::string>& dead_args) {}
 
 void find_dead_code(const resolved_initial& e, std::unordered_set<std::string>& dead_args) {
+    find_dead_code(e.value, dead_args);
+}
+
+void find_dead_code(const resolved_on_event& e, std::unordered_set<std::string>& dead_args) {
     find_dead_code(e.value, dead_args);
 }
 
@@ -274,6 +292,10 @@ r_expr remove_dead_code(const resolved_bind& e, const std::unordered_set<std::st
 
 r_expr remove_dead_code(const resolved_initial& e, const std::unordered_set<std::string>& dead_args) {
     return make_rexpr<resolved_initial>(e.identifier, remove_dead_code(e.value, dead_args), e.type, e.loc);
+}
+
+r_expr remove_dead_code(const resolved_on_event& e, const std::unordered_set<std::string>& dead_args) {
+    return make_rexpr<resolved_on_event>(e.argument, e.identifier, remove_dead_code(e.value, dead_args), e.type, e.loc);
 }
 
 r_expr remove_dead_code(const resolved_evolve& e, const std::unordered_set<std::string>& dead_args) {

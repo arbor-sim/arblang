@@ -33,6 +33,9 @@ parsed_mechanism normalize(const parsed_mechanism& e) {
     for (const auto& c: e.initializations) {
         mech.initializations.push_back(normalize(c));
     }
+    for (const auto& c: e.on_events) {
+        mech.on_events.push_back(normalize(c));
+    }
     for (const auto& c: e.effects) {
         mech.effects.push_back(normalize(c));
     }
@@ -64,6 +67,9 @@ p_expr normalize(const parsed_bind& e) {
 }
 p_expr normalize(const parsed_initial& e) {
     return make_pexpr<parsed_initial>(e.identifier, normalize(e.value), e.loc);
+}
+p_expr normalize(const parsed_on_event& e) {
+    return make_pexpr<parsed_on_event>(e.argument, e.identifier, normalize(e.value), e.loc);
 }
 p_expr normalize(const parsed_evolve& e) {
     return make_pexpr<parsed_evolve>(e.identifier, normalize(e.value), e.loc);

@@ -54,6 +54,11 @@ r_expr sym_diff(const resolved_initial& e, const std::string& state, const std::
                              "during symbolic differentiation.");
 }
 
+r_expr sym_diff(const resolved_on_event& e, const std::string& state, const std::optional<std::string>& field) {
+    throw std::runtime_error("Internal compiler error, didn't expect a resolved_on_event "
+                             "during symbolic differentiation.");
+}
+
 r_expr sym_diff(const resolved_evolve& e, const std::string& state, const std::optional<std::string>& field) {
     throw std::runtime_error("Internal compiler error, didn't expect a resolved_evolve "
                              "during symbolic differentiation.");
@@ -151,11 +156,13 @@ r_expr sym_diff(const resolved_binary& e, const std::string& state, const std::o
             return make_rexpr<resolved_binary>(binary_op::add, u_prime_v, v_prime_u, e.loc);
         }
         case binary_op::div: {
-            auto u_prime_v = make_rexpr<resolved_binary>(binary_op::mul, sym_diff(e.lhs, state, field), e.rhs, e.loc);
-            auto v_prime_u = make_rexpr<resolved_binary>(binary_op::mul, e.lhs, sym_diff(e.rhs, state, field), e.loc);
-            auto numerator = make_rexpr<resolved_binary>(binary_op::sub, u_prime_v, v_prime_u, e.loc);
-            auto denominator = make_rexpr<resolved_binary>(binary_op::mul, e.rhs, e.rhs, e.loc);
-            return make_rexpr<resolved_binary>(binary_op::div, numerator, denominator, e.loc);
+            // u'/v   - (u/v^2 * v')
+            // l_term - r_term
+            auto l_term        = make_rexpr<resolved_binary>(binary_op::div, sym_diff(e.lhs, state, field), e.rhs, e.loc);
+            auto v_sq          = make_rexpr<resolved_binary>(binary_op::mul, e.rhs, e.rhs, e.loc);
+            auto u_div_v_sq    = make_rexpr<resolved_binary>(binary_op::div, e.lhs, v_sq, e.loc);
+            auto r_term        = make_rexpr<resolved_binary>(binary_op::mul,u_div_v_sq, sym_diff(e.rhs, state, field), e.loc);
+            return make_rexpr<resolved_binary>(binary_op::sub, l_term, r_term, e.loc);
         }
         case binary_op::pow: {
             // Only works if the rhs is an int

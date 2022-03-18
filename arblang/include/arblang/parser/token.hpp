@@ -80,7 +80,7 @@ enum class tok {
     parameter, constant, state,
     record, function, import,
     with, let, as, ret,
-    effect, evolve, initial,
+    effect, evolve, initial, on_event,
     bind, param_export, density,
 
     // quantity keywords

@@ -76,8 +76,8 @@ int main(int argc, char **argv) {
     auto opt_1 = optimizer(m_inlined);
     auto m_fin = opt_1.optimize();
 
-    m_fin = solve(m_fin);
-    auto m_printable = printable_mechanism(m_fin);
+    m_fin = solve(m_fin, "i", "g");
+    auto m_printable = printable_mechanism(m_fin, "i", "g");
 
     std::ofstream fo_hpp, fo_cpp;
     fo_hpp.open(opt_output+".hpp");

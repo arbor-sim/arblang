@@ -61,6 +61,13 @@ std::pair<resolved_mechanism, bool> copy_propagate(const resolved_mechanism& e) 
         mech.initializations.push_back(result.first);
         made_changes |= result.second;
     }
+    for (const auto& c: e.on_events) {
+        local_copy_map.clear();
+        rewrites.clear();
+        auto result = copy_propagate(c, local_copy_map, rewrites);
+        mech.on_events.push_back(result.first);
+        made_changes |= result.second;
+    }
     for (const auto& c: e.evolutions) {
         local_copy_map.clear();
         rewrites.clear();
@@ -157,6 +164,14 @@ std::pair<r_expr, bool> copy_propagate(const resolved_initial& e,
 {
     auto result = copy_propagate(e.value, copy_map, rewrites);
     return {make_rexpr<resolved_initial>(e.identifier, result.first, e.type, e.loc), result.second};
+}
+
+std::pair<r_expr, bool> copy_propagate(const resolved_on_event& e,
+                                       std::unordered_map<std::string, r_expr>& copy_map,
+                                       std::unordered_map<std::string, r_expr>& rewrites)
+{
+    auto result = copy_propagate(e.value, copy_map, rewrites);
+    return {make_rexpr<resolved_on_event>(e.argument, e.identifier, result.first, e.type, e.loc), result.second};
 }
 
 std::pair<r_expr, bool> copy_propagate(const resolved_evolve& e,
@@ -282,6 +297,11 @@ std::pair<r_expr, bool> copy_propagate(const r_expr& e,
                                        std::unordered_map<std::string, r_expr>& copy_map,
                                        std::unordered_map<std::string, r_expr>& rewrites)
 {
+    return std::visit([&](auto& c) {return copy_propagate(c, copy_map, rewrites);}, *e);
+}
+
+std::pair<r_expr, bool> copy_propagate(const r_expr& e, std::unordered_map<std::string, r_expr>& copy_map) {
+    std::unordered_map<std::string, r_expr> rewrites = {};
     return std::visit([&](auto& c) {return copy_propagate(c, copy_map, rewrites);}, *e);
 }
 

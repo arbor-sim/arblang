@@ -34,11 +34,6 @@ resolved_mechanism single_assign(const resolved_mechanism& e) {
         reserved = globals;
         mech.constants.push_back(single_assign(c, reserved, rewrites, pref));
     }
-    for (const auto& c: e.parameters) {
-        reserved = globals;
-        rewrites.clear();
-        mech.parameters.push_back(single_assign(c, reserved, rewrites, pref));
-    }
     for (const auto& c: e.bindings) {
         reserved = globals;
         rewrites.clear();
@@ -54,21 +49,36 @@ resolved_mechanism single_assign(const resolved_mechanism& e) {
         rewrites.clear();
         mech.functions.push_back(single_assign(c, reserved, rewrites, pref));
     }
+    // parameters and init share the same reserved_map
+    reserved = globals;
+    for (const auto& c: e.parameters) {
+        rewrites.clear();
+        mech.parameters.push_back(single_assign(c, reserved, rewrites, pref));
+    }
     for (const auto& c: e.initializations) {
-        reserved = globals;
         rewrites.clear();
         mech.initializations.push_back(single_assign(c, reserved, rewrites, pref));
     }
+
+    reserved = globals;
+    for (const auto& c: e.on_events) {
+        rewrites.clear();
+        mech.on_events.push_back(single_assign(c, reserved, rewrites, pref));
+    }
+
+    reserved = globals;
     for (const auto& c: e.evolutions) {
-        reserved = globals;
         rewrites.clear();
         mech.evolutions.push_back(single_assign(c, reserved, rewrites, pref));
     }
+
+    reserved = globals;
     for (const auto& c: e.effects) {
-        reserved = globals;
         rewrites.clear();
         mech.effects.push_back(single_assign(c, reserved, rewrites, pref));
     }
+
+    reserved = globals;
     for (const auto& c: e.exports) {
         reserved = globals;
         rewrites.clear();
@@ -158,6 +168,15 @@ r_expr single_assign(const resolved_initial& e,
 {
     auto val_ssa = single_assign(e.value, reserved, rewrites, pref);
     return make_rexpr<resolved_initial>(e.identifier, val_ssa, e.type, e.loc);
+}
+
+r_expr single_assign(const resolved_on_event& e,
+                     std::unordered_set<std::string>& reserved,
+                     std::unordered_map<std::string, r_expr>& rewrites,
+                     const std::string& pref)
+{
+    auto val_ssa = single_assign(e.value, reserved, rewrites, pref);
+    return make_rexpr<resolved_on_event>(e.argument, e.identifier, val_ssa, e.type, e.loc);
 }
 
 r_expr single_assign(const resolved_evolve& e,

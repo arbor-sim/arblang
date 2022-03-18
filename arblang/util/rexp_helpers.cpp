@@ -38,5 +38,17 @@ std::optional<double> as_number(const r_expr& e) {
     return {};
 }
 
+bool is_trivial(const r_expr& e) {
+    if (as_number(e)) return true;
+    if (auto obj = std::get_if<resolved_object>(e.get())) {
+        for (const auto& v: obj->field_values()) {
+            if (!as_number(v)) return false;
+        }
+        return true;
+    }
+    return false;
+}
+
+
 } // namespace resolved_ir
 } // namespace al

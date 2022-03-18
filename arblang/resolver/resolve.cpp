@@ -187,7 +187,54 @@ r_expr resolve(const parsed_initial& e, const in_scope_map& map) {
     }
     // The 'initial' expression refers to the state using a resolved_argument.
     auto s_expr = map.state_map.at(i_name);
+    if (*type_of(s_expr) != *i_type) {
+        throw std::runtime_error(fmt::format("type mismatch between {} and {} at {}.",
+                                             to_string(type_of(s_expr)), to_string(i_type), to_string(id.loc)));
+    }
+
     return make_rexpr<resolved_initial>(s_expr, i_val, i_type, e.loc);
+}
+
+r_expr resolve(const parsed_on_event& e, const in_scope_map& map) {
+    auto id = std::get<parsed_identifier>(*e.identifier);
+    auto i_name = id.name;
+
+    if (!map.state_map.count(i_name)) {
+        throw std::runtime_error(fmt::format("variable {} modified in on_event at {} is not a state variable.", i_name, to_string(e.loc)));
+    }
+
+    auto a_id = std::get<parsed_identifier>(*e.argument);
+    if (!a_id.type) {
+        throw std::runtime_error(fmt::format("on_event argument {} at {} missing quantity type.",
+                                             a_id.name, to_string(a_id.loc)));
+    }
+
+    auto a_type = resolve_type(a_id.type.value(), map.type_map);
+    if (std::get_if<resolved_record>(a_type.get())) {
+        throw std::runtime_error(fmt::format("on_event argument {} at {} has invalid quantity type {}; "
+                                             "a single (non-record) argument iss expected.",
+                                             a_id.name, to_string(a_id.loc), to_string(a_type)));
+    }
+
+    auto available_map = map;
+    auto o_arg = make_rexpr<resolved_argument>(a_id.name, a_type, a_id.loc);
+    available_map.local_map.insert_or_assign(a_id.name, o_arg);
+
+    // Resolve the value of the 'on_event' expression
+    auto o_val = resolve(e.value, available_map);
+    auto o_type = type_of(o_val);
+
+    // Check that the type of the identifier matches the type of the value
+    if (id.type) {
+        auto id_type = resolve_type(id.type.value(), map.type_map);
+        if (*id_type != *o_type) {
+            throw std::runtime_error(fmt::format("type mismatch between {} and {} at {}.",
+                                                 to_string(id_type), to_string(o_type), to_string(id.loc)));
+        }
+    }
+    // The 'initial' expression refers to the state using a resolved_argument.
+    auto s_expr = map.state_map.at(i_name);
+    return make_rexpr<resolved_on_event>(o_arg, s_expr, o_val, o_type, e.loc);
 }
 
 r_expr resolve(const parsed_evolve& e, const in_scope_map& map) {
@@ -756,6 +803,9 @@ resolved_mechanism resolve(const parsed_mechanism& e) {
     }
     for (const auto& c: e.initializations) {
         mech.initializations.push_back(resolve(c, available_map));
+    }
+    for (const auto& c: e.on_events) {
+        mech.on_events.push_back(resolve(c, available_map));
     }
     for (const auto& c: e.evolutions) {
         mech.evolutions.push_back(resolve(c, available_map));

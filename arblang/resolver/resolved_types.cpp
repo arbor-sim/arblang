@@ -12,7 +12,7 @@ using namespace parsed_type_ir;
 // normalized_type
 normalized_type::normalized_type(quantity q) {
     switch (q) {
-        //                                                   m  g  s  A mol K
+        //                                                   m kg  s  A mol K
         case quantity::real:          quantity_exponents = { 0, 0, 0, 0, 0, 0}; break;
         case quantity::length:        quantity_exponents = { 1, 0, 0, 0, 0, 0}; break;
         case quantity::mass:          quantity_exponents = { 0, 1, 0, 0, 0, 0}; break;

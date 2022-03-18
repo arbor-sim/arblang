@@ -65,8 +65,8 @@ r_type make_rtype(Args&&... args) {
     return r_type(new resolved_type(T(std::forward<Args>(args)...)));
 }
 
-r_type resolve_type(const bindable& b, const src_location& loc);
-r_type resolve_type(const affectable& a, const src_location& loc);
+r_type resolve_type(const bindable& b, const src_location& loc = {});
+r_type resolve_type(const affectable& a, const src_location& loc = {});
 r_type resolve_type(const p_type&, const std::unordered_map<std::string, r_type>&);
 
 std::optional<r_type> derive(const r_type&);

@@ -45,7 +45,7 @@ std::stringstream print_mechanism(const printable_mechanism& mech, const std::st
     // Open namespaces
     out << fmt::format("namespace arb {{\n");
     out << fmt::format("namespace {} {{\n", cpp_namespace);
-    out << fmt::format("namespace kernel_{} {{\n\n", mech.name);
+    out << fmt::format("namespace kernel_{} {{\n\n", mech.mech_name);
 
     // Print aliases && constexpr
     out << "using ::arb::math::exprelr;\n"
@@ -217,34 +217,35 @@ std::stringstream print_mechanism(const printable_mechanism& mech, const std::st
         }
         return {external_access, ions_accessed};
     };
-    auto print_read = [&](const auto& map) {
+    auto print_read = [&](const auto& map, std::string indent) {
         for (const auto& [var, ptr]: map) {
             switch (ptr.pointer_kind) {
                 case printable_mechanism::storage_class::ionic:
                     if (ptr.scale) {
-                        out << fmt::format("       auto {} = {}[{}{}]*{};\n", var, ptr.pointer_name, ion_idx_var_pref, ptr.ion.value(), ptr.scale.value());
+                        out << fmt::format("{}auto {} = {}[{}{}]*{};\n", indent, var, ptr.pointer_name, ion_idx_var_pref, ptr.ion.value(), ptr.scale.value());
                     } else {
-                        out << fmt::format("       auto {} = {}[{}{}];\n", var, ptr.pointer_name, ion_idx_var_pref, ptr.ion.value());
+                        out << fmt::format("{}auto {} = {}[{}{}];\n", indent, var, ptr.pointer_name, ion_idx_var_pref, ptr.ion.value());
                     }
                     break;
                 case printable_mechanism::storage_class::external:
                     if (ptr.scale) {
-                        out << fmt::format("       auto {} = {}[{}]*{};\n", var, ptr.pointer_name, node_idx_var, ptr.scale.value());
+                        out << fmt::format("{}auto {} = {}[{}]*{};\n", indent, var, ptr.pointer_name, node_idx_var, ptr.scale.value());
                     } else {
-                        out << fmt::format("       auto {} = {}[{}];\n", var, ptr.pointer_name, node_idx_var);
+                        out << fmt::format("{}auto {} = {}[{}];\n", indent, var, ptr.pointer_name, node_idx_var);
                     }
                     break;
                 case printable_mechanism::storage_class::internal:
                     if (ptr.scale) {
-                        out << fmt::format("       auto {} = {}[i_]*{};\n", var, ptr.pointer_name, ptr.scale.value());
+                        out << fmt::format("{}auto {} = {}[i_]*{};\n", indent, var, ptr.pointer_name, ptr.scale.value());
                     } else {
-                        out << fmt::format("       auto {} = {}[i_];\n", var, ptr.pointer_name);
+                        out << fmt::format("{}auto {} = {}[i_];\n", indent, var, ptr.pointer_name);
                     }
                     break;
+                default: break;
             }
         }
     };
-    auto print_write = [&](const auto& map) {
+    auto print_write = [&](const auto& map, std::string indent) {
         // If an external or ionic storage class is written to multiple times,
         // write the sum of the variables only once.
         std::unordered_map<printable_mechanism::storage_info, std::vector<std::string>> reduced_map;
@@ -264,34 +265,35 @@ std::stringstream print_mechanism(const printable_mechanism& mech, const std::st
                     var_val += v;
                     first = false;
                 }
-                out << fmt::format("       auto {} = {};\n", var_name, var_val);
+                out << fmt::format("{}auto {} = {};\n", indent, var_name, var_val);
             }
             switch (ptr.pointer_kind) {
                 case printable_mechanism::storage_class::ionic:
                     if (ptr.scale) {
-                        out << fmt::format("       {0}[{1}{2}] = fma({5}*{3}[i_], {4}, {0}[{1}{2}]);\n",
-                                           ptr.pointer_name, ion_idx_var_pref, ptr.ion.value(), mech_node_weight, var_name, ptr.scale.value());
+                        out << fmt::format("{6}{0}[{1}{2}] = fma({5}*{3}[i_], {4}, {0}[{1}{2}]);\n",
+                                           ptr.pointer_name, ion_idx_var_pref, ptr.ion.value(), mech_node_weight, var_name, ptr.scale.value(), indent);
                     } else {
-                        out << fmt::format("       {0}[{1}{2}] = fma({3}[i_], {4}, {0}[{1}{2}]);\n",
-                                           ptr.pointer_name, ion_idx_var_pref, ptr.ion.value(), mech_node_weight, var_name);
+                        out << fmt::format("{5}{0}[{1}{2}] = fma({3}[i_], {4}, {0}[{1}{2}]);\n",
+                                           ptr.pointer_name, ion_idx_var_pref, ptr.ion.value(), mech_node_weight, var_name, indent);
                     }
                     break;
                 case printable_mechanism::storage_class::external:
                     if (ptr.scale) {
-                        out << fmt::format("       {0}[{1}] = fma({4}*{2}[i_], {3}, {0}[{1}]);\n",
-                                           ptr.pointer_name, node_idx_var, mech_node_weight, var_name, ptr.scale.value());
+                        out << fmt::format("{5}{0}[{1}] = fma({4}*{2}[i_], {3}, {0}[{1}]);\n",
+                                           ptr.pointer_name, node_idx_var, mech_node_weight, var_name, ptr.scale.value(), indent);
                     } else {
-                        out << fmt::format("       {0}[{1}] = fma({2}[i_], {3}, {0}[{1}]);\n",
-                                           ptr.pointer_name, node_idx_var, mech_node_weight, var_name);
+                        out << fmt::format("{4}{0}[{1}] = fma({2}[i_], {3}, {0}[{1}]);\n",
+                                           ptr.pointer_name, node_idx_var, mech_node_weight, var_name, indent);
                     }
                     break;
                 case printable_mechanism::storage_class::internal:
                     if (ptr.scale) {
-                        out << fmt::format("       {0}[i_] = {2}*{1};\n", ptr.pointer_name, var_name, ptr.scale.value());
+                        out << fmt::format("{3}{0}[i_] = {2}*{1};\n", ptr.pointer_name, var_name, ptr.scale.value(), indent);
                     } else {
-                        out << fmt::format("       {0}[i_] = {1};\n", ptr.pointer_name, var_name);
+                        out << fmt::format("{2}{0}[i_] = {1};\n", ptr.pointer_name, var_name, indent);
                     }
                     break;
+                default: break;
             }
         }
     };
@@ -314,20 +316,20 @@ std::stringstream print_mechanism(const printable_mechanism& mech, const std::st
             }
             // print reads
             out << "       // Perform memory reads\n";
-            print_read(mech.init_read_map);
+            print_read(mech.init_read_map, "       ");
 
             // print expressions
+            out << "       // Perform calculations\n";
             for (const auto &p: mech.procedure_pack.assigned_parameters) {
-                print(p, out, "       ");
+                print_expression(p, out, "       ");
             }
             for (const auto &p: mech.procedure_pack.initializations) {
-                out << "       // Perform calculations\n";
-                print(p, out, "       ");
+                print_expression(p, out, "       ");
             }
 
             // print writes
             out << "       // Perform memory writes\n";
-            print_write(mech.init_write_map);
+            print_write(mech.init_write_map, "       ");
 
             out << fmt::format("    }}\n");
         }
@@ -354,17 +356,17 @@ std::stringstream print_mechanism(const printable_mechanism& mech, const std::st
             }
             // print reads
             out << "       // Perform memory reads\n";
-            print_read(mech.evolve_read_map);
+            print_read(mech.evolve_read_map, "       ");
 
             // print expressions
             for (const auto &p: mech.procedure_pack.evolutions) {
                 out << "       // Perform calculations\n";
-                print(p, out, "       ");
+                print_expression(p, out, "       ");
             }
 
             // print writes
             out << "       // Perform memory writes\n";
-            print_write(mech.evolve_write_map);
+            print_write(mech.evolve_write_map, "       ");
 
             out << fmt::format("    }}\n");
         }
@@ -389,28 +391,67 @@ std::stringstream print_mechanism(const printable_mechanism& mech, const std::st
             }
             // print reads
             out << "       // Perform memory reads\n";
-            print_read(mech.effect_read_map);
+            print_read(mech.effect_read_map, "       ");
 
             // print expressions
             for (const auto &p: mech.procedure_pack.effects) {
                 out << "       // Perform calculations\n";
-                print(p, out, "       ");
+                print_expression(p, out, "       ");
             }
 
             // print writes
             out << "       // Perform memory writes\n";
-            print_write(mech.effect_write_map);
+            print_write(mech.effect_write_map, "       ");
 
             out << fmt::format("    }}\n");
         }
         out << fmt::format("}}\n");
     }
-    // print write_ions, apply_events, post_events (empty)
+    // print apply_events
     {
-        auto read_access  = check_access(mech.evolve_read_map);
-        auto write_access = check_access(mech.evolve_write_map);
+        auto read_access = check_access(mech.event_read_map);
+        auto write_access = check_access(mech.event_write_map);
+        out << fmt::format(FMT_COMPILE("static void apply_events(arb_mechanism_ppack* pp, arb_deliverable_event_stream* stream_ptr) {{\n"));
+
+        if (!mech.procedure_pack.on_events.empty()) {
+            out << fmt::format(FMT_COMPILE("    PPACK_IFACE_BLOCK;\n"
+                                           "    auto ncell = stream_ptr->n_streams;\n"
+                                           "    for (arb_size_type c = 0; c<ncell; ++c) {{\n"
+                                           "        auto begin  = stream_ptr->events + stream_ptr->begin[c];\n"
+                                           "        auto end    = stream_ptr->events + stream_ptr->end[c];\n"
+                                           "        for (auto p = begin; p<end; ++p) {{\n"
+                                           "            auto i_     = p->mech_index;\n"));
+
+            // find the and read stream members
+            for (const auto&[var, ptr]: mech.event_read_map) {
+                if (ptr.pointer_kind == printable_mechanism::storage_class::stream_member) {
+                    out << fmt::format("            auto {}     = p->{};\n", var, ptr.pointer_name);
+                }
+            }
+            out << fmt::format(FMT_COMPILE("            if (p->mech_id=={0}) {{\n"), mech_id);
+
+            // print reads
+            out << "                // Perform memory reads\n";
+            print_read(mech.event_read_map, "                ");
+
+            // print expressions
+            for (const auto &p: mech.procedure_pack.on_events) {
+                out << "                // Perform calculations\n";
+                print_expression(p, out, "                ");
+            }
+
+            // print writes
+            out << "                // Perform memory writes\n";
+            print_write(mech.event_write_map, "                ");
+            out << "            }\n"
+                   "        }\n"
+                   "    }\n";
+        }
+        out << "}\n";
+    }
+    // print write_ions, post_events (empty)
+    {
         out << fmt::format("static void write_ions(arb_mechanism_ppack*) {{}}\n");
-        out << fmt::format("static void apply_events(arb_mechanism_ppack*, arb_deliverable_event_stream*) {{}}\n");
         out << fmt::format("static void post_event(arb_mechanism_ppack*) {{}}\n");
     }
     // undef PPACK_IFACE_BLOCK
@@ -419,12 +460,12 @@ std::stringstream print_mechanism(const printable_mechanism& mech, const std::st
     out << "#undef PPACK_IFACE_BLOCK\n";
     out << fmt::format("}} // namespace arb\n");
     out << fmt::format("}} // namespace {} {{\n", cpp_namespace);
-    out << fmt::format("}} // namespace kernel_{} {{\n", mech.name);
+    out << fmt::format("}} // namespace kernel_{} {{\n", mech.mech_name);
 
     // define extern "C"
-    std::string full_namespace = "arb::" + cpp_namespace + "::kernel_" + mech.name;
+    std::string full_namespace = "arb::" + cpp_namespace + "::kernel_" + mech.mech_name;
     out << fmt::format("extern \"C\" {{\n");
-    out << fmt::format("  arb_mechanism_interface* make_arb_{}_catalogue_{}_interface_multicore() {{\n", cpp_namespace, mech.name);
+    out << fmt::format("  arb_mechanism_interface* make_arb_{}_catalogue_{}_interface_multicore() {{\n", cpp_namespace, mech.mech_name);
     out << fmt::format("    static arb_mechanism_interface result;\n");
     out << fmt::format("    result.partition_width = {}::simd_width_;\n", full_namespace);
     out << fmt::format("    result.backend = arb_backend_kind_cpu;\n");

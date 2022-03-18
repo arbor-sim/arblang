@@ -147,6 +147,18 @@ struct hash<resolved_initial> {
 };
 
 template <>
+struct hash<resolved_on_event> {
+    inline size_t operator()(const resolved_on_event& e) const {
+        std::size_t res = 0;
+        hash_combine(res, *e.argument);
+        hash_combine(res, *e.identifier);
+        hash_combine(res, *e.value);
+        hash_combine(res, *e.type);
+        return res;
+    }
+};
+
+template <>
 struct hash<resolved_evolve> {
     inline size_t operator()(const resolved_evolve& e) const {
         std::size_t res = 0;

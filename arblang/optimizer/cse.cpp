@@ -56,6 +56,13 @@ std::pair<resolved_mechanism, bool> cse(const resolved_mechanism& e) {
         mech.initializations.push_back(result.first);
         made_changes |= result.second;
     }
+    for (const auto& c: e.on_events) {
+        expr_map.clear();
+        rewrites.clear();
+        auto result = cse(c, expr_map, rewrites);
+        mech.on_events.push_back(result.first);
+        made_changes |= result.second;
+    }
     for (const auto& c: e.evolutions) {
         expr_map.clear();
         rewrites.clear();
@@ -152,6 +159,14 @@ std::pair<r_expr, bool> cse(const resolved_initial& e,
 {
     auto val_cse = cse(e.value, expr_map, rewrites);
     return {make_rexpr<resolved_initial>(e.identifier, val_cse.first, e.type, e.loc), val_cse.second};
+}
+
+std::pair<r_expr, bool> cse(const resolved_on_event& e,
+                            std::unordered_map<resolved_expr, r_expr>& expr_map,
+                            std::unordered_map<std::string, r_expr>& rewrites)
+{
+    auto val_cse = cse(e.value, expr_map, rewrites);
+    return {make_rexpr<resolved_on_event>(e.argument, e.identifier, val_cse.first, e.type, e.loc), val_cse.second};
 }
 
 std::pair<r_expr, bool> cse(const resolved_evolve& e,

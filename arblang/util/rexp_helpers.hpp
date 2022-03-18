@@ -11,5 +11,7 @@ std::optional<resolved_let> get_let(const r_expr& expr);
 
 std::optional<double> as_number(const r_expr& e);
 
+bool is_trivial(const r_expr& e);
+
 } // namespace resolved_ir
 } // namespace al

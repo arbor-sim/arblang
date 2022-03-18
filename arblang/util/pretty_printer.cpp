@@ -28,6 +28,9 @@ std::string pretty_print(const resolved_mechanism& e) {
     for (const auto& p: e.initializations) {
         str += pretty_print(p) + "\n";
     }
+    for (const auto& p: e.on_events) {
+        str += pretty_print(p) + "\n";
+    }
     for (const auto& p: e.evolutions) {
         str += pretty_print(p) + "\n";
     }
@@ -84,6 +87,14 @@ std::string pretty_print(const resolved_bind& e) {
 std::string pretty_print(const resolved_initial& e) {
     std::string str = "initial " + pretty_print(e.identifier) + ":" + pretty_print(e.type) +
                     " =\n" + pretty_print(e.value);
+    if (str.back() != ';') str += ";";
+    return str;
+}
+
+std::string pretty_print(const resolved_on_event& e) {
+    std::string str = "on_event(" + pretty_print(e.argument) + ") " +
+                      pretty_print(e.identifier) + ":" + pretty_print(e.type) +
+                      " =\n" + pretty_print(e.value);
     if (str.back() != ';') str += ";";
     return str;
 }
@@ -279,6 +290,15 @@ std::string expand(const resolved_bind& e, int indent) {
 std::string expand(const resolved_initial& e, int indent) {
     auto single_indent = std::string(indent*2, ' ');
     std::string str = single_indent + "(initial\n";
+    str += expand(e.identifier, indent+1) + "\n";
+    str += expand(e.value, indent+1);
+    return str + ")";
+}
+
+std::string expand(const resolved_on_event& e, int indent) {
+    auto single_indent = std::string(indent*2, ' ');
+    std::string str = single_indent + "(on_event\n";
+    str += expand(e.argument, indent+1) + "\n";
     str += expand(e.identifier, indent+1) + "\n";
     str += expand(e.value, indent+1);
     return str + ")";

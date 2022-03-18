@@ -56,6 +56,10 @@ void read_arguments(const resolved_initial& e, std::vector<std::string>& vec) {
     read_arguments(e.value, vec);
 }
 
+void read_arguments(const resolved_on_event& e, std::vector<std::string>& vec) {
+    read_arguments(e.value, vec);
+}
+
 void read_arguments(const resolved_evolve& e, std::vector<std::string>& vec) {
     read_arguments(e.value, vec);
 }

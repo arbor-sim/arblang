@@ -25,6 +25,7 @@ struct parsed_bind;
 struct parsed_initial;
 struct parsed_evolve;
 struct parsed_effect;
+struct parsed_on_event;
 struct parsed_export;
 struct parsed_call;
 struct parsed_object;
@@ -47,6 +48,7 @@ using parsed_expr = std::variant<
     parsed_initial,
     parsed_evolve,
     parsed_effect,
+    parsed_on_event,
     parsed_export,
     parsed_call,
     parsed_object,
@@ -73,6 +75,7 @@ struct parsed_mechanism {
     std::vector<p_expr> records;        // expect parsed_record_alias
     std::vector<p_expr> bindings;       // expect parsed_bind
     std::vector<p_expr> initializations; // expect parsed_initial
+    std::vector<p_expr> on_events;      // expect parsed_on_event
     std::vector<p_expr> effects;        // expect effects_expr
     std::vector<p_expr> evolutions;     // expect parsed_evolve
     std::vector<p_expr> exports;        // expect parsed_export
@@ -168,6 +171,17 @@ struct parsed_effect {
     parsed_effect(const token& t, const std::string& ion, std::optional<parsed_type_ir::p_type> type, p_expr value, const src_location& loc);
     parsed_effect(affectable effect, std::optional<std::string> ion, std::optional<parsed_type_ir::p_type> type, p_expr value, const src_location& loc):
         effect(std::move(effect)), ion(std::move(ion)), type(std::move(type)), value(std::move(value)), loc(loc) {};
+};
+
+// Top level on_events
+struct parsed_on_event {
+    p_expr argument;   // expect parsed_identifier
+    p_expr identifier; // expect parsed_identifier
+    p_expr value;
+    src_location loc;
+
+    parsed_on_event(p_expr argument, p_expr identifier, p_expr value, const src_location& loc):
+            argument(std::move(argument)), identifier(std::move(identifier)), value(std::move(value)), loc(loc) {};
 };
 
 // Top level exports

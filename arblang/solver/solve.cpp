@@ -14,9 +14,13 @@
 namespace al {
 namespace resolved_ir {
 
-resolved_effect get_ig_pair(const resolved_effect& e, const std::string& v, std::unordered_set<std::string>& temps);
+resolved_effect get_ig_pair(const resolved_effect& e,
+                            const std::string& v,
+                            std::unordered_set<std::string>& temps,
+                            const std::string& i_name,
+                            const std::string& g_name);
 
-resolved_mechanism solve(const resolved_mechanism& e) {
+resolved_mechanism solve(const resolved_mechanism& e, const std::string& i_name, const std::string& g_name) {
     resolved_mechanism mech;
     if (!e.constants.empty()) {
         throw std::runtime_error("Internal compiler error, unexpected constant at this stage of the compiler");
@@ -32,6 +36,9 @@ resolved_mechanism solve(const resolved_mechanism& e) {
     }
     for (const auto& c: e.initializations) {
         mech.initializations.push_back(c);
+    }
+    for (const auto& c: e.on_events) {
+        mech.on_events.push_back(c);
     }
     for (const auto& c: e.evolutions) {
         // Solve the ODE of a resolved_evolve
@@ -58,7 +65,7 @@ resolved_mechanism solve(const resolved_mechanism& e) {
         // {current_density, conductivity} and {current, conductance}
         // contributions respectively
         auto effect = std::get<resolved_effect>(*c);
-        mech.effects.push_back(make_rexpr<resolved_effect>(get_ig_pair(effect, v_sym, temps)));
+        mech.effects.push_back(make_rexpr<resolved_effect>(get_ig_pair(effect, v_sym, temps, i_name, g_name)));
     }
     for (const auto& c: e.exports) {
         mech.exports.push_back(c);
@@ -69,7 +76,12 @@ resolved_mechanism solve(const resolved_mechanism& e) {
     return mech;
 }
 
-resolved_effect get_ig_pair(const resolved_effect& e, const std::string& v, std::unordered_set<std::string>& temps) {
+resolved_effect get_ig_pair(const resolved_effect& e,
+                            const std::string& v,
+                            std::unordered_set<std::string>& temps,
+                            const std::string& i_name,
+                            const std::string& g_name)
+{
     if (v.empty()) {
         return e;
     }
@@ -99,17 +111,17 @@ resolved_effect get_ig_pair(const resolved_effect& e, const std::string& v, std:
     g = make_rexpr<resolved_binary>(binary_op::div, g, unit_voltage, src_location{});
 
     // Combine i and g into a resolved_object
-    std::string i_name = "_sim_i";
-    std::string g_name = "_sim_g";
+    std::string i_ion_name = i_name;
+    std::string g_ion_name = g_name;
     if (e.ion) {
-        i_name += ("_" + e.ion.value());
-        g_name += ("_" + e.ion.value());
+        i_ion_name += ("_" + e.ion.value());
+        g_ion_name += ("_" + e.ion.value());
     }
     auto ig_type = make_rtype<resolved_record>(
-            std::vector<std::pair<std::string, r_type>>{{i_name, type_of(i)}, {g_name, type_of(g)}}, src_location{});
+            std::vector<std::pair<std::string, r_type>>{{i_ion_name, type_of(i)}, {g_ion_name, type_of(g)}}, src_location{});
     std::vector<r_expr> ig_fields = {
-        make_rexpr<resolved_variable>(i_name, i, type_of(i), src_location{}),
-        make_rexpr<resolved_variable>(g_name, g, type_of(g), src_location{})
+        make_rexpr<resolved_variable>(i_ion_name, i, type_of(i), src_location{}),
+        make_rexpr<resolved_variable>(g_ion_name, g, type_of(g), src_location{})
     };
     auto ig_pair = make_rexpr<resolved_object>(ig_fields, ig_type, src_location{});
 

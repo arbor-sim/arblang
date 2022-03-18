@@ -8,7 +8,7 @@
 namespace al {
 namespace resolved_ir {
 
-void print(const r_expr&, std::stringstream&, const std::string& indent="");
+void print_expression(const r_expr&, std::stringstream&, const std::string& indent="");
 
 } // namespace resolved_ir
 } // namespace al

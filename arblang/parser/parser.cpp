@@ -82,6 +82,9 @@ parsed_mechanism parser::parse_mechanism() {
             case tok::initial:
                 m.initializations.push_back(parse_initial());
                 break;
+            case tok::on_event:
+                m.on_events.push_back(parse_on_event());
+                break;
             case tok::param_export:
                 m.exports.push_back(parse_export());
                 break;
@@ -310,6 +313,33 @@ p_expr parser::parse_initial() {
 
     auto assign = parse_assignment();
     return make_pexpr<parsed_initial>(std::move(assign.first), std::move(assign.second), loc);
+}
+
+// An on_event of the form
+// `on_event`(`argument`[:`type`]) `identifier`[:`type`] = `value_expression`;
+p_expr parser::parse_on_event() {
+    auto t = current();
+    if (t.type != tok::on_event) {
+        throw std::runtime_error(fmt::format("Expected `on_event`, got {} at {}" + t.spelling, to_string(t.loc)));
+    }
+    auto loc = t.loc;
+    t = next(); // consume 'on_event'
+
+    if (t.type != tok::lparen) {
+        throw std::runtime_error(fmt::format("Expected (, got {} at {}", t.spelling, to_string(t.loc)));
+    }
+    t = next(); // consume '('
+
+    auto argument = parse_typed_identifier();
+
+    t = current();
+    if (t.type != tok::rparen) {
+        throw std::runtime_error(fmt::format("Expected ), got {} at {}", t.spelling, to_string(t.loc)));
+    }
+    next(); // consume '('
+
+    auto assign = parse_assignment();
+    return make_pexpr<parsed_on_event>(std::move(argument), std::move(assign.first), std::move(assign.second), loc);
 }
 
 // An effect of the form

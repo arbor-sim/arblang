@@ -43,7 +43,7 @@ std::stringstream print_header(
                        "  arb_mechanism_type make_arb_{0}_catalogue_{1}() {{\n"
                        "    // Tables\n",
                        std::regex_replace(cpp_namespace, std::regex{"::"}, "_"),
-                       mech.name);
+                       mech.mech_name);
 
     // print empty globals
     out << "    static arb_field_info* globals = NULL;\n";
@@ -93,16 +93,16 @@ std::stringstream print_header(
                                    "    return result;\n"
                                    "  }}\n"
                                    "\n"),
-                       mech.name,
+                       mech.mech_name,
                        fingerprint,
-                       arb_mechanism_kind(mech.kind),
+                       arb_mechanism_kind(mech.mech_kind),
                        false, // TODO: actually check linearity
                        false) // TODO: actually check post_events
         << fmt::format("  arb_mechanism_interface* make_arb_{0}_catalogue_{1}_interface_multicore(){2}\n"
                        "  arb_mechanism_interface* make_arb_{0}_catalogue_{1}_interface_gpu(){3}\n"
                        "}}\n",
                        std::regex_replace(cpp_namespace, std::regex{"::"}, "_"),
-                       mech.name,
+                       mech.mech_name,
                        cpu ? ";" : " { return nullptr; }",
                        gpu ? ";" : " { return nullptr; }");
     return out;

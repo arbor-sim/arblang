@@ -221,6 +221,9 @@ std::string to_string(const resolved_mechanism& e, bool include_type, bool expan
     for (const auto& p: e.initializations) {
         str += to_string(p, include_type, expand_var, indent+1) + "\n";
     }
+    for (const auto& p: e.on_events) {
+        str += to_string(p, include_type, expand_var, indent+1) + "\n";
+    }
     for (const auto& p: e.evolutions) {
         str += to_string(p, include_type, expand_var, indent+1) + "\n";
     }
@@ -319,6 +322,19 @@ std::string to_string(const resolved_initial& e, bool include_type, bool expand_
     auto double_indent = single_indent + "  ";
 
     std::string str = single_indent + "(resolved_initial\n";
+    str += to_string(e.identifier, false, expand_var, indent+1) + "\n";
+    str += to_string(e.value, false, expand_var, indent+1);
+    if (include_type) str += "\n" + to_string(e.type, indent+1);
+    return str + ")";
+}
+
+// resolved_initial
+std::string to_string(const resolved_on_event& e, bool include_type, bool expand_var, int indent) {
+    auto single_indent = std::string(indent*2, ' ');
+    auto double_indent = single_indent + "  ";
+
+    std::string str = single_indent + "(resolved_on_event\n";
+    str += to_string(e.argument, false, expand_var, indent+1) + "\n";
     str += to_string(e.identifier, false, expand_var, indent+1) + "\n";
     str += to_string(e.value, false, expand_var, indent+1);
     if (include_type) str += "\n" + to_string(e.type, indent+1);
@@ -553,6 +569,11 @@ bool operator==(const resolved_bind& lhs, const resolved_bind& rhs) {
 
 bool operator==(const resolved_initial& lhs, const resolved_initial& rhs) {
     return (*lhs.identifier == *rhs.identifier) && (*lhs.value == *rhs.value) && (*lhs.type == *rhs.type);
+}
+
+bool operator==(const resolved_on_event& lhs, const resolved_on_event& rhs) {
+    return (*lhs.argument == *rhs.argument) && (*lhs.identifier == *rhs.identifier) &&
+           (*lhs.value == *rhs.value) && (*lhs.type == *rhs.type);
 }
 
 bool operator==(const resolved_evolve& lhs, const resolved_evolve& rhs) {

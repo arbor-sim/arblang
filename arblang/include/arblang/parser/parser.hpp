@@ -31,6 +31,7 @@ public:
     p_expr parse_effect();
     p_expr parse_evolve();
     p_expr parse_initial();
+    p_expr parse_on_event();
     p_expr parse_export();
 
     p_expr parse_identifier();

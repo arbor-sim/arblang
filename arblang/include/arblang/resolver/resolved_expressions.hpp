@@ -28,6 +28,7 @@ struct resolved_record_alias;
 struct resolved_function;
 struct resolved_bind;
 struct resolved_initial;
+struct resolved_on_event;
 struct resolved_evolve;
 struct resolved_effect;
 struct resolved_export;
@@ -51,6 +52,7 @@ using resolved_expr = std::variant<
     resolved_function,
     resolved_bind,
     resolved_initial,
+    resolved_on_event,
     resolved_evolve,
     resolved_effect,
     resolved_export,
@@ -76,6 +78,7 @@ struct resolved_mechanism {
     std::vector<r_expr> functions;      // expect resolved_function
     std::vector<r_expr> bindings;       // expect resolved_bind
     std::vector<r_expr> initializations; // expect resolved_initial
+    std::vector<r_expr> on_events;      // expect resolved_on_events
     std::vector<r_expr> effects;        // expect effects_expr
     std::vector<r_expr> evolutions;     // expect resolved_evolve
     std::vector<r_expr> exports;        // expect resolved_export
@@ -197,6 +200,18 @@ struct resolved_initial {
 
     resolved_initial(r_expr iden, r_expr value, r_type type, const src_location& loc):
         identifier(std::move(iden)), value(std::move(value)), type(std::move(type)), loc(loc) {};
+};
+
+// Top level on_event
+struct resolved_on_event {
+    r_expr argument;
+    r_expr identifier;
+    r_expr value;
+    r_type type;
+    src_location loc;
+
+    resolved_on_event(r_expr arg, r_expr iden, r_expr value, r_type type, const src_location& loc):
+        argument(std::move(arg)), identifier(std::move(iden)), value(std::move(value)), type(std::move(type)), loc(loc) {};
 };
 
 // Top level evolution
@@ -347,6 +362,7 @@ bool operator==(const resolved_record_alias& lhs, const resolved_record_alias& r
 bool operator==(const resolved_function& lhs, const resolved_function& rhs);
 bool operator==(const resolved_bind& lhs, const resolved_bind& rhs);
 bool operator==(const resolved_initial& lhs, const resolved_initial& rhs);
+bool operator==(const resolved_on_event& lhs, const resolved_on_event& rhs);
 bool operator==(const resolved_evolve& lhs, const resolved_evolve& rhs);
 bool operator==(const resolved_effect& lhs, const resolved_effect& rhs);
 bool operator==(const resolved_export& lhs, const resolved_export& rhs);

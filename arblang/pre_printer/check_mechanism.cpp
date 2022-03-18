@@ -17,8 +17,12 @@ struct mech_error: std::runtime_error {
 };
 
 void check(const resolved_mechanism& e) {
-    if (e.kind != mechanism_kind::density) {
+    if (e.kind != mechanism_kind::density && e.kind != mechanism_kind::point) {
         throw mech_error(fmt::format("Unsupported mechanism kind {} for mechanism {}, still a work in progress",
+                                     to_string(e.kind), e.name));
+    }
+    if (e.kind != mechanism_kind::point && !e.on_events.empty()) {
+        throw mech_error(fmt::format("Unsupported API call `on_events` for mechanism kind {} (mechanism {})",
                                      to_string(e.kind), e.name));
     }
     if (!e.functions.empty()) {
@@ -56,8 +60,13 @@ void check(const resolved_mechanism& e) {
         }
         auto t = std::get_if<resolved_record>(p->type.get());
         if (t) {
-            throw mech_error(fmt::format("Unsupported record type for parameters, still a work in progress",
-                                         to_string(e.kind), e.name));
+            for (const auto& [f_id, f_type]: t->fields) {
+                auto ft = std::get_if<resolved_record>(f_type.get());
+                if (ft) {
+                    throw mech_error(fmt::format("Unsupported nested records for parameters, still a work in progress",
+                                                 to_string(e.kind), e.name));
+                }
+            }
         }
         if (std::get_if<resolved_int>(p->value.get()) || std::get_if<resolved_float>(p->value.get())) {
             const_params.insert(p->name);
@@ -167,6 +176,14 @@ void check(const resolved_mechanism& e) {
                                  "affectable at this stage of the compilation. Instead expected "
                                  "current_density_pair or current_pair");
             }
+            case affectable::current_density_pair:
+            case affectable::current_pair: {
+                auto rec = std::get_if<resolved_record>(b->type.get());
+                if (!rec) {
+                    throw mech_error(fmt::format("Internal compiler error, expected affectable {} to have been "
+                                                 "resolved_record type.", to_string(effect)));
+                }
+            }
             default: break;
         }
     }
@@ -180,6 +197,23 @@ void check(const resolved_mechanism& e) {
         auto arg = std::get_if<resolved_argument>(init->identifier.get());
         if (!arg) {
             throw mech_error("Internal compiler error: expected identifier of resolved_initial to be a "
+                             "resolved_argument.");
+        }
+    }
+    for (const auto& a: e.on_events) {
+        auto on_event = std::get_if<resolved_on_event>(a.get());
+        if (!on_event) {
+            throw mech_error(fmt::format("Internal compiler error, expected resolved_on_event in "
+                                         "resolved_mechanism::on_events"));
+        }
+        auto arg = std::get_if<resolved_argument>(on_event->argument.get());
+        if (!arg) {
+            throw mech_error("Internal compiler error: expected argument of resolved_on_event to be a "
+                             "resolved_argument.");
+        }
+        auto iden = std::get_if<resolved_argument>(on_event->identifier.get());
+        if (!iden) {
+            throw mech_error("Internal compiler error: expected identifier of resolved_on_event to be a "
                              "resolved_argument.");
         }
     }
