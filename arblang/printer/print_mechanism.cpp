@@ -80,11 +80,11 @@ std::stringstream print_mechanism(const printable_mechanism& mech, const std::st
 
     // Print the pointers to the bindables
     for (const auto& [name, bind, ion]: mech.field_pack.bind_sources) {
-        if (!mech.source_pointer_map.count(name)) {
+        if (!mech.pointer_map.count(name)) {
             throw std::runtime_error(fmt::format("Internal compiler error: 0 sources found for {}.",
                                                  name));
         }
-        auto pointer_name = mech.source_pointer_map.at(name).pointer_name;
+        auto pointer_name = mech.pointer_map.at(name).pointer_name;
         // If there's no associated ion;
         if (!ion) {
             switch (bind) {
@@ -136,11 +136,11 @@ std::stringstream print_mechanism(const printable_mechanism& mech, const std::st
 
     // Print the pointers to the affectables
     for (const auto& [name, effect, ion]: mech.field_pack.effect_sources) {
-        if (!mech.source_pointer_map.count(name)) {
+        if (!mech.pointer_map.count(name)) {
             throw std::runtime_error(fmt::format("Internal compiler error: 0 sources found for {}.",
                                                  name));
         }
-        auto pointer_name = mech.source_pointer_map.at(name).pointer_name;
+        auto pointer_name = mech.pointer_map.at(name).pointer_name;
 
         // If there's no associated ion;
         if (!ion) {
@@ -176,11 +176,11 @@ std::stringstream print_mechanism(const printable_mechanism& mech, const std::st
     // Print the pointers to the parameters
     idx = 0;
     for (const auto& [name, val, unit]: mech.field_pack.param_sources) {
-        if (!mech.source_pointer_map.count(name)) {
+        if (!mech.pointer_map.count(name)) {
             throw std::runtime_error(fmt::format("Internal compiler error: 0 sources found for {}.",
                                                  name));
         }
-        auto pointer_name = mech.source_pointer_map.at(name).pointer_name;
+        auto pointer_name = mech.pointer_map.at(name).pointer_name;
         out << fmt::format("[[maybe_unused]] auto* {} = pp->parameters[{}];\\\n", pointer_name, idx);
         idx++;
     }
@@ -188,17 +188,17 @@ std::stringstream print_mechanism(const printable_mechanism& mech, const std::st
     // Print the pointers to the states
     idx = 0;
     for (const auto& name: mech.field_pack.state_sources) {
-        if (!mech.source_pointer_map.count(name)) {
+        if (!mech.pointer_map.count(name)) {
             throw std::runtime_error(fmt::format("Internal compiler error: 0 sources found for {}.",
                                                  name));
         }
-        auto pointer_name = mech.source_pointer_map.at(name).pointer_name;
+        auto pointer_name = mech.pointer_map.at(name).pointer_name;
         out << fmt::format("[[maybe_unused]] auto* {} = pp->state_vars[{}];\\\n", pointer_name, idx);
         idx++;
     }
     out << "\n";
 
-    // print init
+    // printer helpers
     struct index_info {
         bool external_access;
         std::unordered_set<std::string> ions_accessed;
@@ -217,7 +217,7 @@ std::stringstream print_mechanism(const printable_mechanism& mech, const std::st
         }
         return {external_access, ions_accessed};
     };
-    auto print_read = [&](const auto& map, std::string indent) {
+    auto print_read = [&](const auto& map, const std::string& indent) {
         for (const auto& [var, ptr]: map) {
             switch (ptr.pointer_kind) {
                 case printable_mechanism::storage_class::ionic:
@@ -245,7 +245,7 @@ std::stringstream print_mechanism(const printable_mechanism& mech, const std::st
             }
         }
     };
-    auto print_write = [&](const auto& map, std::string indent) {
+    auto print_write = [&](const auto& map, const std::string& indent) {
         // If an external or ionic storage class is written to multiple times,
         // write the sum of the variables only once.
         std::unordered_map<printable_mechanism::storage_info, std::vector<std::string>> reduced_map;
@@ -297,6 +297,8 @@ std::stringstream print_mechanism(const printable_mechanism& mech, const std::st
             }
         }
     };
+
+    // print init
     {
         out << fmt::format("static void init(arb_mechanism_ppack* pp) {{\n");
         if (!(mech.procedure_pack.assigned_parameters.empty() && mech.procedure_pack.initializations.empty())) {

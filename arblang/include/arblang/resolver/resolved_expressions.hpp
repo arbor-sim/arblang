@@ -17,10 +17,10 @@ namespace resolved_ir {
 
 using namespace resolved_type_ir;
 
+struct resolved_mechanism;
 struct resolved_argument;
 struct resolved_variable;
 struct resolved_field_access;
-struct resolved_mechanism;
 struct resolved_parameter;
 struct resolved_constant;
 struct resolved_state;
@@ -380,6 +380,30 @@ std::string to_string(const r_expr&, bool include_type=true, bool expand_var=fal
 
 r_type type_of(const r_expr&);
 src_location location_of(const r_expr&);
+
+std::optional<resolved_argument> is_resolved_argument(const r_expr&);
+std::optional<resolved_variable> is_resolved_variable(const r_expr&);
+std::optional<resolved_field_access> is_resolved_field_access(const r_expr&);
+std::optional<resolved_mechanism> is_resolved_mechanism(const r_expr&);
+std::optional<resolved_parameter> is_resolved_parameter(const r_expr&);
+std::optional<resolved_constant> is_resolved_constant(const r_expr&);
+std::optional<resolved_state> is_resolved_state(const r_expr&);
+std::optional<resolved_record_alias> is_resolved_record_alias(const r_expr&);
+std::optional<resolved_function> is_resolved_function(const r_expr&);
+std::optional<resolved_bind> is_resolved_bind(const r_expr&);
+std::optional<resolved_initial> is_resolved_initial(const r_expr&);
+std::optional<resolved_on_event> is_resolved_on_event(const r_expr&);
+std::optional<resolved_evolve> is_resolved_evolve(const r_expr&);
+std::optional<resolved_effect> is_resolved_effect(const r_expr&);
+std::optional<resolved_export> is_resolved_export(const r_expr&);
+std::optional<resolved_call> is_resolved_call(const r_expr&);
+std::optional<resolved_object> is_resolved_object(const r_expr&);
+std::optional<resolved_let> is_resolved_let(const r_expr&);
+std::optional<resolved_conditional> is_resolved_conditional(const r_expr&);
+std::optional<resolved_float> is_resolved_float(const r_expr&);
+std::optional<resolved_int> is_resolved_int(const r_expr&);
+std::optional<resolved_unary> is_resolved_unary(const r_expr&);
+std::optional<resolved_binary> is_resolved_binary(const r_expr&);
 
 template <typename T, typename... Args>
 r_expr make_rexpr(Args&&... args) {

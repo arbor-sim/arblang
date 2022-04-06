@@ -122,6 +122,11 @@ parsed_type_ir::p_type to_type(const p_unit &);
 //          mV/mA -> {V/A, 0}
 std::pair<p_unit, int> normalize_unit(const p_unit&);
 
+std::optional<parsed_integer_unit> is_parsed_integer_unit(const p_unit&);
+std::optional<parsed_simple_unit> is_parsed_simple_unit(const p_unit&);
+std::optional<parsed_binary_unit> is_parsed_binary_unit(const p_unit&);
+std::optional<parsed_no_unit> is_parsed_no_unit(const p_unit&);
+
 template <typename T, typename... Args>
 p_unit make_punit(Args&&... args) {
     return p_unit(new parsed_unit(T(std::forward<Args>(args)...)));

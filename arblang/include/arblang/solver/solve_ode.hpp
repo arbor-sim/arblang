@@ -11,13 +11,11 @@ namespace resolved_ir {
 
 // Very basic solver for ODEs or systems of ODEs that are diagonal linear.
 // This is not necessarily true nor is it checked that this is true.
-// Only works on resolved_evolve. However, resolved_effect can also be used to
-// describe ODEs and those ODEs also need to be solved. This class can
-// be written to be more generic and work on resolved_effect as well as
-// resolved_evolve.
+// Only works on resolved_evolve.
+// Not very well written.
 class solver {
 private:
-    resolved_evolve evolve; // modified resolved_evolve
+    resolved_evolve evolve;  // resolved_evolve with solved ODE
 
     r_expr state_id;         // state expression
     r_type state_type;       // state type
@@ -25,9 +23,7 @@ private:
     src_location state_loc;  // state location
 
     r_expr state_deriv;      // state derivative
-    r_expr state_deriv_body; // innermost body of state_derive
-
-    bool record_state;       // whether or not the state has a record type
+    r_expr state_deriv_body; // innermost body of state_deriv
 
     r_expr make_zero_state();
 public:

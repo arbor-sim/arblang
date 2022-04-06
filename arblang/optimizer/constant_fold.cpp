@@ -12,101 +12,41 @@
 namespace al {
 namespace resolved_ir {
 
+// Constant folding performs the following:
+// 1. Propagates the values of resolved_constants,
+//    and resolved_variables with constant values to
+//    the expressions that use them. e.g.
+//       constant a = 4.5;
+//       let x = 3;
+//       let r = a/x;
+//    becomes:
+//       constant a = 4.5;
+//       let x = 3;
+//       let r = 4.5/3;
+// 2. Solves binary_expressions, unary_expressions and
+//    conditional_expressions if their arguments have
+//    constant values. The above example thus becomes:
+//       constant a = 4.5;
+//       let x = 3;
+//       let r = 1.5;
+// 3. Simplifies a binary_expression when only one of
+//    its arguments has a constant value. e.g.
+//    multiplication by, 1 or zero, addition of 0 etc.
+// 4. Propagates the value of an object field with
+//    to the expressions that access that field. e.g.
+//       let a = {x = 4; y = _t0;};
+//       let b = a.x + a.y;
+//    becomes:
+//       let a = {x = 4; y = _t0;};
+//       let b = 4 + _t0;
+//    TODO: propagating _t0 shouldn't be done in this  pass,
+//          probably fits better in the copy propagation pass
+//
+// Constant folding needs to be performed in a loop,
+// until no more changes can be made.
+
 bool is_integer(double v) {
     return std::floor(v) == v;
-}
-
-std::pair<resolved_mechanism, bool> constant_fold(const resolved_mechanism& e) {
-    std::unordered_map<std::string, r_expr> constants_map, rewrites, local_constant_map;
-    std::unordered_set<std::string> exported_params;
-
-    auto reset_maps = [&]() {
-        rewrites.clear();
-        local_constant_map.clear();
-        local_constant_map = constants_map;
-    };
-
-    resolved_mechanism mech;
-    bool made_changes = false;
-    for (const auto& c: e.exports) {
-        // No need to constant fold, there is nothing to do.
-        mech.exports.push_back(c);
-
-        // Keep set of exported parameters.
-        // Remaining un-exported parameters can be constant propagated.
-        auto param_id = std::get<resolved_export>(*c).identifier;
-        exported_params.insert(std::get<resolved_argument>(*param_id).name);
-    }
-    for (const auto& c: e.constants) {
-        reset_maps();
-        auto result = constant_fold(c, local_constant_map, rewrites);
-
-        auto constant  = std::get<resolved_constant>(*result.first);
-        if (as_number(constant.value)) {
-            constants_map.insert({constant.name, constant.value});
-        } else {
-            mech.constants.push_back(result.first);
-        }
-        made_changes |= result.second;
-    }
-    for (const auto& c: e.parameters) {
-        reset_maps();
-        auto result = constant_fold(c, local_constant_map, rewrites);
-
-        auto param  = std::get<resolved_parameter>(*result.first);
-        if (!exported_params.count(param.name) && as_number(param.value)) {
-            constants_map.insert({param.name, param.value});
-        } else {
-            mech.parameters.push_back(result.first);
-        }
-        made_changes |= result.second;
-    }
-    for (const auto& c: e.bindings) {
-        reset_maps();
-        auto result = constant_fold(c, local_constant_map, rewrites);
-        mech.bindings.push_back(result.first);
-        made_changes |= result.second;
-    }
-    for (const auto& c: e.states) {
-        reset_maps();
-        auto result = constant_fold(c, local_constant_map, rewrites);
-        mech.states.push_back(result.first);
-        made_changes |= result.second;
-    }
-    for (const auto& c: e.functions) {
-        reset_maps();
-        auto result = constant_fold(c, local_constant_map, rewrites);
-        mech.functions.push_back(result.first);
-        made_changes |= result.second;
-    }
-    for (const auto& c: e.initializations) {
-        reset_maps();
-        auto result = constant_fold(c, local_constant_map, rewrites);
-        mech.initializations.push_back(result.first);
-        made_changes |= result.second;
-    }
-    for (const auto& c: e.on_events) {
-        reset_maps();
-        auto result = constant_fold(c, local_constant_map, rewrites);
-        mech.on_events.push_back(result.first);
-        made_changes |= result.second;
-    }
-    for (const auto& c: e.evolutions) {
-        reset_maps();
-        auto result = constant_fold(c, local_constant_map, rewrites);
-        mech.evolutions.push_back(result.first);
-        made_changes |= result.second;
-    }
-    for (const auto& c: e.effects) {
-        reset_maps();
-        auto result = constant_fold(c, local_constant_map, rewrites);
-        mech.effects.push_back(result.first);
-        made_changes |= result.second;
-    }
-    mech.name = e.name;
-    mech.loc = e.loc;
-    mech.kind = e.kind;
-    return {mech, made_changes};
 }
 
 std::pair<r_expr, bool> constant_fold(const resolved_record_alias& e,
@@ -244,7 +184,7 @@ std::pair<r_expr, bool> constant_fold(const resolved_let& e,
                                       std::unordered_map<std::string, r_expr>& rewrites)
 {
     auto var_name = e.id_name();
-    if (as_number(e.id_value())) {
+    if (is_number(e.id_value())) {
         constant_map.insert({var_name, e.id_value()});
     }
 
@@ -265,7 +205,7 @@ std::pair<r_expr, bool> constant_fold(const resolved_conditional& e,
     auto tval = constant_fold(e.value_true, constant_map, rewrites);
     auto fval = constant_fold(e.value_false, constant_map, rewrites);
 
-    if (auto val = as_number(cond.first)) {
+    if (auto val = is_number(cond.first)) {
         if ((bool)val.value()) {
             return {tval.first, true};
         }
@@ -294,7 +234,7 @@ std::pair<r_expr, bool> constant_fold(const resolved_unary& e,
                                       std::unordered_map<std::string, r_expr>& rewrites)
 {
     auto arg = constant_fold(e.arg, constant_map, rewrites);
-    if (auto val_opt = as_number(arg.first)) {
+    if (auto val_opt = is_number(arg.first)) {
         auto val = val_opt.value();
         switch (e.op) {
             case unary_op::exp:
@@ -328,13 +268,13 @@ std::pair<r_expr, bool> constant_fold(const resolved_binary& e,
 {
     auto lhs_arg = constant_fold(e.lhs, constant_map, rewrites);
     auto rhs_arg = constant_fold(e.rhs, constant_map, rewrites);
-    auto lhs_opt = as_number(lhs_arg.first);
-    auto rhs_opt = as_number(rhs_arg.first);
+    auto lhs_opt = is_number(lhs_arg.first);
+    auto rhs_opt = is_number(rhs_arg.first);
 
-    auto lhs_ptr = std::get_if<resolved_quantity>(type_of(lhs_arg.first).get());
+    auto lhs_ptr = is_resolved_quantity_type(type_of(lhs_arg.first));
     bool lhs_real = lhs_ptr && lhs_ptr->type.is_real();
 
-    auto rhs_ptr = std::get_if<resolved_quantity>(type_of(rhs_arg.first).get());
+    auto rhs_ptr = is_resolved_quantity_type(type_of(rhs_arg.first));
     bool rhs_real = rhs_ptr && rhs_ptr->type.is_real();
 
     if (lhs_opt && rhs_opt) {
@@ -429,8 +369,9 @@ std::pair<r_expr, bool> constant_fold(const resolved_binary& e,
                 default: break;
             }
         } else {
+            // transform divisions by constant into multiplications by constant.
             if (e.op == binary_op::div) {
-                if (auto q = std::get_if<resolved_quantity>(type_of(e.rhs).get())) {
+                if (auto q = is_resolved_quantity_type(type_of(e.rhs))) {
                     auto q_inv = normalized_type(quantity::real) / q->type;
                     auto rhs_inv = make_rexpr<resolved_float>(1/rhs, make_rtype<resolved_quantity>(q_inv, q->loc), location_of(e.rhs));
                     return {make_rexpr<resolved_binary>(binary_op::mul, e.lhs, rhs_inv, e.type, e.loc), true};
@@ -469,10 +410,10 @@ std::pair<r_expr, bool> constant_fold(const resolved_field_access& e,
     auto field = e.field;
 
     // TODO This shouldn't be in the constant fold pass
-    if (auto o_ptr = std::get_if<resolved_object>(obj_arg.first.get())) {
+    if (auto o_ptr = is_resolved_object(obj_arg.first)) {
         int idx = -1;
         for (unsigned i = 0; i < o_ptr->record_fields.size(); ++i) {
-            if (std::get<resolved_variable>(*(o_ptr->record_fields[i])).name == field) {
+            if (is_resolved_variable(o_ptr->record_fields[i])->name == field) {
                 idx = (int)i;
                 break;
             }
@@ -483,6 +424,100 @@ std::pair<r_expr, bool> constant_fold(const resolved_field_access& e,
         return {o_ptr->field_values()[idx], true};
     }
     return {make_rexpr<resolved_field_access>(obj_arg.first, field, e.type, e.loc), obj_arg.second};
+}
+
+std::pair<resolved_mechanism, bool> constant_fold(const resolved_mechanism& e) {
+    std::unordered_map<std::string, r_expr> constants_map, rewrites, local_constant_map;
+    std::unordered_set<std::string> exported_params;
+
+    auto reset_maps = [&]() {
+        rewrites.clear();
+        local_constant_map.clear();
+        local_constant_map = constants_map;
+    };
+
+    resolved_mechanism mech;
+    bool made_changes = false;
+    // Parameters that are not exported can be constant propagated.
+    for (const auto& c: e.exports) {
+        // No need to constant fold, there is nothing to do.
+        mech.exports.push_back(c);
+
+        // Keep set of exported parameters.
+        // Remaining un-exported parameters can be constant propagated.
+        auto param_id = is_resolved_export(c)->identifier;
+        exported_params.insert(is_resolved_argument(param_id)->name);
+    }
+    for (const auto& c: e.constants) {
+        reset_maps();
+        auto result = constant_fold(c, local_constant_map, rewrites);
+
+        auto constant  = is_resolved_constant(result.first);
+        if (is_number(constant->value)) {
+            constants_map.insert({constant->name, constant->value});
+        } else {
+            mech.constants.push_back(result.first);
+        }
+        made_changes |= result.second;
+    }
+    for (const auto& c: e.parameters) {
+        reset_maps();
+        auto result = constant_fold(c, local_constant_map, rewrites);
+
+        auto param  = is_resolved_parameter(result.first);
+        if (!exported_params.count(param->name) && is_number(param->value)) {
+            constants_map.insert({param->name, param->value});
+        } else {
+            mech.parameters.push_back(result.first);
+        }
+        made_changes |= result.second;
+    }
+    for (const auto& c: e.bindings) {
+        reset_maps();
+        auto result = constant_fold(c, local_constant_map, rewrites);
+        mech.bindings.push_back(result.first);
+        made_changes |= result.second;
+    }
+    for (const auto& c: e.states) {
+        reset_maps();
+        auto result = constant_fold(c, local_constant_map, rewrites);
+        mech.states.push_back(result.first);
+        made_changes |= result.second;
+    }
+    for (const auto& c: e.functions) {
+        reset_maps();
+        auto result = constant_fold(c, local_constant_map, rewrites);
+        mech.functions.push_back(result.first);
+        made_changes |= result.second;
+    }
+    for (const auto& c: e.initializations) {
+        reset_maps();
+        auto result = constant_fold(c, local_constant_map, rewrites);
+        mech.initializations.push_back(result.first);
+        made_changes |= result.second;
+    }
+    for (const auto& c: e.on_events) {
+        reset_maps();
+        auto result = constant_fold(c, local_constant_map, rewrites);
+        mech.on_events.push_back(result.first);
+        made_changes |= result.second;
+    }
+    for (const auto& c: e.evolutions) {
+        reset_maps();
+        auto result = constant_fold(c, local_constant_map, rewrites);
+        mech.evolutions.push_back(result.first);
+        made_changes |= result.second;
+    }
+    for (const auto& c: e.effects) {
+        reset_maps();
+        auto result = constant_fold(c, local_constant_map, rewrites);
+        mech.effects.push_back(result.first);
+        made_changes |= result.second;
+    }
+    mech.name = e.name;
+    mech.loc = e.loc;
+    mech.kind = e.kind;
+    return {mech, made_changes};
 }
 
 std::pair<r_expr, bool> constant_fold(const r_expr& e,

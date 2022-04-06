@@ -10,74 +10,26 @@
 
 namespace al {
 namespace resolved_ir {
+// Canonicalization is the process of rewriting expressions such that
+// the rhs of an assignment operation contains either:
+//   1. a single resolved object expression.
+//   2. a single resolved call expression.
+//   3. a single resolved unary expression.
+//   4. a single resolved binary expression.
+//   5. a single resolved conditional expression.
+//   6. a single resolved integer expression.
+//   7. a single resolved float expression.
+// As well as rewriting expressions such that the arguments of unary
+// expressions, binary expressions, call expressions and conditional
+// expression as well as the fields of object expressions are either:
+//   1. a single resolved argument expression.
+//   2. a single resolved variable expression.
+//   3. a single resolved integer expression.
+//   4. a single resolved float expression.
+// Canonicalization is a prerequisite for the optimization passes.
 
-// Canonicalize
-resolved_mechanism canonicalize(const resolved_mechanism& e) {
-    std::unordered_set<std::string> reserved;
-    std::unordered_map<std::string, r_expr> rewrites;
-    std::string pref = "t";
-    resolved_mechanism mech;
-    for (const auto& c: e.constants) {
-        reserved.clear();
-        rewrites.clear();
-        mech.constants.push_back(canonicalize(c, reserved, rewrites, pref));
-    }
-    for (const auto& c: e.bindings) {
-        reserved.clear();
-        rewrites.clear();
-        mech.bindings.push_back(canonicalize(c, reserved, rewrites, pref));
-    }
-    for (const auto& c: e.states) {
-        reserved.clear();
-        rewrites.clear();
-        mech.states.push_back(canonicalize(c, reserved, rewrites, pref));
-    }
-    for (const auto& c: e.functions) {
-        reserved.clear();
-        rewrites.clear();
-        mech.functions.push_back(canonicalize(c, reserved, rewrites, pref));
-    }
-
-    // parameters and init share the same reserved_map
-    reserved.clear();
-    for (const auto& c: e.parameters) {
-        rewrites.clear();
-        mech.parameters.push_back(canonicalize(c, reserved, rewrites, pref));
-    }
-    for (const auto& c: e.initializations) {
-        rewrites.clear();
-        mech.initializations.push_back(canonicalize(c, reserved, rewrites, pref));
-    }
-
-    reserved.clear();
-    for (const auto& c: e.on_events) {
-        rewrites.clear();
-        mech.on_events.push_back(canonicalize(c, reserved, rewrites, pref));
-    }
-
-    reserved.clear();
-    for (const auto& c: e.evolutions) {
-        rewrites.clear();
-        mech.evolutions.push_back(canonicalize(c, reserved, rewrites, pref));
-    }
-
-    reserved.clear();
-    for (const auto& c: e.effects) {
-        rewrites.clear();
-        mech.effects.push_back(canonicalize(c, reserved, rewrites, pref));
-    }
-
-    reserved.clear();
-    for (const auto& c: e.exports) {
-        rewrites.clear();
-        mech.exports.push_back(canonicalize(c, reserved, rewrites, pref));
-    }
-    mech.name = e.name;
-    mech.loc = e.loc;
-    mech.kind = e.kind;
-    return mech;
-}
-
+// Resolved record aliases are dropped from the mechanism
+// after being used in the resolution.
 r_expr canonicalize(const resolved_record_alias& e,
                     std::unordered_set<std::string>& reserved,
                     std::unordered_map<std::string, r_expr>& rewrites,
@@ -87,6 +39,7 @@ r_expr canonicalize(const resolved_record_alias& e,
                              "this stage in the compilation.");
 }
 
+// Resolved arguments are kept the same.
 r_expr canonicalize(const resolved_argument& e,
                     std::unordered_set<std::string>& reserved,
                     std::unordered_map<std::string, r_expr>& rewrites,
@@ -95,6 +48,17 @@ r_expr canonicalize(const resolved_argument& e,
     return make_rexpr<resolved_argument>(e);
 }
 
+// Resolved variable values may be rewritten. e.g.
+//   let a = x + y*z;
+//   let b = a*2
+// gets canonicalized into
+//   let _t0 = y*z;
+//   let a = x + _t0;
+//   let b = a*2;
+// while `b` still refers to `a`, the _value_ of `a` is now
+// different.
+// The `rewrites` map contains a mapping from resolved variable
+// identifiers to their full expressions.
 r_expr canonicalize(const resolved_variable& e,
                     std::unordered_set<std::string>& reserved,
                     std::unordered_map<std::string, r_expr>& rewrites,
@@ -203,7 +167,7 @@ r_expr canonicalize(const resolved_call& e,
     //   1. The let statement becomes the new body of a preceding
     //      let statement if it exists.
     //   2. The innermost body of the let statement become the new
-    //      argument of the call
+    //      argument of the call.
     // Example:
     //   foo(a+b);
     // 1. 'a+b' is canonicalized into 'let _t0 = a+b; _t0;'
@@ -217,7 +181,7 @@ r_expr canonicalize(const resolved_call& e,
     resolved_let let_outer;
     for (const auto& arg: e.call_args) {
         auto arg_canon = canonicalize(arg, reserved, rewrites, pref);
-        if (auto let_opt = get_let(arg_canon)) {
+        if (auto let_opt = is_resolved_let(arg_canon)) {
             auto let_arg = let_opt.value();
 
             // The innermost body of let_arg is the new call argument
@@ -282,7 +246,7 @@ r_expr canonicalize(const resolved_object& e,
     resolved_let let_outer;
     for (const auto& arg: e.field_values()) {
         auto arg_canon = canonicalize(arg, reserved, rewrites, pref);
-        if (auto let_opt = get_let(arg_canon)) {
+        if (auto let_opt = is_resolved_let(arg_canon)) {
             auto let_val = let_opt.value();
 
             // The innermost body of let_val is the new call argument
@@ -337,17 +301,17 @@ r_expr canonicalize(const resolved_let& e,
     // 2. To canonicalize 'let x = (let _t0 = a+b; let _t1 = _t0+c; _t1;); x;' perform the
     //    procedure outlined above to get 'let _t0 = a+b; let _t1 = _t0+c; let x = _t1; x;'
 
-    auto val_canon = canonicalize(e.id_value(), reserved, rewrites, pref);
-
     auto var_name = e.id_name();
+    auto val_canon = canonicalize(e.id_value(), reserved, rewrites, pref);
     auto var_canon = make_rexpr<resolved_variable>(e.id_name(), val_canon, type_of(val_canon), location_of(val_canon));
+
+    // The resolved variable name now refers to a new expression
     rewrites.insert({var_name, var_canon});
 
     auto body_canon = canonicalize(e.body, reserved, rewrites, pref);
-
     auto let_outer = resolved_let(var_canon, body_canon, e.type, e.loc);
 
-    if (auto let_opt = get_let(val_canon)) {
+    if (auto let_opt = is_resolved_let(val_canon)) {
         auto let_val = let_opt.value();
 
         let_outer.id_value(get_innermost_body(&let_val));
@@ -384,13 +348,13 @@ r_expr canonicalize(const resolved_conditional& e,
 
     resolved_let let_outer;
     bool has_let = false;
-    if (auto let_opt = get_let(cond_canon)) {
+    if (auto let_opt = is_resolved_let(cond_canon)) {
         auto let_cond = let_opt.value();
         let_outer = let_cond;
         cond_canon = get_innermost_body(&let_cond);
         has_let = true;
     }
-    if (auto let_opt = get_let(true_canon)) {
+    if (auto let_opt = is_resolved_let(true_canon)) {
         auto let_true = let_opt.value();
         if (!has_let) {
             let_outer = let_true;
@@ -401,7 +365,7 @@ r_expr canonicalize(const resolved_conditional& e,
         has_let = true;
         true_canon = get_innermost_body(&let_true);
     }
-    if (auto let_opt = get_let(false_canon)) {
+    if (auto let_opt = is_resolved_let(false_canon)) {
         auto let_false = let_opt.value();
         if (!has_let) {
             let_outer = let_false;
@@ -460,7 +424,7 @@ r_expr canonicalize(const resolved_unary& e,
 
     resolved_let let_outer;
     bool has_let = false;
-    if (auto let_opt = get_let(arg_canon)) {
+    if (auto let_opt = is_resolved_let(arg_canon)) {
         auto let_first = let_opt.value();
         arg_canon = get_innermost_body(&let_first);
         let_outer = let_first;
@@ -507,13 +471,13 @@ r_expr canonicalize(const resolved_binary& e,
 
     resolved_let let_outer;
     bool has_let = false;
-    if (auto let_opt = get_let(lhs_canon)) {
+    if (auto let_opt = is_resolved_let(lhs_canon)) {
         auto let_first = let_opt.value();
         let_outer = let_first;
         lhs_canon = get_innermost_body(&let_first);
         has_let = true;
     }
-    if (auto let_opt = get_let(rhs_canon)) {
+    if (auto let_opt = is_resolved_let(rhs_canon)) {
         auto let_first = let_opt.value();
         if (!has_let) {
             let_outer = let_first;
@@ -556,7 +520,7 @@ r_expr canonicalize(const resolved_field_access& e,
 
     resolved_let let_outer;
     bool has_let = false;
-    if (auto let_opt = get_let(obj_canon)) {
+    if (auto let_opt = is_resolved_let(obj_canon)) {
         auto let_obj = let_opt.value();
         let_outer = let_obj;
         obj_canon = get_innermost_body(&let_obj);
@@ -571,6 +535,86 @@ r_expr canonicalize(const resolved_field_access& e,
 
     set_innermost_body(&let_outer, let_wrapper);
     return make_rexpr<resolved_let>(let_outer);
+}
+
+// Canonicalize
+resolved_mechanism canonicalize(const resolved_mechanism& e) {
+    // Used to keep track of the newly introduced variables.
+    std::unordered_set<std::string> reserved;
+
+    // Prefix for newly introduced variables.
+    std::string pref = "t";
+
+    // Used to keep track of rewritten variable values.
+    std::unordered_map<std::string, r_expr> rewrites;
+
+    resolved_mechanism mech;
+    for (const auto& c: e.constants) {
+        reserved.clear();
+        rewrites.clear();
+        mech.constants.push_back(canonicalize(c, reserved, rewrites, pref));
+    }
+    for (const auto& c: e.bindings) {
+        reserved.clear();
+        rewrites.clear();
+        mech.bindings.push_back(canonicalize(c, reserved, rewrites, pref));
+    }
+    for (const auto& c: e.states) {
+        reserved.clear();
+        rewrites.clear();
+        mech.states.push_back(canonicalize(c, reserved, rewrites, pref));
+    }
+    for (const auto& c: e.functions) {
+        reserved.clear();
+        rewrites.clear();
+        mech.functions.push_back(canonicalize(c, reserved, rewrites, pref));
+    }
+
+    // All parameters and initializations share the same reserved_map
+    // because they share the same API call.
+    reserved.clear();
+    for (const auto& c: e.parameters) {
+        rewrites.clear();
+        mech.parameters.push_back(canonicalize(c, reserved, rewrites, pref));
+    }
+    for (const auto& c: e.initializations) {
+        rewrites.clear();
+        mech.initializations.push_back(canonicalize(c, reserved, rewrites, pref));
+    }
+
+    // All on_events share the same reserved_map because they share the
+    // same API call.
+    reserved.clear();
+    for (const auto& c: e.on_events) {
+        rewrites.clear();
+        mech.on_events.push_back(canonicalize(c, reserved, rewrites, pref));
+    }
+
+    // All evolutions share the same reserved_map because they share the
+    // same API call.
+    reserved.clear();
+    for (const auto& c: e.evolutions) {
+        rewrites.clear();
+        mech.evolutions.push_back(canonicalize(c, reserved, rewrites, pref));
+    }
+
+    // All effects share the same reserved_map because they share the
+    // same API call.
+    reserved.clear();
+    for (const auto& c: e.effects) {
+        rewrites.clear();
+        mech.effects.push_back(canonicalize(c, reserved, rewrites, pref));
+    }
+
+    reserved.clear();
+    for (const auto& c: e.exports) {
+        rewrites.clear();
+        mech.exports.push_back(canonicalize(c, reserved, rewrites, pref));
+    }
+    mech.name = e.name;
+    mech.loc = e.loc;
+    mech.kind = e.kind;
+    return mech;
 }
 
 r_expr canonicalize(const r_expr& e,

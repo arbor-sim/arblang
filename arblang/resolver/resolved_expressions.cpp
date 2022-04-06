@@ -21,7 +21,7 @@ resolved_let::resolved_let(std::string iden, r_expr value, r_expr body, r_type t
 }
 
 r_expr resolved_let::id_value() const {
-    if (auto id = std::get_if<resolved_variable>(identifier.get())) {
+    if (auto id = is_resolved_variable(identifier)) {
         return id->value;
     }
     throw std::runtime_error("internal compiler error: expected resolved_variable at " + to_string(loc));
@@ -36,7 +36,7 @@ void resolved_let::id_value(r_expr val) {
 }
 
 std::string resolved_let::id_name() const {
-    if (auto id = std::get_if<resolved_variable>(identifier.get())) {
+    if (auto id = is_resolved_variable(identifier)) {
         return id->name;
     }
     throw std::runtime_error("internal compiler error: expected resolved_variable at " + to_string(loc));
@@ -59,7 +59,7 @@ resolved_object::resolved_object(std::vector<std::string> names,
 std::vector<r_expr> resolved_object::field_values() const {
     std::vector<r_expr> vals;
     for (const auto& field: record_fields) {
-        if (auto id = std::get_if<resolved_variable>(field.get())) {
+        if (auto id = is_resolved_variable(field)) {
             vals.push_back(id->value);
         } else {
             throw std::runtime_error("internal compiler error: expected resolved_variable at " + to_string(loc));
@@ -71,7 +71,7 @@ std::vector<r_expr> resolved_object::field_values() const {
 void resolved_object::field_values(std::vector<r_expr> vals) {
     for (unsigned i = 0; i < record_fields.size(); ++i) {
         auto& field = record_fields[i];
-        if (auto id = std::get_if<resolved_variable>(field.get())) {
+        if (auto id = is_resolved_variable(field)) {
             id->value = std::move(vals[i]);
         } else {
             throw std::runtime_error("internal compiler error: expected resolved_variable at " + to_string(loc));
@@ -82,7 +82,7 @@ void resolved_object::field_values(std::vector<r_expr> vals) {
 std::vector<std::string> resolved_object::field_names() const {
     std::vector<std::string> names;
     for (const auto& field: record_fields) {
-        if (auto id = std::get_if<resolved_variable>(field.get())) {
+        if (auto id = is_resolved_variable(field)) {
             names.push_back(id->name);
         } else {
             throw std::runtime_error("internal compiler error: expected resolved_variable at " + to_string(loc));
@@ -94,11 +94,11 @@ std::vector<std::string> resolved_object::field_names() const {
 resolved_binary::resolved_binary(binary_op op, r_expr l, r_expr r, const src_location& loc):
     op(op), lhs(std::move(l)), rhs(std::move(r)), loc(loc)
 {
-    auto lhs_q = std::get_if<resolved_quantity>(type_of(lhs).get());
-    auto rhs_q = std::get_if<resolved_quantity>(type_of(rhs).get());
+    auto lhs_q = is_resolved_quantity_type(type_of(lhs));
+    auto rhs_q = is_resolved_quantity_type(type_of(rhs));
 
-    auto lhs_b = std::get_if<resolved_boolean>(type_of(lhs).get());
-    auto rhs_b = std::get_if<resolved_boolean>(type_of(rhs).get());
+    auto lhs_b = is_resolved_bool_type(type_of(lhs));
+    auto rhs_b = is_resolved_bool_type(type_of(rhs));
 
     bool is_bool = (lhs_b && rhs_b);
     bool is_quantity = (lhs_q && rhs_q);
@@ -117,12 +117,6 @@ resolved_binary::resolved_binary(binary_op op, r_expr l, r_expr r, const src_loc
     switch (op) {
         case binary_op::add:
         case binary_op::sub:
-        case binary_op::lt:
-        case binary_op::le:
-        case binary_op::gt:
-        case binary_op::ge:
-        case binary_op::eq:
-        case binary_op::ne:
         case binary_op::min:
         case binary_op::max: {
             if (is_bool) incompatible_op();
@@ -130,14 +124,21 @@ resolved_binary::resolved_binary(binary_op op, r_expr l, r_expr r, const src_loc
             type = type_of(lhs);
             break;
         }
+        case binary_op::lt:
+        case binary_op::le:
+        case binary_op::gt:
+        case binary_op::ge:
+        case binary_op::eq:
+        case binary_op::ne: {
+            if (is_bool) incompatible_op();
+            if (lhs_q->type != rhs_q->type) incompatible_args();
+            type = make_rtype<resolved_boolean>(loc);
+            break;
+        }
         case binary_op::land:
         case binary_op::lor: {
-            if (is_bool) {
-                type = make_rtype<resolved_boolean>(loc);
-                break;
-            }
-            if (lhs_q->type != rhs_q->type) incompatible_args();
-            type = type_of(lhs);
+            if (is_quantity && (lhs_q->type != rhs_q->type)) incompatible_args();;
+            type = make_rtype<resolved_boolean>(loc);
             break;
         }
         case binary_op::dot:
@@ -154,8 +155,13 @@ resolved_binary::resolved_binary(binary_op op, r_expr l, r_expr r, const src_loc
             break;
         case binary_op::pow: {
             if (is_bool) incompatible_op();
-            auto rhs_int = std::get_if<resolved_int>(rhs.get());
+            if (lhs_q && lhs_q->type.is_real()) {
+                type = make_rtype<resolved_quantity>(quantity::real, loc);
+                break;
+            }
+            auto rhs_int = is_resolved_int(rhs);
             if (!rhs_int) {
+                // TODO, we actually allow a^float if a has a real type.
                 throw std::runtime_error(fmt::format("Internal compiler error: operator {} rhs is not a resolved_int "
                                                      "at {}", to_string(op), to_string(loc)));
             }
@@ -170,8 +176,8 @@ resolved_unary::resolved_unary(unary_op op, r_expr a, const src_location& loc):
     arg(std::move(a)),
     loc(loc)
 {
-    auto arg_q = std::get_if<resolved_quantity>(type_of(arg).get());
-    auto arg_b = std::get_if<resolved_boolean>(type_of(arg).get());
+    auto arg_q = is_resolved_quantity_type(type_of(arg));
+    auto arg_b = is_resolved_bool_type(type_of(arg));
 
     auto incompatible_op = [&]() {
         throw std::runtime_error(fmt::format("Internal compiler error: cannot apply operand {} to type {} at {}",
@@ -597,10 +603,8 @@ bool operator==(const resolved_call& lhs, const resolved_call& rhs) {
 }
 
 bool operator==(const resolved_object& lhs, const resolved_object& rhs) {
-    auto lhs_fields = lhs.record_fields;
-    auto rhs_fields = rhs.record_fields;
-    std::sort(lhs_fields.begin(), lhs_fields.end());
-    std::sort(rhs_fields.begin(), rhs_fields.end());
+    const auto& lhs_fields = lhs.record_fields;
+    const auto& rhs_fields = rhs.record_fields;
 
     if (lhs_fields.size() != rhs_fields.size()) return false;
     for (unsigned i = 0; i < lhs_fields.size(); ++i) {
@@ -641,6 +645,95 @@ r_type type_of(const r_expr& e) {
 
 src_location location_of(const r_expr& e) {
     return std::visit([](auto&& c){return c.loc;}, *e);
+}
+
+std::optional<resolved_argument> is_resolved_argument(const r_expr& r) {
+    if (!std::holds_alternative<resolved_argument>(*r)) return {};
+    return std::get<resolved_argument>(*r);
+}
+std::optional<resolved_variable> is_resolved_variable(const r_expr& r) {
+    if (!std::holds_alternative<resolved_variable>(*r)) return {};
+    return std::get<resolved_variable>(*r);
+}
+std::optional<resolved_field_access> is_resolved_field_access(const r_expr& r) {
+    if (!std::holds_alternative<resolved_field_access>(*r)) return {};
+    return std::get<resolved_field_access>(*r);
+}
+std::optional<resolved_parameter> is_resolved_parameter(const r_expr& r) {
+    if (!std::holds_alternative<resolved_parameter>(*r)) return {};
+    return std::get<resolved_parameter>(*r);
+}
+std::optional<resolved_constant> is_resolved_constant(const r_expr& r) {
+    if (!std::holds_alternative<resolved_constant>(*r)) return {};
+    return std::get<resolved_constant>(*r);
+}
+std::optional<resolved_state> is_resolved_state(const r_expr& r) {
+    if (!std::holds_alternative<resolved_state>(*r)) return {};
+    return std::get<resolved_state>(*r);
+}
+std::optional<resolved_record_alias> is_resolved_record_alias(const r_expr& r) {
+    if (!std::holds_alternative<resolved_record_alias>(*r)) return {};
+    return std::get<resolved_record_alias>(*r);
+}
+std::optional<resolved_function> is_resolved_function(const r_expr& r) {
+    if (!std::holds_alternative<resolved_function>(*r)) return {};
+    return std::get<resolved_function>(*r);
+}
+std::optional<resolved_bind> is_resolved_bind(const r_expr& r) {
+    if (!std::holds_alternative<resolved_bind>(*r)) return {};
+    return std::get<resolved_bind>(*r);
+}
+std::optional<resolved_initial> is_resolved_initial(const r_expr& r) {
+    if (!std::holds_alternative<resolved_initial>(*r)) return {};
+    return std::get<resolved_initial>(*r);
+}
+std::optional<resolved_on_event> is_resolved_on_event(const r_expr& r) {
+    if (!std::holds_alternative<resolved_on_event>(*r)) return {};
+    return std::get<resolved_on_event>(*r);
+}
+std::optional<resolved_evolve> is_resolved_evolve(const r_expr& r) {
+    if (!std::holds_alternative<resolved_evolve>(*r)) return {};
+    return std::get<resolved_evolve>(*r);
+}
+std::optional<resolved_effect> is_resolved_effect(const r_expr& r) {
+    if (!std::holds_alternative<resolved_effect>(*r)) return {};
+    return std::get<resolved_effect>(*r);
+}
+std::optional<resolved_export> is_resolved_export(const r_expr& r) {
+    if (!std::holds_alternative<resolved_export>(*r)) return {};
+    return std::get<resolved_export>(*r);
+}
+std::optional<resolved_call> is_resolved_call(const r_expr& r) {
+    if (!std::holds_alternative<resolved_call>(*r)) return {};
+    return std::get<resolved_call>(*r);
+}
+std::optional<resolved_object> is_resolved_object(const r_expr& r) {
+    if (!std::holds_alternative<resolved_object>(*r)) return {};
+    return std::get<resolved_object>(*r);
+}
+std::optional<resolved_let> is_resolved_let(const r_expr& r) {
+    if (!std::holds_alternative<resolved_let>(*r)) return {};
+    return std::get<resolved_let>(*r);
+}
+std::optional<resolved_conditional> is_resolved_conditional(const r_expr& r) {
+    if (!std::holds_alternative<resolved_conditional>(*r)) return {};
+    return std::get<resolved_conditional>(*r);
+}
+std::optional<resolved_float> is_resolved_float(const r_expr& r) {
+    if (!std::holds_alternative<resolved_float>(*r)) return {};
+    return std::get<resolved_float>(*r);
+}
+std::optional<resolved_int> is_resolved_int(const r_expr& r) {
+    if (!std::holds_alternative<resolved_int>(*r)) return {};
+    return std::get<resolved_int>(*r);
+}
+std::optional<resolved_unary> is_resolved_unary(const r_expr& r) {
+    if (!std::holds_alternative<resolved_unary>(*r)) return {};
+    return std::get<resolved_unary>(*r);
+}
+std::optional<resolved_binary> is_resolved_binary(const r_expr& r) {
+    if (!std::holds_alternative<resolved_binary>(*r)) return {};
+    return std::get<resolved_binary>(*r);
 }
 
 } // namespace al

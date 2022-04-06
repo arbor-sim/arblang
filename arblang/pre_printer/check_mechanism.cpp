@@ -7,10 +7,11 @@
 namespace al {
 namespace resolved_ir {
 
-// Check that the mechanism is printable
-// Should throw an exception for all unsupported features,
-// Any leftover user errors,
-// And any compiler errors.
+// Check that the mechanism is printable.
+// Should throw an exception for:
+// 1. All unsupported features.
+// 2. Any leftover user errors.
+// 3. And compiler errors.
 
 struct mech_error: std::runtime_error {
     mech_error(const std::string& what_arg): std::runtime_error("Error in pre-printer check: " + what_arg) {}
@@ -18,30 +19,30 @@ struct mech_error: std::runtime_error {
 
 void check(const resolved_mechanism& e) {
     if (e.kind != mechanism_kind::density && e.kind != mechanism_kind::point) {
-        throw mech_error(fmt::format("Unsupported mechanism kind {} for mechanism {}, still a work in progress",
+        throw mech_error(fmt::format("Unsupported mechanism kind {} for mechanism {}, still a work in progress.",
                                      to_string(e.kind), e.name));
     }
     if (e.kind != mechanism_kind::point && !e.on_events.empty()) {
-        throw mech_error(fmt::format("Unsupported API call `on_events` for mechanism kind {} (mechanism {})",
+        throw mech_error(fmt::format("Unsupported API call `on_events` for mechanism kind {} (mechanism {}).",
                                      to_string(e.kind), e.name));
     }
     if (!e.functions.empty()) {
-        throw mech_error(fmt::format("Internal compiler error, expected zero functions after inlining"));
+        throw mech_error(fmt::format("Internal compiler error, expected zero functions after inlining."));
     }
     if (!e.constants.empty()) {
-        throw mech_error(fmt::format("Internal compiler error, expected zero constants after constant propagation"));
+        throw mech_error(fmt::format("Internal compiler error, expected zero constants after constant propagation."));
     }
 
     for (const auto& a: e.states) {
-        auto p = std::get_if<resolved_state>(a.get());
+        auto p = is_resolved_state(a);
         if (!p) {
             throw mech_error(fmt::format("Internal compiler error, expected resolved_state in "
                                          "resolved_mechanism::states"));
         }
-        auto t = std::get_if<resolved_record>(p->type.get());
+        auto t = is_resolved_record_type(p->type);
         if (t) {
             for (const auto& [f_id, f_type]: t->fields) {
-                auto ft = std::get_if<resolved_record>(f_type.get());
+                auto ft = is_resolved_record_type(f_type);
                 if (ft) {
                     throw mech_error(fmt::format("Unsupported nested records for states, still a work in progress",
                                                  to_string(e.kind), e.name));
@@ -53,22 +54,22 @@ void check(const resolved_mechanism& e) {
     std::unordered_set<std::string> const_params;
     std::unordered_set<std::string> assigned_params;
     for (const auto& a: e.parameters) {
-        auto p = std::get_if<resolved_parameter>(a.get());
+        auto p = is_resolved_parameter(a);
         if (!p) {
             throw mech_error(fmt::format("Internal compiler error, expected resolved_parameter in "
                                          "resolved_mechanism::parameters"));
         }
-        auto t = std::get_if<resolved_record>(p->type.get());
+        auto t = is_resolved_record_type(p->type);
         if (t) {
             for (const auto& [f_id, f_type]: t->fields) {
-                auto ft = std::get_if<resolved_record>(f_type.get());
+                auto ft = is_resolved_record_type(f_type);
                 if (ft) {
                     throw mech_error(fmt::format("Unsupported nested records for parameters, still a work in progress",
                                                  to_string(e.kind), e.name));
                 }
             }
         }
-        if (std::get_if<resolved_int>(p->value.get()) || std::get_if<resolved_float>(p->value.get())) {
+        if (is_resolved_int(p->value) || is_resolved_float(p->value)) {
             const_params.insert(p->name);
         }
         else {
@@ -77,12 +78,12 @@ void check(const resolved_mechanism& e) {
     }
 
     for (const auto& a: e.exports) {
-        auto x = std::get_if<resolved_export>(a.get());
+        auto x = is_resolved_export(a);
         if (!x) {
             throw mech_error(fmt::format("Internal compiler error, expected resolved_export in "
                                          "resolved_mechanism::exports"));
         }
-        auto p = std::get_if<resolved_argument>(x->identifier.get());
+        auto p = is_resolved_argument(x->identifier);
         if (!p) {
             throw mech_error(fmt::format("Internal compiler error, expected resolved_argument as the identifier "
                                          "of a resolved_export"));
@@ -104,13 +105,8 @@ void check(const resolved_mechanism& e) {
                                      "propagated if not exported", *const_params.begin()));
     }
 
-    //membrane_potential, temperature, current_density,
-    //    molar_flux, charge,
-    //    internal_concentration, external_concentration, nernst_potential,
-    //    dt
-
     for (const auto& a: e.bindings) {
-        auto b = std::get_if<resolved_bind>(a.get());
+        auto b = is_resolved_bind(a);
         if (!b) {
             throw mech_error(fmt::format("Internal compiler error, expected resolved_bind in "
                                          "resolved_mechanism::bindings"));
@@ -129,7 +125,7 @@ void check(const resolved_mechanism& e) {
     }
 
     for (const auto& a: e.effects) {
-        auto b = std::get_if<resolved_effect>(a.get());
+        auto b = is_resolved_effect(a);
         if (!b) {
             throw mech_error(fmt::format("Internal compiler error, expected resolved_effect in "
                                          "resolved_mechanism::effects"));
@@ -138,7 +134,7 @@ void check(const resolved_mechanism& e) {
         switch (effect) {
             case affectable::molar_flux: {
                 if (e.kind != mechanism_kind::density) {
-                    throw mech_error(fmt::format("User errror: unsupported effect {} for mechanism kind {} at {}",
+                    throw mech_error(fmt::format("User error: unsupported effect {} for mechanism kind {} at {}",
                                                  to_string(effect), to_string(e.kind), to_string(e.loc)));
                 }
                 // TODO Add support for molar_flux
@@ -178,7 +174,7 @@ void check(const resolved_mechanism& e) {
             }
             case affectable::current_density_pair:
             case affectable::current_pair: {
-                auto rec = std::get_if<resolved_record>(b->type.get());
+                auto rec = is_resolved_record_type(b->type);
                 if (!rec) {
                     throw mech_error(fmt::format("Internal compiler error, expected affectable {} to have been "
                                                  "resolved_record type.", to_string(effect)));
@@ -189,41 +185,41 @@ void check(const resolved_mechanism& e) {
     }
 
     for (const auto& a: e.initializations) {
-        auto init = std::get_if<resolved_initial>(a.get());
+        auto init = is_resolved_initial(a);
         if (!init) {
             throw mech_error(fmt::format("Internal compiler error, expected resolved_initial in "
                                          "resolved_mechanism::initializations"));
         }
-        auto arg = std::get_if<resolved_argument>(init->identifier.get());
+        auto arg = is_resolved_argument(init->identifier);
         if (!arg) {
             throw mech_error("Internal compiler error: expected identifier of resolved_initial to be a "
                              "resolved_argument.");
         }
     }
     for (const auto& a: e.on_events) {
-        auto on_event = std::get_if<resolved_on_event>(a.get());
+        auto on_event = is_resolved_on_event(a);
         if (!on_event) {
             throw mech_error(fmt::format("Internal compiler error, expected resolved_on_event in "
                                          "resolved_mechanism::on_events"));
         }
-        auto arg = std::get_if<resolved_argument>(on_event->argument.get());
+        auto arg = is_resolved_argument(on_event->argument);
         if (!arg) {
             throw mech_error("Internal compiler error: expected argument of resolved_on_event to be a "
                              "resolved_argument.");
         }
-        auto iden = std::get_if<resolved_argument>(on_event->identifier.get());
+        auto iden = is_resolved_argument(on_event->identifier);
         if (!iden) {
             throw mech_error("Internal compiler error: expected identifier of resolved_on_event to be a "
                              "resolved_argument.");
         }
     }
     for (const auto& a: e.evolutions) {
-        auto evolve = std::get_if<resolved_evolve>(a.get());
+        auto evolve = is_resolved_evolve(a);
         if (!evolve) {
             throw mech_error(fmt::format("Internal compiler error, expected resolved_evolve in "
                                          "resolved_mechanism::evolutions"));
         }
-        auto arg = std::get_if<resolved_argument>(evolve->identifier.get());
+        auto arg = is_resolved_argument(evolve->identifier);
         if (!arg) {
             throw mech_error("Internal compiler error: expected identifier of resolved_evolve to be a "
                              "resolved_argument.");

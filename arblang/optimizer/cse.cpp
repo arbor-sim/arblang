@@ -8,88 +8,26 @@
 namespace al {
 namespace resolved_ir {
 
-// TODO make sure that single_assign is called before cse
-std::pair<resolved_mechanism, bool> cse(const resolved_mechanism& e) {
-    std::unordered_map<resolved_expr, r_expr> expr_map;
-    std::unordered_map<std::string, r_expr> rewrites;
-    resolved_mechanism mech;
-    bool made_changes = false;
-    for (const auto& c: e.constants) {
-        expr_map.clear();
-        rewrites.clear();
-        auto result = cse(c, expr_map, rewrites);
-        mech.constants.push_back(result.first);
-        made_changes |= result.second;
-    }
-    for (const auto& c: e.parameters) {
-        expr_map.clear();
-        rewrites.clear();
-        auto result = cse(c, expr_map, rewrites);
-        mech.parameters.push_back(result.first);
-        made_changes |= result.second;
-    }
-    for (const auto& c: e.bindings) {
-        expr_map.clear();
-        rewrites.clear();
-        auto result = cse(c, expr_map, rewrites);
-        mech.bindings.push_back(result.first);
-        made_changes |= result.second;
-    }
-    for (const auto& c: e.states) {
-        expr_map.clear();
-        rewrites.clear();
-        auto result = cse(c, expr_map, rewrites);
-        mech.states.push_back(result.first);
-        made_changes |= result.second;
-    }
-    for (const auto& c: e.functions) {
-        expr_map.clear();
-        rewrites.clear();
-        auto result = cse(c, expr_map, rewrites);
-        mech.functions.push_back(result.first);
-        made_changes |= result.second;
-    }
-    for (const auto& c: e.initializations) {
-        expr_map.clear();
-        rewrites.clear();
-        auto result = cse(c, expr_map, rewrites);
-        mech.initializations.push_back(result.first);
-        made_changes |= result.second;
-    }
-    for (const auto& c: e.on_events) {
-        expr_map.clear();
-        rewrites.clear();
-        auto result = cse(c, expr_map, rewrites);
-        mech.on_events.push_back(result.first);
-        made_changes |= result.second;
-    }
-    for (const auto& c: e.evolutions) {
-        expr_map.clear();
-        rewrites.clear();
-        auto result = cse(c, expr_map, rewrites);
-        mech.evolutions.push_back(result.first);
-        made_changes |= result.second;
-    }
-    for (const auto& c: e.effects) {
-        expr_map.clear();
-        rewrites.clear();
-        auto result = cse(c, expr_map, rewrites);
-        mech.effects.push_back(result.first);
-        made_changes |= result.second;
-    }
-    for (const auto& c: e.exports) {
-        expr_map.clear();
-        rewrites.clear();
-        auto result = cse(c, expr_map, rewrites);
-        mech.exports.push_back(result.first);
-        made_changes |= result.second;
-    }
-    mech.name = e.name;
-    mech.loc = e.loc;
-    mech.kind = e.kind;
-    return {mech, made_changes};
-}
+// Common subexpression elimination attempts to
+// simplify the code by not recalculating identical
+// expressions.
+// This is done by hashing the value of all expressions
+// on the rhs of an assignment in a let_expression, and
+// consolidating identical expressions. e.g.
+//    let a = x + y;
+//    let b = x + y;
+// becomes:
+//    let a = x + y;
+//    let b = a;
+// Note that this misses some obvious simplifications:
+//    let a = x + y + z;
+//    let b = x + z;
+// will not be simplified.
+// CSE needs to be performed in a loop, until no more
+// changes can be made.
 
+// Record aliases are not saved in the mechanism and are not expected
+// after the resolution pass.
 std::pair<r_expr, bool> cse(const resolved_record_alias& e,
                             std::unordered_map<resolved_expr, r_expr>& expr_map,
                             std::unordered_map<std::string, r_expr>& rewrites)
@@ -269,6 +207,88 @@ std::pair<r_expr, bool> cse(const resolved_field_access& e,
                             std::unordered_map<std::string, r_expr>& rewrites)
 {
     return {make_rexpr<resolved_field_access>(e), false};
+}
+
+// TODO assert that canonicalize and single_assign were called before cse
+std::pair<resolved_mechanism, bool> cse(const resolved_mechanism& e) {
+    std::unordered_map<resolved_expr, r_expr> expr_map;
+    std::unordered_map<std::string, r_expr> rewrites;
+    resolved_mechanism mech;
+    bool made_changes = false;
+    for (const auto& c: e.constants) {
+        expr_map.clear();
+        rewrites.clear();
+        auto result = cse(c, expr_map, rewrites);
+        mech.constants.push_back(result.first);
+        made_changes |= result.second;
+    }
+    for (const auto& c: e.parameters) {
+        expr_map.clear();
+        rewrites.clear();
+        auto result = cse(c, expr_map, rewrites);
+        mech.parameters.push_back(result.first);
+        made_changes |= result.second;
+    }
+    for (const auto& c: e.bindings) {
+        expr_map.clear();
+        rewrites.clear();
+        auto result = cse(c, expr_map, rewrites);
+        mech.bindings.push_back(result.first);
+        made_changes |= result.second;
+    }
+    for (const auto& c: e.states) {
+        expr_map.clear();
+        rewrites.clear();
+        auto result = cse(c, expr_map, rewrites);
+        mech.states.push_back(result.first);
+        made_changes |= result.second;
+    }
+    for (const auto& c: e.functions) {
+        expr_map.clear();
+        rewrites.clear();
+        auto result = cse(c, expr_map, rewrites);
+        mech.functions.push_back(result.first);
+        made_changes |= result.second;
+    }
+    for (const auto& c: e.initializations) {
+        expr_map.clear();
+        rewrites.clear();
+        auto result = cse(c, expr_map, rewrites);
+        mech.initializations.push_back(result.first);
+        made_changes |= result.second;
+    }
+    for (const auto& c: e.on_events) {
+        expr_map.clear();
+        rewrites.clear();
+        auto result = cse(c, expr_map, rewrites);
+        mech.on_events.push_back(result.first);
+        made_changes |= result.second;
+    }
+    for (const auto& c: e.evolutions) {
+        expr_map.clear();
+        rewrites.clear();
+        auto result = cse(c, expr_map, rewrites);
+        mech.evolutions.push_back(result.first);
+        made_changes |= result.second;
+    }
+    for (const auto& c: e.effects) {
+        expr_map.clear();
+        rewrites.clear();
+        auto result = cse(c, expr_map, rewrites);
+        mech.effects.push_back(result.first);
+        made_changes |= result.second;
+    }
+    for (const auto& c: e.exports) {
+        expr_map.clear();
+        rewrites.clear();
+        auto result = cse(c, expr_map, rewrites);
+        mech.exports.push_back(result.first);
+        made_changes |= result.second;
+    }
+    mech.name = e.name;
+    mech.loc = e.loc;
+    mech.kind = e.kind;
+    return {mech, made_changes};
 }
 
 std::pair<r_expr, bool> cse(const r_expr& e,

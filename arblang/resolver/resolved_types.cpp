@@ -132,31 +132,32 @@ r_type resolve_type(const parsed_quantity_type& t, const std::unordered_map<std:
     return make_rtype<resolved_quantity>(normalized_type(t.type), t.loc);
 }
 r_type resolve_type(const parsed_binary_quantity_type& t, const std::unordered_map<std::string, r_type>& rec_alias) {
-    auto nlhs = resolve_type(t.lhs, rec_alias);;
-    if (!std::get_if<resolved_quantity>(nlhs.get())) {
+    auto qlhs = is_resolved_quantity_type(resolve_type(t.lhs, rec_alias));
+    if (!qlhs) {
         throw std::runtime_error(fmt::format("Internal compiler error: expected resolved quantity type at lhs of {}",
                                              to_string(t.loc)));
     }
-    auto nlhs_q = std::get<resolved_quantity>(*nlhs);
+    auto lhs_type = qlhs->type;
 
     normalized_type type;
     if (t.op == t_binary_op::pow) {
-        if (!std::get_if<parsed_integer_type>(t.rhs.get())) {
+        auto qrhs = is_parsed_integer_type(t.rhs);
+        if (!qrhs) {
             throw std::runtime_error(fmt::format("Internal compiler error: expected integer type at rhs of {}",
                                                  to_string(t.loc)));
         }
-        auto nrhs_q = std::get<parsed_integer_type>(*t.rhs);
-        type = nlhs_q.type^nrhs_q.val;
+        auto rhs_val = qrhs->val;
+        type = lhs_type^rhs_val;
     } else {
-        auto nrhs = resolve_type(t.rhs, rec_alias);
-        if (!std::get_if<resolved_quantity>(nrhs.get())) {
+        auto qrhs = is_resolved_quantity_type(resolve_type(t.rhs, rec_alias));
+        if (!qrhs) {
             throw std::runtime_error(fmt::format("Internal compiler error: expected resolved quantity type at rhs of {}",
                                                  to_string(t.loc)));
         }
-        auto nrhs_q = std::get<resolved_quantity>(*nrhs);
+        auto rhs_type = qrhs->type;
         switch (t.op) {
-            case t_binary_op::mul: type = nlhs_q.type*nrhs_q.type; break;
-            case t_binary_op::div: type = nlhs_q.type/nrhs_q.type; break;
+            case t_binary_op::mul: type = lhs_type*rhs_type; break;
+            case t_binary_op::div: type = lhs_type/rhs_type; break;
             default: break;
         }
     }
@@ -287,5 +288,22 @@ std::string to_string(const resolved_record& q, int indent) {
 std::string to_string(const r_type& q, int indent) {
     return std::visit([&](auto&& c){return to_string(c, indent);}, *q);
 }
+src_location location_of(const r_type& e) {
+    return std::visit([](auto&& c){return c.loc;}, *e);
+}
+
+std::optional<resolved_quantity> is_resolved_quantity_type(const r_type& r) {
+    if (!std::holds_alternative<resolved_quantity>(*r)) return {};
+    return std::get<resolved_quantity>(*r);
+}
+std::optional<resolved_boolean> is_resolved_bool_type(const r_type& r) {
+    if (!std::holds_alternative<resolved_boolean>(*r)) return {};
+    return std::get<resolved_boolean>(*r);
+}
+std::optional<resolved_record> is_resolved_record_type(const r_type& r) {
+    if (!std::holds_alternative<resolved_record>(*r)) return {};
+    return std::get<resolved_record>(*r);
+}
+
 } // namespace resolved_type_ir
 } // namespace al

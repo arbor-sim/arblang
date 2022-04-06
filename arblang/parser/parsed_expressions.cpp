@@ -474,5 +474,90 @@ src_location location_of(const p_expr& e) {
     return std::visit([](auto&& c){return c.loc;}, *e);
 }
 
+std::optional<parsed_parameter> is_parsed_parameter(const p_expr& p) {
+    if (!std::holds_alternative<parsed_parameter>(*p)) return {};
+    return std::get<parsed_parameter>(*p);
+}
+std::optional<parsed_constant> is_parsed_constant(const p_expr& p) {
+    if (!std::holds_alternative<parsed_constant>(*p)) return {};
+    return std::get<parsed_constant>(*p);
+}
+std::optional<parsed_state> is_parsed_state(const p_expr& p) {
+    if (!std::holds_alternative<parsed_state>(*p)) return {};
+    return std::get<parsed_state>(*p);
+}
+std::optional<parsed_record_alias> is_parsed_record_alias(const p_expr& p) {
+    if (!std::holds_alternative<parsed_record_alias>(*p)) return {};
+    return std::get<parsed_record_alias>(*p);
+}
+std::optional<parsed_function> is_parsed_function(const p_expr& p) {
+    if (!std::holds_alternative<parsed_function>(*p)) return {};
+    return std::get<parsed_function>(*p);
+}
+std::optional<parsed_bind> is_parsed_bind(const p_expr& p) {
+    if (!std::holds_alternative<parsed_bind>(*p)) return {};
+    return std::get<parsed_bind>(*p);
+}
+std::optional<parsed_initial> is_parsed_initial(const p_expr& p) {
+    if (!std::holds_alternative<parsed_initial>(*p)) return {};
+    return std::get<parsed_initial>(*p);
+}
+std::optional<parsed_evolve> is_parsed_evolve(const p_expr& p) {
+    if (!std::holds_alternative<parsed_evolve>(*p)) return {};
+    return std::get<parsed_evolve>(*p);
+}
+std::optional<parsed_effect> is_parsed_effect(const p_expr& p) {
+    if (!std::holds_alternative<parsed_effect>(*p)) return {};
+    return std::get<parsed_effect>(*p);
+}
+std::optional<parsed_on_event> is_parsed_on_event(const p_expr& p) {
+    if (!std::holds_alternative<parsed_on_event>(*p)) return {};
+    return std::get<parsed_on_event>(*p);
+}
+std::optional<parsed_export> is_parsed_export(const p_expr& p) {
+    if (!std::holds_alternative<parsed_export>(*p)) return {};
+    return std::get<parsed_export>(*p);
+}
+std::optional<parsed_call> is_parsed_call(const p_expr& p) {
+    if (!std::holds_alternative<parsed_call>(*p)) return {};
+    return std::get<parsed_call>(*p);
+}
+std::optional<parsed_object> is_parsed_object(const p_expr& p) {
+    if (!std::holds_alternative<parsed_object>(*p)) return {};
+    return std::get<parsed_object>(*p);
+}
+std::optional<parsed_let> is_parsed_let(const p_expr& p) {
+    if (!std::holds_alternative<parsed_let>(*p)) return {};
+    return std::get<parsed_let>(*p);
+}
+std::optional<parsed_with> is_parsed_with(const p_expr& p) {
+    if (!std::holds_alternative<parsed_with>(*p)) return {};
+    return std::get<parsed_with>(*p);
+}
+std::optional<parsed_conditional> is_parsed_conditional(const p_expr& p) {
+    if (!std::holds_alternative<parsed_conditional>(*p)) return {};
+    return std::get<parsed_conditional>(*p);
+}
+std::optional<parsed_identifier> is_parsed_identifier(const p_expr& p) {
+    if (!std::holds_alternative<parsed_identifier>(*p)) return {};
+    return std::get<parsed_identifier>(*p);
+}
+std::optional<parsed_float> is_parsed_float(const p_expr& p) {
+    if (!std::holds_alternative<parsed_float>(*p)) return {};
+    return std::get<parsed_float>(*p);
+}
+std::optional<parsed_int> is_parsed_int(const p_expr& p) {
+    if (!std::holds_alternative<parsed_int>(*p)) return {};
+    return std::get<parsed_int>(*p);
+}
+std::optional<parsed_unary> is_parsed_unary(const p_expr& p) {
+    if (!std::holds_alternative<parsed_unary>(*p)) return {};
+    return std::get<parsed_unary>(*p);
+}
+std::optional<parsed_binary> is_parsed_binary(const p_expr& p) {
+    if (!std::holds_alternative<parsed_binary>(*p)) return {};
+    return std::get<parsed_binary>(*p);
+}
+
 } // namespace al
 } // namespace parsed_ir

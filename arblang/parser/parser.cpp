@@ -944,7 +944,7 @@ p_type parser::parse_type() {
         return parse_parsed_record_type();
     }
     auto type = parse_parsed_quantity_type();
-    if (std::get_if<parsed_integer_type>(type.get())) {
+    if (is_parsed_integer_type(type)) {
         throw std::runtime_error("Invalid type.");
     }
     return std::move(type);
@@ -1051,7 +1051,7 @@ p_unit parser::try_parse_unit(int prec) {
     }
     next();
 
-    if (std::get_if<parsed_integer_unit>(u.get())) {
+    if (is_parsed_integer_unit(u)) {
         throw std::runtime_error("Invalid unit.");
     }
     return std::move(u);

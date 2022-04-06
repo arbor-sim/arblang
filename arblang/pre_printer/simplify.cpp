@@ -8,7 +8,13 @@
 namespace al {
 namespace resolved_ir {
 
-// Simplify
+// Resolve all quantity types to `real`. They are no longer needed at this point.
+// This allows a final round of constant propagation that was not possible.
+// example `let a = b * 1 [A];` couldn't be simplified to `let a = b;` because
+// that would cause a type mismatch. When we drop the types it becomes possible.
+// At this point we have also mangled record fields. All `resolved_field_access`
+// can then be replaced with a resolved_argument.
+
 r_expr simplify(const r_expr&, const record_field_map&, std::unordered_map<std::string, r_expr>&);
 
 r_expr simplify(const resolved_record_alias& e, const record_field_map& map, std::unordered_map<std::string, r_expr>& rewrites) {
@@ -155,7 +161,7 @@ r_expr simplify(const resolved_binary& e, const record_field_map& map, std::unor
 }
 
 r_expr simplify(const resolved_field_access& e, const record_field_map& map, std::unordered_map<std::string, r_expr>& rewrites) {
-    if (auto arg = std::get_if<resolved_argument>(e.object.get())) {
+    if (auto arg = is_resolved_argument(e.object)) {
         // Should be referring to a state
         if (!map.count(arg->name)) {
             throw std::runtime_error(fmt::format("Internal compiler error, object of resolved_field_access "

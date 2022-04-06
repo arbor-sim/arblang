@@ -122,11 +122,10 @@ parsed_binary_unit::parsed_binary_unit(tok t, p_unit l, p_unit r, const src_loca
 
 
 bool parsed_binary_unit::verify() const {
-    auto is_int  = [](const p_unit& u) {return std::get_if<parsed_integer_unit>(u.get());};
-    auto is_pow = (op == u_binary_op::pow);
+    auto pow_op = (op == u_binary_op::pow);
 
-    if (is_int(lhs)) return false;
-    if ((is_pow && !is_int(rhs)) || (!is_pow && is_int(rhs))) return false;
+    if (is_parsed_integer_unit(lhs)) return false;
+    if ((pow_op && !is_parsed_integer_unit(rhs)) || (!pow_op && is_parsed_integer_unit(rhs))) return false;
 
     auto is_allowed = [](const p_unit& u) {
         return std::visit(al::util::overloaded {
@@ -141,6 +140,7 @@ bool parsed_binary_unit::verify() const {
 }
 
 // check_parsed_simple_unit
+// Optionally return a "simple unit" (i.e. a an optional prefix + unit symbol)
 std::optional<unit> check_parsed_simple_unit(const std::string& s) {
     // If the string is a unit symbol, return with no prefix.
     if (auto sym = to_unit_symbol(s)) return unit{unit_pref::none, sym.value()};
@@ -338,6 +338,23 @@ std::string to_string(const parsed_no_unit& u, int indent) {
 
 std::string to_string(const p_unit& u , int indent) {
     return std::visit([&](auto&& c){return to_string(c, indent);}, *u);
+}
+
+std::optional<parsed_integer_unit> is_parsed_integer_unit(const p_unit& p) {
+    if (!std::holds_alternative<parsed_integer_unit>(*p)) return {};
+    return std::get<parsed_integer_unit>(*p);
+}
+std::optional<parsed_simple_unit> is_parsed_simple_unit(const p_unit& p) {
+    if (!std::holds_alternative<parsed_simple_unit>(*p)) return {};
+    return std::get<parsed_simple_unit>(*p);
+}
+std::optional<parsed_binary_unit> is_parsed_binary_unit(const p_unit& p) {
+    if (!std::holds_alternative<parsed_binary_unit>(*p)) return {};
+    return std::get<parsed_binary_unit>(*p);
+}
+std::optional<parsed_no_unit> is_parsed_no_unit(const p_unit& p) {
+    if (!std::holds_alternative<parsed_no_unit>(*p)) return {};
+    return std::get<parsed_no_unit>(*p);
 }
 
 

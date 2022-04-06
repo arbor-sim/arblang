@@ -7,93 +7,15 @@
 
 namespace al {
 namespace resolved_ir {
-bool is_argument(const r_expr& e) {
-    return std::get_if<resolved_argument>(e.get());
-}
-bool is_variable(const r_expr& e) {
-    return std::get_if<resolved_variable>(e.get());
-}
-bool is_object(const r_expr& e) {
-    return std::get_if<resolved_object>(e.get());
-}
 
-std::pair<resolved_mechanism, bool> copy_propagate(const resolved_mechanism& e) {
-    std::unordered_map<std::string, r_expr> local_copy_map, rewrites;
-    resolved_mechanism mech;
-    bool made_changes = false;
-    for (const auto& c: e.constants) {
-        auto result = copy_propagate(c, local_copy_map, rewrites);
-        mech.constants.push_back(result.first);
-        made_changes |= result.second;
-    }
-    for (const auto& c: e.parameters) {
-        local_copy_map.clear();
-        rewrites.clear();
-        auto result = copy_propagate(c, local_copy_map, rewrites);
-        mech.parameters.push_back(result.first);
-        made_changes |= result.second;
-    }
-    for (const auto& c: e.bindings) {
-        local_copy_map.clear();
-        rewrites.clear();
-        auto result = copy_propagate(c, local_copy_map, rewrites);
-        mech.bindings.push_back(result.first);
-        made_changes |= result.second;
-    }
-    for (const auto& c: e.states) {
-        local_copy_map.clear();
-        rewrites.clear();
-        auto result = copy_propagate(c, local_copy_map, rewrites);
-        mech.states.push_back(result.first);
-        made_changes |= result.second;
-    }
-    for (const auto& c: e.functions) {
-        local_copy_map.clear();
-        rewrites.clear();
-        auto result = copy_propagate(c, local_copy_map, rewrites);
-        mech.functions.push_back(result.first);
-        made_changes |= result.second;
-    }
-    for (const auto& c: e.initializations) {
-        local_copy_map.clear();
-        rewrites.clear();
-        auto result = copy_propagate(c, local_copy_map, rewrites);
-        mech.initializations.push_back(result.first);
-        made_changes |= result.second;
-    }
-    for (const auto& c: e.on_events) {
-        local_copy_map.clear();
-        rewrites.clear();
-        auto result = copy_propagate(c, local_copy_map, rewrites);
-        mech.on_events.push_back(result.first);
-        made_changes |= result.second;
-    }
-    for (const auto& c: e.evolutions) {
-        local_copy_map.clear();
-        rewrites.clear();
-        auto result = copy_propagate(c, local_copy_map, rewrites);
-        mech.evolutions.push_back(result.first);
-        made_changes |= result.second;
-    }
-    for (const auto& c: e.effects) {
-        local_copy_map.clear();
-        rewrites.clear();
-        auto result = copy_propagate(c, local_copy_map, rewrites);
-        mech.effects.push_back(result.first);
-        made_changes |= result.second;
-    }
-    for (const auto& c: e.exports) {
-        local_copy_map.clear();
-        rewrites.clear();
-        auto result = copy_propagate(c, local_copy_map, rewrites);
-        mech.exports.push_back(result.first);
-        made_changes |= result.second;
-    }
-    mech.name = e.name;
-    mech.loc = e.loc;
-    mech.kind = e.kind;
-    return {mech, made_changes};
-}
+// Copy propagation removes unnecessary copies. e.g.
+//    let a = _t0;
+//    let b = a + 5;
+// becomes:
+//    let a = _t0;
+//    let b = _t0 + 5;
+// Copy propagation needs to be performed in a loop,
+// until no more changes can be made.
 
 std::pair<r_expr, bool> copy_propagate(const resolved_record_alias& e,
                                        std::unordered_map<std::string, r_expr>& copy_map,
@@ -230,7 +152,7 @@ std::pair<r_expr, bool> copy_propagate(const resolved_let& e,
                                        std::unordered_map<std::string, r_expr>& rewrites)
 {
     auto id_val = e.id_value();
-    if (is_argument(id_val) || is_variable(id_val) || is_object(id_val)) {
+    if (is_resolved_argument(id_val) || is_resolved_variable(id_val) || is_resolved_object(id_val)) {
         copy_map.insert({e.id_name(), id_val});
     }
     auto val  = copy_propagate(id_val, copy_map, rewrites);
@@ -291,6 +213,84 @@ std::pair<r_expr, bool> copy_propagate(const resolved_field_access& e,
 {
     auto obj_arg = copy_propagate(e.object, copy_map, rewrites);
     return {make_rexpr<resolved_field_access>(obj_arg.first, e.field, e.type, e.loc), obj_arg.second};
+}
+
+std::pair<resolved_mechanism, bool> copy_propagate(const resolved_mechanism& e) {
+    std::unordered_map<std::string, r_expr> local_copy_map, rewrites;
+    resolved_mechanism mech;
+    bool made_changes = false;
+    for (const auto& c: e.constants) {
+        auto result = copy_propagate(c, local_copy_map, rewrites);
+        mech.constants.push_back(result.first);
+        made_changes |= result.second;
+    }
+    for (const auto& c: e.parameters) {
+        local_copy_map.clear();
+        rewrites.clear();
+        auto result = copy_propagate(c, local_copy_map, rewrites);
+        mech.parameters.push_back(result.first);
+        made_changes |= result.second;
+    }
+    for (const auto& c: e.bindings) {
+        local_copy_map.clear();
+        rewrites.clear();
+        auto result = copy_propagate(c, local_copy_map, rewrites);
+        mech.bindings.push_back(result.first);
+        made_changes |= result.second;
+    }
+    for (const auto& c: e.states) {
+        local_copy_map.clear();
+        rewrites.clear();
+        auto result = copy_propagate(c, local_copy_map, rewrites);
+        mech.states.push_back(result.first);
+        made_changes |= result.second;
+    }
+    for (const auto& c: e.functions) {
+        local_copy_map.clear();
+        rewrites.clear();
+        auto result = copy_propagate(c, local_copy_map, rewrites);
+        mech.functions.push_back(result.first);
+        made_changes |= result.second;
+    }
+    for (const auto& c: e.initializations) {
+        local_copy_map.clear();
+        rewrites.clear();
+        auto result = copy_propagate(c, local_copy_map, rewrites);
+        mech.initializations.push_back(result.first);
+        made_changes |= result.second;
+    }
+    for (const auto& c: e.on_events) {
+        local_copy_map.clear();
+        rewrites.clear();
+        auto result = copy_propagate(c, local_copy_map, rewrites);
+        mech.on_events.push_back(result.first);
+        made_changes |= result.second;
+    }
+    for (const auto& c: e.evolutions) {
+        local_copy_map.clear();
+        rewrites.clear();
+        auto result = copy_propagate(c, local_copy_map, rewrites);
+        mech.evolutions.push_back(result.first);
+        made_changes |= result.second;
+    }
+    for (const auto& c: e.effects) {
+        local_copy_map.clear();
+        rewrites.clear();
+        auto result = copy_propagate(c, local_copy_map, rewrites);
+        mech.effects.push_back(result.first);
+        made_changes |= result.second;
+    }
+    for (const auto& c: e.exports) {
+        local_copy_map.clear();
+        rewrites.clear();
+        auto result = copy_propagate(c, local_copy_map, rewrites);
+        mech.exports.push_back(result.first);
+        made_changes |= result.second;
+    }
+    mech.name = e.name;
+    mech.loc = e.loc;
+    mech.kind = e.kind;
+    return {mech, made_changes};
 }
 
 std::pair<r_expr, bool> copy_propagate(const r_expr& e,

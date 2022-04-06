@@ -81,11 +81,10 @@ parsed_binary_quantity_type::parsed_binary_quantity_type(tok t, p_type l, p_type
 }
 
 bool parsed_binary_quantity_type::verify() const {
-    auto is_int  = [](const p_type& t) {return std::get_if<parsed_integer_type>(t.get());};
-    auto is_pow = (op == t_binary_op::pow);
+    auto pow_op = (op == t_binary_op::pow);
 
-    if (is_int(lhs)) return false;
-    if ((is_pow && !is_int(rhs)) || (!is_pow && is_int(rhs))) return false;
+    if (is_parsed_integer_type(lhs)) return false;
+    if ((pow_op && !is_parsed_integer_type(rhs)) || (!pow_op && is_parsed_integer_type(rhs))) return false;
 
     auto is_allowed = [](const p_type& t) {
         return std::visit(al::util::overloaded {
@@ -197,6 +196,31 @@ std::string to_string(const parsed_record_alias_type& q, int indent) {
 
 std::string to_string(const p_type& t, int indent) {
     return std::visit([&](auto&& c) {return to_string(c, indent);}, *t);
+}
+
+std::optional<parsed_integer_type> is_parsed_integer_type(const p_type& p) {
+    if (!std::holds_alternative<parsed_integer_type>(*p)) return {};
+    return std::get<parsed_integer_type>(*p);
+}
+std::optional<parsed_quantity_type> is_parsed_quantity_type(const p_type& p) {
+    if (!std::holds_alternative<parsed_quantity_type>(*p)) return {};
+    return std::get<parsed_quantity_type>(*p);
+}
+std::optional<parsed_binary_quantity_type> is_parsed_binary_quantity_type(const p_type& p) {
+    if (!std::holds_alternative<parsed_binary_quantity_type>(*p)) return {};
+    return std::get<parsed_binary_quantity_type>(*p);
+}
+std::optional<parsed_bool_type> is_parsed_bool_type(const p_type& p) {
+    if (!std::holds_alternative<parsed_bool_type>(*p)) return {};
+    return std::get<parsed_bool_type>(*p);
+}
+std::optional<parsed_record_type> is_parsed_record_type(const p_type& p) {
+    if (!std::holds_alternative<parsed_record_type>(*p)) return {};
+    return std::get<parsed_record_type>(*p);
+}
+std::optional<parsed_record_alias_type> is_parsed_record_alias_type(const p_type& p) {
+    if (!std::holds_alternative<parsed_record_alias_type>(*p)) return {};
+    return std::get<parsed_record_alias_type>(*p);
 }
 
 } // namespace parsed_type_ir

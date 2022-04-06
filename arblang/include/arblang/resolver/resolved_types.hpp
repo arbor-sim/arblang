@@ -74,5 +74,11 @@ std::optional<r_type> derive(const r_type&);
 std::string to_string(const normalized_type&, int indent=0);
 std::string to_string(const r_type&, int indent=0);
 
+src_location location_of(const r_type&);
+
+std::optional<resolved_quantity> is_resolved_quantity_type(const r_type&);
+std::optional<resolved_boolean> is_resolved_bool_type(const r_type&);
+std::optional<resolved_record> is_resolved_record_type(const r_type&);
+
 } // namespace resolved_type_ir
 } // namespace al

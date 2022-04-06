@@ -9,7 +9,7 @@ namespace al {
 namespace resolved_ir {
 
 void print_non_trivial_expression(const r_expr& e, std::stringstream& out, const std::string& indent) {
-    if (std::get_if<resolved_let>(e.get())) {
+    if (is_resolved_let(e)) {
         print_expression(e, out, indent);
     }
 }
@@ -94,7 +94,7 @@ void print_expression(const resolved_let& e, std::stringstream& out, const std::
     out << ";\n";
 
     // only print the body if it another let statement
-    if (std::get_if<resolved_let>(e.body.get())) {
+    if (is_resolved_let(e.body)) {
         print_expression(e.body, out, indent);
     }
 }

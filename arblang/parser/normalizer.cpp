@@ -7,6 +7,11 @@
 namespace al {
 namespace parsed_ir {
 
+// This pass removes unit prefixes for parsed_int and parsed_float
+// (which are the only 2 expressions where units can appear).
+// e.g. 5 mV -> 0.005 V; 5KA = 5000 A;
+// This is in preparation for dropping units completely
+// during the resolution step.
 parsed_mechanism normalize(const parsed_mechanism& e) {
     parsed_mechanism mech;
     mech.name = e.name;

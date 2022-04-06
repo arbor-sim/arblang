@@ -123,7 +123,7 @@ struct parsed_record_alias {
 // Top level function definitions
 struct parsed_function {
     std::string name;
-    std::vector<p_expr> args;   // expect parsed_identifier
+    std::vector<p_expr> args; // expect parsed_identifier
     std::optional<parsed_type_ir::p_type> ret;
     p_expr body;
     src_location loc;
@@ -309,6 +309,29 @@ std::string to_string(const p_expr&, int indent=0);
 
 // get location
 src_location location_of(const p_expr&);
+
+// Get underlying type
+std::optional<parsed_parameter> is_parsed_parameter(const p_expr&);
+std::optional<parsed_constant> is_parsed_constant(const p_expr&);
+std::optional<parsed_state> is_parsed_state(const p_expr&);
+std::optional<parsed_record_alias> is_parsed_record_alias(const p_expr&);
+std::optional<parsed_function> is_parsed_function(const p_expr&);
+std::optional<parsed_bind> is_parsed_bind(const p_expr&);
+std::optional<parsed_initial> is_parsed_initial(const p_expr&);
+std::optional<parsed_evolve> is_parsed_evolve(const p_expr&);
+std::optional<parsed_effect> is_parsed_effect(const p_expr&);
+std::optional<parsed_on_event> is_parsed_on_event(const p_expr&);
+std::optional<parsed_export> is_parsed_export(const p_expr&);
+std::optional<parsed_call> is_parsed_call(const p_expr&);
+std::optional<parsed_object> is_parsed_object(const p_expr&);
+std::optional<parsed_let> is_parsed_let(const p_expr&);
+std::optional<parsed_with> is_parsed_with(const p_expr&);
+std::optional<parsed_conditional> is_parsed_conditional(const p_expr&);
+std::optional<parsed_identifier> is_parsed_identifier(const p_expr&);
+std::optional<parsed_float> is_parsed_float(const p_expr&);
+std::optional<parsed_int> is_parsed_int(const p_expr&);
+std::optional<parsed_unary> is_parsed_unary(const p_expr&);
+std::optional<parsed_binary> is_parsed_binary(const p_expr&);
 
 template <typename T, typename... Args>
 p_expr make_pexpr(Args&&... args) {

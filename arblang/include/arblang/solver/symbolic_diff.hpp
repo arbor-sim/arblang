@@ -5,8 +5,12 @@
 namespace al {
 namespace resolved_ir {
 
-// TODO types are a big Question Mark in the implementation.
-r_expr sym_diff(const r_expr&, const std::string& sym, const std::optional<std::string>& field = {});
+struct diff_var {
+    std::string sym;
+    std::optional<std::string> sub_field;
+    r_type type;
+};
+r_expr sym_diff(const r_expr&, const diff_var&);
 
 } // namespace resolved_ir
 } // namespace al

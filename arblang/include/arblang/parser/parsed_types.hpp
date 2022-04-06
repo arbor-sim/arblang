@@ -119,6 +119,13 @@ struct parsed_record_alias_type {
 std::string to_string(quantity);
 std::string to_string(const p_type&, int indent = 0);
 
+std::optional<parsed_integer_type> is_parsed_integer_type(const p_type&);
+std::optional<parsed_quantity_type> is_parsed_quantity_type(const p_type&);
+std::optional<parsed_binary_quantity_type> is_parsed_binary_quantity_type(const p_type&);
+std::optional<parsed_bool_type> is_parsed_bool_type(const p_type&);
+std::optional<parsed_record_type> is_parsed_record_type(const p_type&);
+std::optional<parsed_record_alias_type> is_parsed_record_alias_type(const p_type&);
+
 template <typename T, typename... Args>
 p_type make_ptype(Args&&... args) {
     return p_type(new type_expr(T(std::forward<Args>(args)...)));

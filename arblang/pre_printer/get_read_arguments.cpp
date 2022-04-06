@@ -5,6 +5,8 @@
 
 #include <arblang/pre_printer/get_read_arguments.hpp>
 
+// Collect ead arguments that require special indexing (non-local variables).
+// These are guaranteed to be resolved_arguments.
 namespace al {
 namespace resolved_ir {
 

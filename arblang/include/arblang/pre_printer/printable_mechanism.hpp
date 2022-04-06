@@ -24,9 +24,9 @@ struct printable_mechanism {
         std::vector<r_expr> evolutions;
     } procedure_pack;
 
-    // Used to create assign storage for parameters and state vars
-    // and create named pointers to the storage of parameters, state
-    // vars, bindables and affectables.
+    // Used to assign storage for parameters and state vars,
+    // and to create named pointers to the storage of parameters,
+    // state vars, bindables and affectables.
     struct mechanism_fields {
         std::vector<std::tuple<std::string, double, std::string>> param_sources; // param name to val and unit
         std::vector<std::string> state_sources;
@@ -43,13 +43,11 @@ struct printable_mechanism {
     // This needs to be a vector, we rely on it for indexing
     std::vector<ion_info> ionic_fields;
 
-    // Map from state vars/affectables being written to prefixed pointer names of the destinations.
-    // Current effectables can write to multiple pointers (ionic and overall current), so multimap
     enum class storage_class {
         internal,      // param, state
         external,      // indexed by node_index
-        ionic,         // indexed by ioninc node_index
-        stream_member, // A member of an event stream
+        ionic,         // indexed by ionic node_index
+        stream_member, // A member of an event stream (weight)
     };
     struct storage_info {
         std::string pointer_name;
@@ -58,14 +56,24 @@ struct printable_mechanism {
         std::optional<double> scale;
     };
 
-    // Map from variable name to source/destination (pointer storage info)
+    // Map from variable name to source/destination pointer storage info.
+    // write_map is a multimap because certain destinations can be written
+    // multiple times. These get accumulated durign the printing stage.
     using write_map = std::unordered_multimap<std::string, storage_info>;
     using read_map = std::unordered_map<std::string, storage_info>;
 
-    // Map from all parameters/states/bindables/affectables to prefixed pointer names of the destinations/sources.
-    write_map dest_pointer_map;
-    read_map source_pointer_map;
+    // Map from all parameters/states/bindables/affectables to prefixed pointer names of the data storage.
+    // e.g. `state s: real; parameter p: voltage = 1 [V]; bindable b = membrane_voltage; effect current_density = ...`
+    // source_pointer_map = {
+    //   {s: {_pp_s, internal}},
+    //   {p: {_pp_p, internal}},
+    //   {b: {_pp_b, external}},
+    //   {_effect_i: {_pp__effect_i, external}},
+    //   {_effect_g: {_pp__effect_g, external}},
+    // }
+    read_map pointer_map;
 
+    // Per stage map from writable/readable variables to prefixed pointer names of the destinations/sources.
     read_map  init_read_map;
     write_map init_write_map;
 
@@ -93,7 +101,8 @@ private:
     record_field_map gen_record_field_map(const std::vector<std::pair<std::string, r_type>>&);
     resolved_mechanism simplify_mech(const resolved_mechanism& mech, const record_field_map& map);
 
-    void fill_write_maps(const std::unordered_map<std::string, std::unordered_map<std::string, std::string>>&);
+    void fill_write_maps(const std::unordered_map<std::string, std::unordered_map<std::string, std::string>>&,
+                         const write_map&);
     void fill_read_maps();
 };
 

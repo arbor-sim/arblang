@@ -6,89 +6,25 @@
 
 namespace al {
 namespace resolved_ir {
-
-// TODO make sure that canonicalize is called before single_assign
-resolved_mechanism single_assign(const resolved_mechanism& e) {
-    std::unordered_set<std::string> globals;
-    std::unordered_set<std::string> reserved;
-    std::unordered_map<std::string, r_expr> rewrites;
-    std::string pref = "r";
-    resolved_mechanism mech;
-
-    // Get all globally available symbols
-    for (const auto& c: e.constants) {
-        globals.insert(std::get<resolved_constant>(*c).name);
-    }
-    for (const auto& c: e.parameters) {
-        globals.insert(std::get<resolved_parameter>(*c).name);
-    }
-    for (const auto& c: e.bindings) {
-        globals.insert(std::get<resolved_bind>(*c).name);
-    }
-    for (const auto& c: e.states) {
-        globals.insert(std::get<resolved_state>(*c).name);
-    }
-
-    // Handle expressions
-    for (const auto& c: e.constants) {
-        reserved = globals;
-        mech.constants.push_back(single_assign(c, reserved, rewrites, pref));
-    }
-    for (const auto& c: e.bindings) {
-        reserved = globals;
-        rewrites.clear();
-        mech.bindings.push_back(single_assign(c, reserved, rewrites, pref));
-    }
-    for (const auto& c: e.states) {
-        reserved = globals;
-        rewrites.clear();
-        mech.states.push_back(single_assign(c, reserved, rewrites, pref));
-    }
-    for (const auto& c: e.functions) {
-        reserved = globals;
-        rewrites.clear();
-        mech.functions.push_back(single_assign(c, reserved, rewrites, pref));
-    }
-    // parameters and init share the same reserved_map
-    reserved = globals;
-    for (const auto& c: e.parameters) {
-        rewrites.clear();
-        mech.parameters.push_back(single_assign(c, reserved, rewrites, pref));
-    }
-    for (const auto& c: e.initializations) {
-        rewrites.clear();
-        mech.initializations.push_back(single_assign(c, reserved, rewrites, pref));
-    }
-
-    reserved = globals;
-    for (const auto& c: e.on_events) {
-        rewrites.clear();
-        mech.on_events.push_back(single_assign(c, reserved, rewrites, pref));
-    }
-
-    reserved = globals;
-    for (const auto& c: e.evolutions) {
-        rewrites.clear();
-        mech.evolutions.push_back(single_assign(c, reserved, rewrites, pref));
-    }
-
-    reserved = globals;
-    for (const auto& c: e.effects) {
-        rewrites.clear();
-        mech.effects.push_back(single_assign(c, reserved, rewrites, pref));
-    }
-
-    reserved = globals;
-    for (const auto& c: e.exports) {
-        reserved = globals;
-        rewrites.clear();
-        mech.exports.push_back(single_assign(c, reserved, rewrites, pref));
-    }
-    mech.name = e.name;
-    mech.loc = e.loc;
-    mech.kind = e.kind;
-    return mech;
-}
+// Single assignment is the process of rewriting expressions such that
+// no 2 variables share the same name.
+// Before this step, the following is possible:
+//   let a = 4;
+//   let a = 7.3;
+//   let b = a;
+// We want to change this to:
+//   let a = 4;
+//   let _r0 = 7.3;
+//   let b = _r0;
+// The following is also possible:
+//   parameter a = ...
+//   ...
+//   let a = ..
+// We want to change this to :
+//   parameter a = ...
+//   ...
+//   let _t0 = ...
+// Single assignment is a prerequisite for the optimization passes.
 
 r_expr single_assign(const resolved_record_alias& e,
                      std::unordered_set<std::string>& reserved,
@@ -107,6 +43,8 @@ r_expr single_assign(const resolved_argument& e,
     return make_rexpr<resolved_argument>(e);
 }
 
+// Resolved variables may be rewritten similar to the
+// canonicalization process.
 r_expr single_assign(const resolved_variable& e,
                      std::unordered_set<std::string>& reserved,
                      std::unordered_map<std::string, r_expr>& rewrites,
@@ -302,6 +240,97 @@ r_expr single_assign(const resolved_field_access& e,
 {
     auto obj_ssa = single_assign(e.object, reserved, rewrites, pref);
     return make_rexpr<resolved_field_access>(obj_ssa, e.field, e.type, e.loc);
+}
+
+// TODO make sure that canonicalize is called before single_assign
+resolved_mechanism single_assign(const resolved_mechanism& e) {
+    std::unordered_set<std::string> globals;
+    std::unordered_set<std::string> reserved;
+    std::unordered_map<std::string, r_expr> rewrites;
+    std::string pref = "r";
+    resolved_mechanism mech;
+
+    // Get all globally available symbols and mark them as reserved.
+    for (const auto& c: e.constants) {
+        globals.insert(is_resolved_constant(c)->name);
+    }
+    for (const auto& c: e.parameters) {
+        globals.insert(is_resolved_parameter(c)->name);
+    }
+    for (const auto& c: e.bindings) {
+        globals.insert(is_resolved_bind(c)->name);
+    }
+    for (const auto& c: e.states) {
+        globals.insert(is_resolved_state(c)->name);
+    }
+
+    // Handle expressions
+    for (const auto& c: e.constants) {
+        reserved = globals;
+        mech.constants.push_back(single_assign(c, reserved, rewrites, pref));
+    }
+    for (const auto& c: e.bindings) {
+        reserved = globals;
+        rewrites.clear();
+        mech.bindings.push_back(single_assign(c, reserved, rewrites, pref));
+    }
+    for (const auto& c: e.states) {
+        reserved = globals;
+        rewrites.clear();
+        mech.states.push_back(single_assign(c, reserved, rewrites, pref));
+    }
+    for (const auto& c: e.functions) {
+        reserved = globals;
+        rewrites.clear();
+        mech.functions.push_back(single_assign(c, reserved, rewrites, pref));
+    }
+
+    // All parameters and initializations share the same reserved_map
+    // because they share the same API call.
+    reserved = globals;
+    for (const auto& c: e.parameters) {
+        rewrites.clear();
+        mech.parameters.push_back(single_assign(c, reserved, rewrites, pref));
+    }
+    for (const auto& c: e.initializations) {
+        rewrites.clear();
+        mech.initializations.push_back(single_assign(c, reserved, rewrites, pref));
+    }
+
+    // All on_events share the same reserved_map because they share the
+    // same API call.
+    reserved = globals;
+    for (const auto& c: e.on_events) {
+        rewrites.clear();
+        mech.on_events.push_back(single_assign(c, reserved, rewrites, pref));
+    }
+
+    // All evolutions share the same reserved_map because they share the
+    // same API call.
+    reserved = globals;
+    for (const auto& c: e.evolutions) {
+        rewrites.clear();
+        mech.evolutions.push_back(single_assign(c, reserved, rewrites, pref));
+    }
+
+    // All effects share the same reserved_map because they share the
+    // same API call.
+    reserved = globals;
+    for (const auto& c: e.effects) {
+        rewrites.clear();
+        mech.effects.push_back(single_assign(c, reserved, rewrites, pref));
+    }
+
+    reserved = globals;
+    for (const auto& c: e.exports) {
+        reserved = globals;
+        rewrites.clear();
+        mech.exports.push_back(single_assign(c, reserved, rewrites, pref));
+    }
+    mech.name = e.name;
+    mech.loc = e.loc;
+    mech.kind = e.kind;
+    return mech;
 }
 
 r_expr single_assign(const r_expr& e,

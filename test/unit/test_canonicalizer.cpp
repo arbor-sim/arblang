@@ -1344,10 +1344,13 @@ TEST(optimizer, mechanism) {
 
         EXPECT_EQ(expected_opt, pretty_print(m_fin));
 
-        m_fin = solve(m_fin);
+        std::string i_name = "i";
+        std::string g_name = "g";
+
+        m_fin = solve(m_fin, i_name, g_name);
         std::cout << pretty_print(m_fin) << std::endl;
 
-        auto m_printable = printable_mechanism(m_fin);
+        auto m_printable = printable_mechanism(m_fin, i_name, g_name);
         std::cout << "/**********************************************/" << std::endl;
         std::cout << mech << std::endl;
         std::cout << "/**********************************************/" << std::endl;

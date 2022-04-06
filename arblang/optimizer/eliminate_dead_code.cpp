@@ -8,160 +8,12 @@
 namespace al {
 namespace resolved_ir {
 
-std::pair<resolved_mechanism, bool> eliminate_dead_code(const resolved_mechanism& e) {
-    std::unordered_set<std::string> dead_code;
-    std::unordered_set<std::string> dead_param;
-    resolved_mechanism mech;
-
-    bool made_changes = false;
-    for (const auto& c: e.constants) {
-        dead_param.insert(std::get<resolved_constant>(*c).name);
-    }
-    for (const auto& c: e.parameters) {
-        dead_param.insert(std::get<resolved_parameter>(*c).name);
-        find_dead_code(c, dead_param);
-    }
-    for (const auto& c: e.bindings) {
-        dead_param.insert(std::get<resolved_bind>(*c).name);
-    }
-    for (const auto& c: e.states) {
-        dead_param.insert(std::get<resolved_state>(*c).name);
-    }
-    for (const auto& c: e.functions) {
-        find_dead_code(c, dead_param);
-    }
-    for (const auto& c: e.initializations) {
-        find_dead_code(c, dead_param);
-    }
-    for (const auto& c: e.on_events) {
-        find_dead_code(c, dead_param);
-    }
-    for (const auto& c: e.evolutions) {
-        find_dead_code(c, dead_param);
-    }
-    for (const auto& c: e.effects) {
-        find_dead_code(c, dead_param);
-    }
-
-    // Whatever remains in dead_const, dead_param, dead_bind, dead_state
-    // wasn't actually used and can be skipped in the final mechanism
-
-    for (const auto& c: e.constants) {
-        auto name = std::get<resolved_constant>(*c).name;
-        if (dead_param.count(name)) continue;
-
-        find_dead_code(c, dead_code);
-        if (!dead_code.empty()) {
-            mech.constants.push_back(remove_dead_code(c, dead_code));
-        } else {
-            mech.constants.push_back(c);
-        }
-        made_changes |= !dead_code.empty();
-    }
-    for (const auto& c: e.parameters) {
-        auto name = std::get<resolved_parameter>(*c).name;
-        if (dead_param.count(name)) continue;
-
-        dead_code.clear();
-        find_dead_code(c, dead_code);
-        if (!dead_code.empty()) {
-            mech.parameters.push_back(remove_dead_code(c, dead_code));
-        } else {
-            mech.parameters.push_back(c);
-        }
-        made_changes |= !dead_code.empty();
-    }
-    for (const auto& c: e.bindings) {
-        auto name = std::get<resolved_bind>(*c).name;
-        if (dead_param.count(name)) continue;
-
-        dead_code.clear();
-        find_dead_code(c, dead_code);
-        if (!dead_code.empty()) {
-            mech.bindings.push_back(remove_dead_code(c, dead_code));
-        } else {
-            mech.bindings.push_back(c);
-        }
-        made_changes |= !dead_code.empty();
-    }
-    for (const auto& c: e.states) {
-        auto name = std::get<resolved_state>(*c).name;
-        if (dead_param.count(name)) continue;
-
-        dead_code.clear();
-        find_dead_code(c, dead_code);
-        if (!dead_code.empty()) {
-            mech.states.push_back(remove_dead_code(c, dead_code));
-        } else {
-            mech.states.push_back(c);
-        }
-        made_changes |= !dead_code.empty();
-    }
-    for (const auto& c: e.functions) {
-        dead_code.clear();
-        find_dead_code(c, dead_code);
-        if (!dead_code.empty()) {
-            mech.functions.push_back(remove_dead_code(c, dead_code));
-        } else {
-            mech.functions.push_back(c);
-        }
-        made_changes |= !dead_code.empty();
-    }
-    for (const auto& c: e.initializations) {
-        dead_code.clear();
-        find_dead_code(c, dead_code);
-        if (!dead_code.empty()) {
-            mech.initializations.push_back(remove_dead_code(c, dead_code));
-        } else {
-            mech.initializations.push_back(c);
-        }
-        made_changes |= !dead_code.empty();
-    }
-    for (const auto& c: e.on_events) {
-        dead_code.clear();
-        find_dead_code(c, dead_code);
-        if (!dead_code.empty()) {
-            mech.on_events.push_back(remove_dead_code(c, dead_code));
-        } else {
-            mech.on_events.push_back(c);
-        }
-        made_changes |= !dead_code.empty();
-    }
-    for (const auto& c: e.evolutions) {
-        dead_code.clear();
-        find_dead_code(c, dead_code);
-        if (!dead_code.empty()) {
-            mech.evolutions.push_back(remove_dead_code(c, dead_code));
-        } else {
-            mech.evolutions.push_back(c);
-        }
-        made_changes |= !dead_code.empty();
-    }
-    for (const auto& c: e.effects) {
-        dead_code.clear();
-        find_dead_code(c, dead_code);
-        if (!dead_code.empty()) {
-            mech.effects.push_back(remove_dead_code(c, dead_code));
-        } else {
-            mech.effects.push_back(c);
-        }
-        made_changes |= !dead_code.empty();
-    }
-    for (const auto& c: e.exports) {
-        dead_code.clear();
-        find_dead_code(c, dead_code);
-        if (!dead_code.empty()) {
-            mech.exports.push_back(remove_dead_code(c, dead_code));
-        } else {
-            mech.exports.push_back(c);
-        }
-        made_changes |= !dead_code.empty();
-    }
-    mech.name = e.name;
-    mech.loc = e.loc;
-    mech.kind = e.kind;
-    return {mech, made_changes};
-}
+// Dead code elimination is used to remove unused
+// let_expression variables.
+// It is split into 2 phases, gathering unused variables,
+// then removing them from the code.
+// Dead code elimination needs to be performed in a loop,
+// until no more changes can be made.
 
 // Find dead code
 void find_dead_code(const resolved_record_alias& e, std::unordered_set<std::string>& dead_args) {
@@ -224,7 +76,7 @@ void find_dead_code(const resolved_object& e, std::unordered_set<std::string>& d
 }
 
 void find_dead_code(const resolved_let& e, std::unordered_set<std::string>& dead_args) {
-    dead_args.insert(std::get<resolved_variable>(*e.identifier).name);
+    dead_args.insert(is_resolved_variable(e.identifier)->name);
     find_dead_code(e.id_value(), dead_args);
     find_dead_code(e.body, dead_args);
 }
@@ -351,6 +203,161 @@ r_expr remove_dead_code(const resolved_field_access& e, const std::unordered_set
 
 r_expr remove_dead_code(const r_expr& e, const std::unordered_set<std::string>& dead_args) {
     return std::visit([&](auto& c) {return remove_dead_code(c, dead_args);}, *e);
+}
+
+std::pair<resolved_mechanism, bool> eliminate_dead_code(const resolved_mechanism& e) {
+    std::unordered_set<std::string> dead_code;
+    std::unordered_set<std::string> dead_param;
+    resolved_mechanism mech;
+
+    bool made_changes = false;
+    for (const auto& c: e.constants) {
+        dead_param.insert(is_resolved_constant(c)->name);
+    }
+    for (const auto& c: e.parameters) {
+        find_dead_code(c, dead_param);
+        dead_param.insert(is_resolved_parameter(c)->name);
+    }
+    for (const auto& c: e.bindings) {
+        dead_param.insert(is_resolved_bind(c)->name);
+    }
+    for (const auto& c: e.states) {
+        dead_param.insert(is_resolved_state(c)->name);
+    }
+    for (const auto& c: e.functions) {
+        find_dead_code(c, dead_param);
+    }
+    for (const auto& c: e.initializations) {
+        find_dead_code(c, dead_param);
+    }
+    for (const auto& c: e.on_events) {
+        find_dead_code(c, dead_param);
+    }
+    for (const auto& c: e.evolutions) {
+        find_dead_code(c, dead_param);
+    }
+    for (const auto& c: e.effects) {
+        find_dead_code(c, dead_param);
+    }
+
+    // Whatever remains in dead_param wasn't actually used
+    // and can be skipped in the final mechanism
+
+    for (const auto& c: e.constants) {
+        auto name = is_resolved_constant(c)->name;
+        if (dead_param.count(name)) continue;
+
+        find_dead_code(c, dead_code);
+        if (!dead_code.empty()) {
+            mech.constants.push_back(remove_dead_code(c, dead_code));
+        } else {
+            mech.constants.push_back(c);
+        }
+        made_changes |= !dead_code.empty();
+    }
+    for (const auto& c: e.parameters) {
+        auto name = is_resolved_parameter(c)->name;
+        if (dead_param.count(name)) continue;
+
+        dead_code.clear();
+        find_dead_code(c, dead_code);
+        if (!dead_code.empty()) {
+            mech.parameters.push_back(remove_dead_code(c, dead_code));
+        } else {
+            mech.parameters.push_back(c);
+        }
+        made_changes |= !dead_code.empty();
+    }
+    for (const auto& c: e.bindings) {
+        auto name = is_resolved_bind(c)->name;
+        if (dead_param.count(name)) continue;
+
+        dead_code.clear();
+        find_dead_code(c, dead_code);
+        if (!dead_code.empty()) {
+            mech.bindings.push_back(remove_dead_code(c, dead_code));
+        } else {
+            mech.bindings.push_back(c);
+        }
+        made_changes |= !dead_code.empty();
+    }
+    for (const auto& c: e.states) {
+        auto name = is_resolved_state(c)->name;
+        if (dead_param.count(name)) continue;
+
+        dead_code.clear();
+        find_dead_code(c, dead_code);
+        if (!dead_code.empty()) {
+            mech.states.push_back(remove_dead_code(c, dead_code));
+        } else {
+            mech.states.push_back(c);
+        }
+        made_changes |= !dead_code.empty();
+    }
+    for (const auto& c: e.functions) {
+        dead_code.clear();
+        find_dead_code(c, dead_code);
+        if (!dead_code.empty()) {
+            mech.functions.push_back(remove_dead_code(c, dead_code));
+        } else {
+            mech.functions.push_back(c);
+        }
+        made_changes |= !dead_code.empty();
+    }
+    for (const auto& c: e.initializations) {
+        dead_code.clear();
+        find_dead_code(c, dead_code);
+        if (!dead_code.empty()) {
+            mech.initializations.push_back(remove_dead_code(c, dead_code));
+        } else {
+            mech.initializations.push_back(c);
+        }
+        made_changes |= !dead_code.empty();
+    }
+    for (const auto& c: e.on_events) {
+        dead_code.clear();
+        find_dead_code(c, dead_code);
+        if (!dead_code.empty()) {
+            mech.on_events.push_back(remove_dead_code(c, dead_code));
+        } else {
+            mech.on_events.push_back(c);
+        }
+        made_changes |= !dead_code.empty();
+    }
+    for (const auto& c: e.evolutions) {
+        dead_code.clear();
+        find_dead_code(c, dead_code);
+        if (!dead_code.empty()) {
+            mech.evolutions.push_back(remove_dead_code(c, dead_code));
+        } else {
+            mech.evolutions.push_back(c);
+        }
+        made_changes |= !dead_code.empty();
+    }
+    for (const auto& c: e.effects) {
+        dead_code.clear();
+        find_dead_code(c, dead_code);
+        if (!dead_code.empty()) {
+            mech.effects.push_back(remove_dead_code(c, dead_code));
+        } else {
+            mech.effects.push_back(c);
+        }
+        made_changes |= !dead_code.empty();
+    }
+    for (const auto& c: e.exports) {
+        dead_code.clear();
+        find_dead_code(c, dead_code);
+        if (!dead_code.empty()) {
+            mech.exports.push_back(remove_dead_code(c, dead_code));
+        } else {
+            mech.exports.push_back(c);
+        }
+        made_changes |= !dead_code.empty();
+    }
+    mech.name = e.name;
+    mech.loc = e.loc;
+    mech.kind = e.kind;
+    return {mech, made_changes};
 }
 
 std::pair<r_expr, bool> eliminate_dead_code(const r_expr& e) {
